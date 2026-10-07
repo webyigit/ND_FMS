@@ -1,5 +1,5 @@
 import type { IconDefinition } from "@fortawesome/fontawesome-svg-core";
-import { faGaugeHigh, faHandHoldingDollar, faWallet, faEarthAsia, faFileInvoice, faCalculator, faGear, faInbox } from "@fortawesome/free-solid-svg-icons";
+import { faGaugeHigh, faHandHoldingDollar, faWallet, faEarthAsia, faFileInvoice, faCalculator, faGear, faInbox, faListCheck } from "@fortawesome/free-solid-svg-icons";
 
 // 요구사항정의 메뉴 구조 (아이콘: Font Awesome)
 export type MenuItem = { href: string; label: string };
@@ -7,6 +7,7 @@ export type MenuGroup = { label: string; icon: IconDefinition; items: MenuItem[]
 
 export const MENU: MenuGroup[] = [
   { label: "대시보드", icon: faGaugeHigh, items: [{ href: "/dashboard", label: "대시보드" }] },
+  { label: "TODO LIST", icon: faListCheck, items: [{ href: "/todo", label: "TODO LIST" }] },
   {
     label: "수입관리", icon: faHandHoldingDollar,
     items: [

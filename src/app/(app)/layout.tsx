@@ -1,4 +1,5 @@
 import Sidebar from "@/components/Sidebar";
+import PendingTodos from "@/components/PendingTodos";
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -9,6 +10,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           {/* 로그인 사용자·알림: 인증 연결 후 */}
           재정부
         </header>
+        <PendingTodos />
         <main className="flex-1 p-6">{children}</main>
       </div>
     </div>
