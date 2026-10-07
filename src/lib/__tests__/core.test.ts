@@ -165,3 +165,31 @@ describe("재정부게시판", () => {
     expect(listPosts(xs, "인수").map((x) => x.id)).toEqual(["c"]);
   });
 });
+
+import { auditPeriods, incomeTable, expenseTable, monthly, missionSummary } from "../auditReport";
+describe("재정감사보고서", () => {
+  const inc = [
+    { date: "2026-03-01", fund: "일반" as const, type: "십일조", amount: 100 },
+    { date: "2026-08-02", fund: "일반" as const, type: "십일조", amount: 50 },
+    { date: "2026-08-02", fund: "별도" as const, type: "해외선교", amount: 30 },
+  ];
+  const exp = [{ date: "2026-02-01", dept: "A부", item: "x", content: "", amount: 40 }, { date: "2026-09-01", dept: "A부", item: "x", content: "", amount: 10 }];
+  it("기간: 상반기 1개, 하반기는 하반기+연간", () => {
+    expect(auditPeriods(2026, "H1").map((p) => [p.from, p.to])).toEqual([["2026-01-01", "2026-06-30"]]);
+    expect(auditPeriods(2026, "H2").map((p) => p.key)).toEqual(["H2", "Y"]);
+    expect(auditPeriods(2026, "H2", "2026-10-07").map((p) => p.to)).toEqual(["2026-10-07", "2026-10-07"]);
+    expect(auditPeriods(2026, "H1", "2026-10-07")[0].to).toBe("2026-06-30");
+  });
+  it("수입·지출 집계, 별도기금은 합계에서 제외", () => {
+    const ps = auditPeriods(2026, "H2");
+    const t = incomeTable([{ fund: "일반", type: "십일조", budget: 300 }], inc, ps);
+    expect(t.general.amounts).toEqual([50, 150]);
+    expect(t.separate.amounts).toEqual([30, 30]);
+    expect(expenseTable([{ dept: "A부", item: "x", budget: 100 }], exp, ps).total.amounts).toEqual([10, 50]);
+    expect(monthly(2026, inc, exp)[7]).toEqual({ month: 8, income: 50, expense: 0 });
+  });
+  it("해외선교 기간 잔액", () => {
+    const tx = [{ date: "2026-03-01", content: "", income: 20, expense: 5 }, { date: "2026-08-01", content: "", income: 10, expense: 30 }];
+    expect(missionSummary(100, tx, auditPeriods(2026, "H2")[0])).toEqual({ start: 115, income: 10, expense: 30, end: 95 });
+  });
+});

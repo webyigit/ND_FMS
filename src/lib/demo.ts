@@ -105,3 +105,19 @@ export const DEMO_MISSION: MissionTx[] = Array.from({ length: 9 }, (_, m) => m +
   ...[1, 2, 3, 4].map((w) => ({ date: `2026-${String(m).padStart(2, "0")}-${String(w * 7 - 3).padStart(2, "0")}`, content: "헌금수입", income: 300000 + w * 10000, expense: 0 })),
   ...["가 선교사", "나 선교사", "다 선교회", "라 노회"].map((to) => ({ date: `2026-${String(m).padStart(2, "0")}-26`, content: to, income: 0, expense: 300000 })),
 ]);
+
+// 재정감사보고서용 가상 수입(실금액 아님): 2026-01 ~ 2026-10-04 매 주일
+import type { IncomeBudget, IncomeTx } from "./auditReport";
+export const DEMO_INCOME_BUDGETS: IncomeBudget[] = OFFERING_TYPES.map((o, i) => ({ fund: o.fund, type: o.name, budget: Math.round(2 + seeded(i + 101) * 20) * 5000000 }));
+export const DEMO_INCOME: IncomeTx[] = (() => {
+  const out: IncomeTx[] = [];
+  for (let d = new Date(Date.UTC(2026, 0, 4)); d <= new Date(Date.UTC(2026, 9, 4)); d.setUTCDate(d.getUTCDate() + 7)) {
+    const date = d.toISOString().slice(0, 10);
+    DEMO_INCOME_BUDGETS.forEach((b, i) => {
+      const r = seeded(d.getUTCDate() * 17 + d.getUTCMonth() * 31 + i);
+      if (r < 0.35 && i > 2) return; // 절기·특별헌금은 매주 있지 않다
+      out.push({ date, fund: b.fund, type: b.type, amount: Math.round((b.budget / 52) * (0.6 + r * 0.8) / 1000) * 1000 });
+    });
+  }
+  return out;
+})();

@@ -1,5 +1,9 @@
-import Todo from "@/components/Todo";
+"use client";
+import dynamic from "next/dynamic";
+
+// 오늘 날짜·차트(브라우저 전용)를 쓰므로 클라이언트에서만 렌더링
+const AuditReport = dynamic(() => import("./AuditReport"), { ssr: false });
 
 export default function Page() {
-  return <Todo spec={["연 2회(상반기·하반기) 재정감사 보고서", "세부 양식·항목은 요구사항정의서 작성 중 [확인 필요]"]} />;
+  return <AuditReport />;
 }
