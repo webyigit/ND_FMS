@@ -21,3 +21,4 @@ dist/
 next-env.d.ts
 *.tsbuildinfo
 /coverage
+.claude/worktrees/
