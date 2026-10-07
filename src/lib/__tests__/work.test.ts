@@ -3,7 +3,7 @@ import { areaOf, canEnter, canUploadReceipt, homeFor } from "../work/access";
 import { barWidth, editable, expenseFormProblems, groupItems, statusLabel, summarizeBudget, type ExpenseForm } from "../work/requests";
 import { fromTodoRow, sortTodos } from "../todo";
 import { forChannel, fromNoticeRow } from "../notice";
-import { fromPostRow, listPosts } from "../board";
+import { commentCounts, commentsOf, fromCommentRow, fromPostRow, listPosts } from "../board";
 import { isPublicPath } from "../supabase/config";
 
 describe("부서장 모바일·지출신청 접근", () => {
@@ -94,5 +94,25 @@ describe("업무 DB 행 변환", () => {
     const p = fromPostRow({ id: 1, title: "인수인계", body: "", author_name: "관리자", pinned: false, created_at: "2026-10-07", updated_at: null });
     expect(p).toEqual({ id: "1", title: "인수인계", body: "", author: "관리자", pinned: false, createdAt: "2026-10-07" });
     expect(listPosts([p], "관리자")).toHaveLength(1);
+  });
+});
+
+describe("재정부게시판 댓글", () => {
+  const row = { id: 3, post_id: 7, body: "확인", author_id: "u1", author_name: "재정부원", created_at: "2026-10-07T10:00:00Z", updated_at: null };
+  it("DB 행을 화면 값으로", () => {
+    expect(fromCommentRow(row)).toEqual({ id: "3", postId: "7", body: "확인", author: "재정부원", authorId: "u1", createdAt: "2026-10-07T10:00:00Z" });
+    expect(fromCommentRow({ ...row, author_name: null, author_id: null, updated_at: "2026-10-07T11:00:00Z" }))
+      .toMatchObject({ author: "", updatedAt: "2026-10-07T11:00:00Z" });
+  });
+  it("글별로 오래된 순, 개수", () => {
+    const xs = [
+      { id: "b", postId: "1", body: "둘", author: "", createdAt: "2026-10-07T12:00:00Z" },
+      { id: "a", postId: "1", body: "하나", author: "", createdAt: "2026-10-07T09:00:00Z" },
+      { id: "c", postId: "2", body: "다른 글", author: "", createdAt: "2026-10-07T10:00:00Z" },
+    ];
+    expect(commentsOf(xs, "1").map((c) => c.id)).toEqual(["a", "b"]);
+    expect(commentsOf(xs, "9")).toEqual([]);
+    const n = commentCounts(xs);
+    expect([n.get("1"), n.get("2"), n.get("9")]).toEqual([2, 1, undefined]);
   });
 });
