@@ -1,0 +1,53 @@
+erDiagram
+  app_user ||--o{ user_department : "부서장"
+  department ||--o{ user_department : "담당 부서"
+  app_user ||--o{ notice : "작성"
+  department ||--o{ budget_request : "예산 신청"
+  expense_item |o--o{ budget_request : "항목"
+  department |o--o{ expense_request : "부서(목회자는 null)"
+  receipt_file |o--o{ expense_request : "영수증 사진"
+  payee |o--o{ expense_request : "송금 계좌"
+  app_user ||--o{ expense_request : "신청자"
+  expense_request |o--o| expense : "승인 후 지출"
+  member |o--o{ donation_request : "매칭 교인"
+  donation_request |o--o| donation_receipt : "발행"
+  user_department { uuid user_id PK
+    int department_id PK }
+  notice { bigint id PK
+    text title
+    text audience "dept_head/all"
+    timestamptz published_at }
+  budget_request { bigint id PK
+    int year
+    int department_id FK
+    bigint amount
+    enum status "requested/approved/rejected/done" }
+  expense_request { bigint id PK
+    int department_id FK
+    text content
+    bigint amount
+    date used_at
+    bigint receipt_file_id FK
+    enum status
+    bigint expense_id FK }
+  donation_request { bigint id PK
+    text name
+    bytea rrn_enc
+    text receipt_name
+    text_arr family_names
+    text verified_by "sms/birth_phone4"
+    timestamptz consent_at
+    text ip_hash
+    enum status }
+  request_rate_limit { text key PK
+    int count
+    timestamptz blocked_until }
+  app_user { uuid id PK
+    enum role "+dept_head, pastor" }
+  department { int id PK }
+  expense_item { int id PK }
+  receipt_file { bigint id PK }
+  payee { bigint id PK }
+  expense { bigint id PK }
+  member { bigint id PK }
+  donation_receipt { bigint id PK }
