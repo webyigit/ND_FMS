@@ -4,10 +4,10 @@ import MobileNav from "@/components/MobileNav";
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div className="flex min-h-screen bg-slate-50">
+    <div className="flex min-h-screen bg-bg">
       <Sidebar />
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="flex h-16 items-center justify-between border-b border-slate-200 bg-white px-4 text-sm text-slate-500 lg:justify-end lg:px-6">
+        <header className="flex h-[72px] items-center justify-between bg-surface px-4 text-label shadow-card lg:justify-end lg:px-6">
           <MobileNav />
           {/* 로그인 사용자·알림: 인증 연결 후 */}
           <span>재정부</span>

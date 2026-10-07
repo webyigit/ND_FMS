@@ -18,7 +18,7 @@ export default function PendingTodos() {
         {pending.slice(0, 5).map((t) => (
           <label key={t.id} className="flex items-center gap-1.5 text-slate-700">
             <input type="checkbox" onChange={() => todoActions.toggle(t.id)} />
-            <span className={t.date < today ? "font-semibold text-red-600" : "text-slate-500"}>{t.date.slice(5)}</span>
+            <span className={t.date < today ? "font-semibold text-red-600" : "text-label"}>{t.date.slice(5)}</span>
             {t.text}
           </label>
         ))}

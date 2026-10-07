@@ -68,46 +68,46 @@ export default function IncomeEntryForm() {
 
   return (
     <>
-      <PageHeader actions={<span className="rounded bg-amber-100 px-2 py-1 text-xs text-amber-800">데모 데이터 · DB 연결 전 브라우저에만 임시저장</span>} />
+      <PageHeader actions={<span className="rounded bg-warning-subtle px-2 py-1 text-xs text-warning">데모 데이터 · DB 연결 전 브라우저에만 임시저장</span>} />
 
-      <div className="mb-6 rounded-lg border border-slate-200 bg-white p-4">
+      <div className="mb-6 rounded-lg bg-surface shadow-card p-4">
         <div className="grid gap-3 md:grid-cols-[140px_180px_160px_1fr_160px_auto]">
-          <label className="text-xs text-slate-500">주일
-            <input type="date" value={sunday} onChange={(e) => setSunday(e.target.value)} className="mt-1 w-full rounded border px-2 py-1.5 text-sm text-slate-900" />
+          <label className="text-xs text-label">주일
+            <input type="date" value={sunday} onChange={(e) => setSunday(e.target.value)} className="mt-1 w-full rounded border px-2 py-1.5 text-sm text-heading" />
           </label>
-          <label className="text-xs text-slate-500">헌금구분 (고정)
-            <select value={typeId} onChange={(e) => { setTypeId(Number(e.target.value)); reset(); }} className="mt-1 w-full rounded border px-2 py-1.5 text-sm text-slate-900">
+          <label className="text-xs text-label">헌금구분 (고정)
+            <select value={typeId} onChange={(e) => { setTypeId(Number(e.target.value)); reset(); }} className="mt-1 w-full rounded border px-2 py-1.5 text-sm text-heading">
               {OFFERING_TYPES.map((t) => <option key={t.id} value={t.id}>[{t.fund}] {t.name}</option>)}
             </select>
           </label>
-          <div className="text-xs text-slate-500">구분
+          <div className="text-xs text-label">구분
             <div className="mt-1 flex overflow-hidden rounded border text-sm">
               {(["cash", "online"] as const).map((c) => (
-                <button key={c} onClick={() => setChannel(c)} className={`flex-1 py-1.5 ${channel === c ? "bg-slate-800 text-white" : "text-slate-700"}`}>
+                <button key={c} onClick={() => setChannel(c)} className={`flex-1 py-1.5 ${channel === c ? "bg-primary text-white" : "text-slate-700"}`}>
                   {c === "cash" ? "현금" : "이체"}
                 </button>
               ))}
             </div>
           </div>
-          <div className="relative text-xs text-slate-500">이름 {type.totalOnly && "(총액만 입력)"}
+          <div className="relative text-xs text-label">이름 {type.totalOnly && "(총액만 입력)"}
             <input ref={nameRef} disabled={type.totalOnly} value={query}
               onChange={(e) => { setQuery(e.target.value); setPicked(null); }}
               onKeyDown={(e) => { if (e.key === "Enter") { if (suggestions[0]) { setPicked(suggestions[0]); setQuery(suggestions[0].name); } amountRef.current?.focus(); } }}
-              placeholder="두 글자 이상 입력" className="mt-1 w-full rounded border px-2 py-1.5 text-sm text-slate-900 disabled:bg-slate-100" />
+              placeholder="두 글자 이상 입력" className="mt-1 w-full rounded border px-2 py-1.5 text-sm text-heading disabled:bg-surface-2" />
             {suggestions.length > 0 && (
-              <ul className="absolute z-10 mt-1 w-full rounded border bg-white text-sm text-slate-900 shadow">
+              <ul className="absolute z-10 mt-1 w-full rounded border bg-surface text-sm text-heading shadow">
                 {suggestions.map((m) => (
-                  <li key={m.id}><button className="w-full px-2 py-1 text-left hover:bg-slate-100" onClick={() => { setPicked(m); setQuery(m.name); amountRef.current?.focus(); }}>{m.name} {m.title && <span className="text-slate-400">{m.title}</span>}</button></li>
+                  <li key={m.id}><button className="w-full px-2 py-1 text-left hover:bg-surface-2" onClick={() => { setPicked(m); setQuery(m.name); amountRef.current?.focus(); }}>{m.name} {m.title && <span className="text-muted">{m.title}</span>}</button></li>
                 ))}
               </ul>
             )}
           </div>
-          <label className="text-xs text-slate-500">금액 {unit > 1 && `(×${won(unit)}원)`}
+          <label className="text-xs text-label">금액 {unit > 1 && `(×${won(unit)}원)`}
             <input ref={amountRef} inputMode="numeric" value={amount} onChange={(e) => setAmount(e.target.value.replace(/[^\d,]/g, ""))}
-              onKeyDown={(e) => e.key === "Enter" && submit()} className="mt-1 w-full rounded border px-2 py-1.5 text-right text-sm text-slate-900" />
+              onKeyDown={(e) => e.key === "Enter" && submit()} className="mt-1 w-full rounded border px-2 py-1.5 text-right text-sm text-heading" />
           </label>
           <div className="flex items-end gap-2">
-            <button onClick={submit} className="rounded bg-blue-600 px-4 py-1.5 text-sm text-white">{editId ? "수정" : "추가"}</button>
+            <button onClick={submit} className="rounded bg-primary px-4 py-1.5 text-sm text-white">{editId ? "수정" : "추가"}</button>
             {editId && <button onClick={reset} className="rounded border px-3 py-1.5 text-sm">취소</button>}
           </div>
         </div>
@@ -118,22 +118,22 @@ export default function IncomeEntryForm() {
 
       <div className="mb-3 flex items-center justify-between text-sm">
         <div>{sunday} 주일 · {entries.length}건 · 합계 <b>{won(grand)}원</b></div>
-        <button disabled className="rounded border px-3 py-1.5 text-slate-400" title="DB 연결 후 사용">입력 완료(저장)</button>
+        <button disabled className="rounded border px-3 py-1.5 text-muted" title="DB 연결 후 사용">입력 완료(저장)</button>
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         {byType.map(({ t, rows, total }) => (
-          <div key={t.id} className="rounded-lg border border-slate-200 bg-white">
+          <div key={t.id} className="rounded-lg bg-surface shadow-card">
             <div className="flex justify-between border-b px-4 py-2 text-sm font-semibold"><span>{t.name}</span><span>{won(total)}</span></div>
             <table className="w-full text-sm">
               <tbody>
                 {rows.map((r) => (
                   <tr key={r.id} className="border-b last:border-0">
-                    <td className="px-4 py-1.5">{r.name}{r.memo && <span className="text-slate-400"> · {r.memo}</span>}</td>
-                    <td className="px-2 text-xs text-slate-400">{r.channel === "cash" ? "현금" : "이체"}</td>
+                    <td className="px-4 py-1.5">{r.name}{r.memo && <span className="text-muted"> · {r.memo}</span>}</td>
+                    <td className="px-2 text-xs text-muted">{r.channel === "cash" ? "현금" : "이체"}</td>
                     <td className="px-2 text-right">{won(r.amount)}</td>
                     <td className="w-24 px-2 text-right text-xs">
-                      <button onClick={() => edit(r)} className="text-blue-600">수정</button>{" "}
+                      <button onClick={() => edit(r)} className="text-primary">수정</button>{" "}
                       <button onClick={() => setEntries((xs) => xs.filter((x) => x.id !== r.id))} className="text-red-500">삭제</button>
                     </td>
                   </tr>

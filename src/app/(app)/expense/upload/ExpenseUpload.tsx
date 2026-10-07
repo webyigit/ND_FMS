@@ -122,45 +122,45 @@ export default function ExpenseUpload() {
 
   return (
     <>
-      <PageHeader actions={<span className="rounded bg-amber-100 px-2 py-1 text-xs text-amber-800">증빙 사진·PDF는 압축해 드라이브 저장 · 지출 행은 DB 연결 후 저장</span>} />
+      <PageHeader actions={<span className="rounded bg-warning-subtle px-2 py-1 text-xs text-warning">증빙 사진·PDF는 압축해 드라이브 저장 · 지출 행은 DB 연결 후 저장</span>} />
 
       <div
         onDragOver={(e) => { e.preventDefault(); setDrag(true); }} onDragLeave={() => setDrag(false)}
         onDrop={(e) => { e.preventDefault(); setDrag(false); onFiles(e.dataTransfer.files); }}
-        className={`mb-4 rounded-lg border-2 border-dashed bg-white p-6 text-center ${drag ? "border-blue-500 bg-blue-50" : "border-slate-300"}`}
+        className={`mb-4 rounded-lg border-2 border-dashed bg-surface p-6 text-center ${drag ? "border-primary bg-primary-subtle" : "border-line"}`}
       >
-        <FontAwesomeIcon icon={faCloudArrowUp} className="mb-2 text-3xl text-slate-400" />
+        <FontAwesomeIcon icon={faCloudArrowUp} className="mb-2 text-3xl text-muted" />
         <div className="mb-1 font-semibold">지출 증빙이나 지출내역 파일을 올려주세요</div>
-        <div className="mb-4 text-xs text-slate-500">영수증 PDF · 사진(JPG, PNG, HEIC) · 엑셀(.xlsx) · CSV · 파일당 20MB · 여러 개 한 번에 가능</div>
+        <div className="mb-4 text-xs text-label">영수증 PDF · 사진(JPG, PNG, HEIC) · 엑셀(.xlsx) · CSV · 파일당 20MB · 여러 개 한 번에 가능</div>
         <div className="flex flex-wrap justify-center gap-2 text-sm">
-          <label className="cursor-pointer rounded bg-blue-600 px-4 py-2 text-white"><FontAwesomeIcon icon={faCloudArrowUp} /> 파일 선택
+          <label className="cursor-pointer rounded bg-primary px-4 py-2 text-white"><FontAwesomeIcon icon={faCloudArrowUp} /> 파일 선택
             <input type="file" multiple accept={ACCEPT} className="hidden" onChange={(e) => { onFiles(e.target.files); e.target.value = ""; }} /></label>
           <label className="cursor-pointer rounded border px-4 py-2"><FontAwesomeIcon icon={faCamera} /> 사진 촬영
             <input type="file" accept="image/*" capture="environment" className="hidden" onChange={(e) => { onFiles(e.target.files); e.target.value = ""; }} /></label>
-          <label className="cursor-pointer rounded border px-4 py-2"><FontAwesomeIcon icon={faFileExcel} className="text-emerald-600" /> 엑셀·CSV
+          <label className="cursor-pointer rounded border px-4 py-2"><FontAwesomeIcon icon={faFileExcel} className="text-success" /> 엑셀·CSV
             <input type="file" multiple accept=".xlsx,.csv" className="hidden" onChange={(e) => { onFiles(e.target.files); e.target.value = ""; }} /></label>
         </div>
-        <div className="mt-3 text-xs text-slate-400">PC에서는 끌어다 놓아도 돼요. 폰에서는 &lsquo;사진 촬영&rsquo;을 누르면 카메라가 바로 열려요.</div>
+        <div className="mt-3 text-xs text-muted">PC에서는 끌어다 놓아도 돼요. 폰에서는 &lsquo;사진 촬영&rsquo;을 누르면 카메라가 바로 열려요.</div>
       </div>
 
       {msg.length > 0 && (
-        <div className="mb-4 space-y-1">{msg.map((m, i) => <div key={i} className={`rounded px-3 py-2 text-sm ${m.ok ? "bg-emerald-50 text-emerald-700" : "bg-red-50 text-red-700"}`}>{m.text}</div>)}</div>
+        <div className="mb-4 space-y-1">{msg.map((m, i) => <div key={i} className={`rounded px-3 py-2 text-sm ${m.ok ? "bg-success-subtle text-success" : "bg-danger-subtle text-danger"}`}>{m.text}</div>)}</div>
       )}
 
       {docs.length > 0 && (
         <section className="mb-6">
-          <h2 className="mb-2 text-sm font-semibold">영수증·증빙 {docs.length}건 <span className="font-normal text-slate-400">· 자동 인식(AI)은 키 설정 후 [확인 필요], 지금은 직접 입력</span></h2>
+          <h2 className="mb-2 text-sm font-semibold">영수증·증빙 {docs.length}건 <span className="font-normal text-muted">· 자동 인식(AI)은 키 설정 후 [확인 필요], 지금은 직접 입력</span></h2>
           <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
             {docs.map((d) => (
-              <div key={d.id} className="flex gap-3 rounded-lg border border-slate-200 bg-white p-3">
-                <a href={d.url} target="_blank" rel="noreferrer" className="flex h-32 w-24 shrink-0 items-center justify-center overflow-hidden rounded border bg-slate-50" title="크게 보기">
+              <div key={d.id} className="flex gap-3 rounded-lg bg-surface shadow-card p-3">
+                <a href={d.url} target="_blank" rel="noreferrer" className="flex h-32 w-24 shrink-0 items-center justify-center overflow-hidden rounded border bg-surface-2" title="크게 보기">
                   {d.kind === "image" && d.preview
                     // eslint-disable-next-line @next/next/no-img-element
                     ? <img src={d.url} alt={d.name} className="h-full w-full object-cover" />
-                    : <FontAwesomeIcon icon={d.kind === "pdf" ? faFilePdf : faImage} className={`text-3xl ${d.kind === "pdf" ? "text-red-500" : "text-slate-400"}`} />}
+                    : <FontAwesomeIcon icon={d.kind === "pdf" ? faFilePdf : faImage} className={`text-3xl ${d.kind === "pdf" ? "text-red-500" : "text-muted"}`} />}
                 </a>
                 <div className="min-w-0 flex-1 space-y-1.5">
-                  <div className="flex items-center justify-between gap-2 text-xs text-slate-500">
+                  <div className="flex items-center justify-between gap-2 text-xs text-label">
                     <a href={d.url} download={d.name} className="truncate underline-offset-2 hover:underline" title="압축본 내려받기">{d.name} · {size(d.size)}</a>
                     <button onClick={() => setDocs((xs) => xs.filter((x) => x.id !== d.id))} className="text-red-500" aria-label="삭제"><FontAwesomeIcon icon={faTrash} /></button>
                   </div>
@@ -180,18 +180,18 @@ export default function ExpenseUpload() {
       {sheet.length > 0 && (
         <section className="mb-6">
           <h2 className="mb-2 flex items-center justify-between text-sm font-semibold">
-            <span>엑셀에서 읽은 지출 {sheet.length}건 <span className="font-normal text-slate-400">· 넣을 줄만 체크</span></span>
-            <button onClick={() => setSheet([])} className="text-xs font-normal text-slate-500">모두 지우기</button>
+            <span>엑셀에서 읽은 지출 {sheet.length}건 <span className="font-normal text-muted">· 넣을 줄만 체크</span></span>
+            <button onClick={() => setSheet([])} className="text-xs font-normal text-label">모두 지우기</button>
           </h2>
-          <div className="overflow-x-auto rounded-lg border border-slate-200 bg-white">
+          <div className="overflow-x-auto rounded-lg bg-surface shadow-card">
             <table className="w-full min-w-[820px] text-sm">
-              <thead className="bg-slate-50 text-xs text-slate-500">
+              <thead className="bg-surface-2 text-xs text-label">
                 <tr><th className="w-8 py-2"><input type="checkbox" checked={sheet.every((r) => r.pick)} onChange={(e) => setSheet((xs) => xs.map((x) => ({ ...x, pick: e.target.checked })))} /></th>
                   <th className="w-36">일자</th><th className="min-w-[200px] text-left">내용</th><th className="w-28 text-right">금액</th><th className="w-36">부서</th><th className="w-40">항목</th><th className="w-24">청구자</th><th className="text-left">파일</th></tr>
               </thead>
               <tbody>
                 {sheet.map((r) => (
-                  <tr key={r.id} className={`border-t ${r.pick ? "" : "text-slate-400"}`}>
+                  <tr key={r.id} className={`border-t ${r.pick ? "" : "text-muted"}`}>
                     <td className="text-center"><input type="checkbox" checked={r.pick} onChange={(e) => setRow(r.id, { pick: e.target.checked })} /></td>
                     <td className="px-1 py-1"><input type="date" className={input} value={r.date} onChange={(e) => setRow(r.id, { date: e.target.value })} /></td>
                     <td className="px-1"><input className={input} value={r.content} onChange={(e) => setRow(r.id, { content: e.target.value })} /></td>
@@ -199,7 +199,7 @@ export default function ExpenseUpload() {
                     <td className="px-1">{deptSel(r.dept, (v) => setRow(r.id, { dept: v, item: "" }))}</td>
                     <td className="px-1">{itemSel(r.dept, r.item, (v) => setRow(r.id, { item: v }))}</td>
                     <td className="px-2 text-center">{r.requester}</td>
-                    <td className="truncate px-2 text-xs text-slate-400">{r.file}</td>
+                    <td className="truncate px-2 text-xs text-muted">{r.file}</td>
                   </tr>
                 ))}
               </tbody>
@@ -209,12 +209,12 @@ export default function ExpenseUpload() {
       )}
 
       {(docs.length > 0 || sheet.length > 0) && (
-        <div className="sticky bottom-2 flex flex-wrap items-center gap-3 rounded-lg border border-slate-200 bg-white px-4 py-3 text-sm shadow">
+        <div className="sticky bottom-2 flex flex-wrap items-center gap-3 rounded-lg bg-surface shadow-card px-4 py-3 text-sm shadow">
           <span>보낼 지출 <b>{ready.length}건</b> · {won(ready.reduce((s, r) => s + r.amount, 0))}원</span>
-          <span className="text-xs text-slate-400">증빙은 금액을 넣은 것만 보내요 · 사진은 압축본을 드라이브에 저장</span>
+          <span className="text-xs text-muted">증빙은 금액을 넣은 것만 보내요 · 사진은 압축본을 드라이브에 저장</span>
           <div className="ml-auto flex gap-2">
             <Link href="/expense/entry" className="rounded border px-3 py-1.5">지출입력 보기</Link>
-            <button onClick={send} disabled={!ready.length || busy} className="rounded bg-blue-600 px-4 py-1.5 text-white disabled:bg-slate-300">{busy ? "저장 중…" : "지출입력으로 보내기"}</button>
+            <button onClick={send} disabled={!ready.length || busy} className="rounded bg-primary px-4 py-1.5 text-white disabled:bg-slate-300">{busy ? "저장 중…" : "지출입력으로 보내기"}</button>
           </div>
         </div>
       )}

@@ -15,15 +15,15 @@ export default function MobileNav() {
       <button onClick={() => setOpen(true)} aria-label="메뉴 열기" className="px-2 py-1 text-lg text-slate-600"><FontAwesomeIcon icon={faBars} /></button>
       {open && (
         <div className="fixed inset-0 z-50 flex">
-          <nav className="h-full w-72 overflow-y-auto bg-white p-3 text-sm shadow-xl">
+          <nav className="h-full w-72 overflow-y-auto bg-surface p-3 text-sm shadow-xl">
             <div className="mb-2 flex items-center justify-between px-3 py-2 font-bold">재정관리시스템
-              <button onClick={() => setOpen(false)} aria-label="메뉴 닫기" className="text-slate-500"><FontAwesomeIcon icon={faXmark} /></button></div>
+              <button onClick={() => setOpen(false)} aria-label="메뉴 닫기" className="text-label"><FontAwesomeIcon icon={faXmark} /></button></div>
             {MENU.map((g) => (
               <div key={g.label} className="mb-2">
-                <div className="flex items-center gap-2 px-3 py-1.5 text-xs font-semibold text-slate-400"><FontAwesomeIcon icon={g.icon} className="w-3.5" /> {g.label}</div>
+                <div className="flex items-center gap-2 px-3 py-1.5 text-xs font-semibold text-muted"><FontAwesomeIcon icon={g.icon} className="w-3.5" /> {g.label}</div>
                 {g.items.map((i) => (
                   <Link key={i.href} href={i.href} onClick={() => setOpen(false)}
-                    className={`block rounded-md px-3 py-2 ${path.startsWith(i.href) ? "bg-slate-100 font-semibold" : "text-slate-600"}`}>{i.label}</Link>
+                    className={`block rounded-md px-3 py-2 ${path.startsWith(i.href) ? "bg-primary-subtle font-medium text-primary" : "text-heading"}`}>{i.label}</Link>
                 ))}
               </div>
             ))}

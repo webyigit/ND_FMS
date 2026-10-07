@@ -30,12 +30,12 @@ export default function Board() {
   return (
     <>
       <PageHeader actions={<>
-        <span className="rounded bg-amber-100 px-2 py-1 text-xs text-amber-800">DB 연결 전 브라우저에만 저장</span>
-        {!form && <button onClick={() => { setForm(blank()); setOpen(null); }} className="rounded bg-blue-600 px-4 py-1.5 text-sm text-white"><FontAwesomeIcon icon={faPen} /> 글쓰기</button>}
+        <span className="rounded bg-warning-subtle px-2 py-1 text-xs text-warning">DB 연결 전 브라우저에만 저장</span>
+        {!form && <button onClick={() => { setForm(blank()); setOpen(null); }} className="rounded bg-primary px-4 py-1.5 text-sm text-white"><FontAwesomeIcon icon={faPen} /> 글쓰기</button>}
       </>} />
 
       {form && (
-        <div className="mb-6 rounded-lg border border-slate-200 bg-white p-4 text-sm">
+        <div className="mb-6 rounded-lg bg-surface shadow-card p-4 text-sm">
           <div className="mb-2 flex flex-wrap gap-2">
             <input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} placeholder="제목" className={`${input} min-w-[240px] flex-1`} autoFocus />
             <input value={form.author} onChange={(e) => setForm({ ...form, author: e.target.value })} placeholder="작성자" className={`${input} w-32`} />
@@ -44,39 +44,39 @@ export default function Board() {
           <div className="mt-2 flex items-center gap-2">
             <label className="flex items-center gap-1"><input type="checkbox" checked={form.pinned} onChange={(e) => setForm({ ...form, pinned: e.target.checked })} /> 상단 고정</label>
             <button onClick={() => setForm(null)} className="ml-auto rounded border px-3 py-1.5">취소</button>
-            <button onClick={save} disabled={!form.title.trim()} className="rounded bg-blue-600 px-4 py-1.5 text-white disabled:bg-slate-300">{form.id ? "수정" : "등록"}</button>
+            <button onClick={save} disabled={!form.title.trim()} className="rounded bg-primary px-4 py-1.5 text-white disabled:bg-slate-300">{form.id ? "수정" : "등록"}</button>
           </div>
         </div>
       )}
 
       {cur && !form && (
-        <article className="mb-6 rounded-lg border border-slate-200 bg-white p-5 text-sm">
+        <article className="mb-6 rounded-lg bg-surface shadow-card p-5 text-sm">
           <h2 className="text-lg font-bold">{cur.pinned && <FontAwesomeIcon icon={faThumbtack} className="mr-1 text-red-500" />}{cur.title}</h2>
-          <div className="mb-4 mt-1 text-xs text-slate-500">{cur.author || "작성자 미상"} · {day(cur.createdAt)}{cur.updatedAt && ` (수정 ${day(cur.updatedAt)})`}</div>
+          <div className="mb-4 mt-1 text-xs text-label">{cur.author || "작성자 미상"} · {day(cur.createdAt)}{cur.updatedAt && ` (수정 ${day(cur.updatedAt)})`}</div>
           <div className="whitespace-pre-wrap leading-relaxed">{cur.body}</div>
           <div className="mt-4 flex justify-end gap-2 text-xs">
             <button onClick={() => setOpen(null)} className="rounded border px-3 py-1">목록</button>
-            <button onClick={() => edit(cur)} className="rounded border px-3 py-1 text-blue-600">수정</button>
+            <button onClick={() => edit(cur)} className="rounded border px-3 py-1 text-primary">수정</button>
             <button onClick={() => del(cur)} className="rounded border px-3 py-1 text-red-500">삭제</button>
           </div>
         </article>
       )}
 
-      <div className="mb-2 flex items-center gap-2 rounded border bg-white px-3 py-1.5 text-sm sm:w-80">
-        <FontAwesomeIcon icon={faMagnifyingGlass} className="text-slate-400" />
+      <div className="mb-2 flex items-center gap-2 rounded border bg-surface px-3 py-1.5 text-sm sm:w-80">
+        <FontAwesomeIcon icon={faMagnifyingGlass} className="text-muted" />
         <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="제목·내용·작성자 검색" className="w-full outline-none" />
       </div>
-      <div className="overflow-hidden rounded-lg border border-slate-200 bg-white text-sm">
+      <div className="overflow-hidden rounded-lg bg-surface shadow-card text-sm">
         <table className="w-full">
-          <thead className="bg-slate-50 text-xs text-slate-500"><tr><th className="w-14 py-2">번호</th><th className="text-left">제목</th><th className="hidden w-28 sm:table-cell">작성자</th><th className="w-24">작성일</th></tr></thead>
+          <thead className="bg-surface-2 text-xs text-label"><tr><th className="w-14 py-2">번호</th><th className="text-left">제목</th><th className="hidden w-28 sm:table-cell">작성자</th><th className="w-24">작성일</th></tr></thead>
           <tbody>
-            {list.length === 0 && <tr><td colSpan={4} className="py-8 text-center text-slate-400">{q ? "검색 결과가 없어요" : "아직 글이 없어요. 첫 기록을 남겨보세요."}</td></tr>}
+            {list.length === 0 && <tr><td colSpan={4} className="py-8 text-center text-muted">{q ? "검색 결과가 없어요" : "아직 글이 없어요. 첫 기록을 남겨보세요."}</td></tr>}
             {list.map((p) => (
-              <tr key={p.id} onClick={() => { setOpen(p.id); setForm(null); }} className={`cursor-pointer border-t hover:bg-slate-50 ${open === p.id ? "bg-blue-50" : ""}`}>
-                <td className="py-2 text-center text-slate-400">{p.pinned ? <FontAwesomeIcon icon={faThumbtack} className="text-red-500" /> : posts.length - posts.findIndex((x) => x.id === p.id)}</td>
+              <tr key={p.id} onClick={() => { setOpen(p.id); setForm(null); }} className={`cursor-pointer border-t hover:bg-surface-2 ${open === p.id ? "bg-primary-subtle" : ""}`}>
+                <td className="py-2 text-center text-muted">{p.pinned ? <FontAwesomeIcon icon={faThumbtack} className="text-red-500" /> : posts.length - posts.findIndex((x) => x.id === p.id)}</td>
                 <td>{p.title}</td>
-                <td className="hidden text-center text-slate-500 sm:table-cell">{p.author}</td>
-                <td className="text-center text-slate-500">{day(p.createdAt).slice(2)}</td>
+                <td className="hidden text-center text-label sm:table-cell">{p.author}</td>
+                <td className="text-center text-label">{day(p.createdAt).slice(2)}</td>
               </tr>
             ))}
           </tbody>

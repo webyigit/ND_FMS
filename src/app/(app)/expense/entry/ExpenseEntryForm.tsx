@@ -69,11 +69,11 @@ export default function ExpenseEntryForm() {
   const input = "w-full rounded border px-1.5 py-1 text-sm";
   return (
     <>
-      <PageHeader actions={<span className="rounded bg-amber-100 px-2 py-1 text-xs text-amber-800">데모 데이터 · 브라우저에만 임시저장</span>} />
+      <PageHeader actions={<span className="rounded bg-warning-subtle px-2 py-1 text-xs text-warning">데모 데이터 · 브라우저에만 임시저장</span>} />
 
-      <div className="mb-4 flex flex-wrap items-end gap-2 rounded-lg border border-slate-200 bg-white p-4 text-sm">
-        <label className="text-xs text-slate-500">주일
-          <input type="date" value={sunday} onChange={(e) => setSunday(e.target.value)} className="mt-1 block rounded border px-2 py-1.5 text-sm text-slate-900" />
+      <div className="mb-4 flex flex-wrap items-end gap-2 rounded-lg bg-surface shadow-card p-4 text-sm">
+        <label className="text-xs text-label">주일
+          <input type="date" value={sunday} onChange={(e) => setSunday(e.target.value)} className="mt-1 block rounded border px-2 py-1.5 text-sm text-heading" />
         </label>
         <button onClick={loadFixed} className="rounded border px-3 py-1.5">고정지출 불러오기</button>
         <label className="cursor-pointer rounded border px-3 py-1.5">은행 엑셀 업로드
@@ -82,41 +82,41 @@ export default function ExpenseEntryForm() {
         <a href="/expense/upload" className="rounded border px-3 py-1.5">증빙·엑셀 올리기</a>
         <button onClick={() => setRows((xs) => [...xs, blank()])} className="rounded border px-3 py-1.5">행 추가</button>
         <a href="/expense/history" target="_blank" className="rounded border px-3 py-1.5">과거 지출내역</a>
-        <button onClick={downloadTransfer} disabled={!rows.length} className="ml-auto rounded bg-blue-600 px-4 py-1.5 text-white disabled:bg-slate-300">송금용 파일 다운로드</button>
+        <button onClick={downloadTransfer} disabled={!rows.length} className="ml-auto rounded bg-primary px-4 py-1.5 text-white disabled:bg-slate-300">송금용 파일 다운로드</button>
       </div>
-      {msg && <div className="mb-3 rounded bg-emerald-50 px-3 py-2 text-sm text-emerald-700">{msg}</div>}
+      {msg && <div className="mb-3 rounded bg-success-subtle px-3 py-2 text-sm text-success">{msg}</div>}
 
       {bankTx.length > 0 && (
-        <div className="mb-4 rounded-lg border border-blue-200 bg-white p-3 text-sm">
+        <div className="mb-4 rounded-lg border border-primary bg-surface p-3 text-sm">
           <div className="mb-2 flex justify-between"><b>은행 출금 내역에서 고르기</b>
-            <button onClick={addBank} disabled={!pick.size} className="rounded bg-blue-600 px-3 py-1 text-white disabled:bg-slate-300">선택 {pick.size}건 넣기</button></div>
+            <button onClick={addBank} disabled={!pick.size} className="rounded bg-primary px-3 py-1 text-white disabled:bg-slate-300">선택 {pick.size}건 넣기</button></div>
           {bankTx.map((t) => (
             <label key={t.key} className="flex gap-3 border-t py-1">
               <input type="checkbox" checked={pick.has(t.key)} onChange={() => setPick((s) => { const n = new Set(s); if (n.has(t.key)) n.delete(t.key); else n.add(t.key); return n; })} />
               <span className="w-36">{t.txAt.slice(0, 16).replace("T", " ")}</span><span className="w-28 text-right">{won(t.withdraw)}</span>
-              <span>{t.description}</span><span className="text-slate-400">{t.transferMemo}</span>
+              <span>{t.description}</span><span className="text-muted">{t.transferMemo}</span>
             </label>
           ))}
         </div>
       )}
 
       <datalist id="members">{MEMBERS.map((m) => <option key={m.id} value={m.name} />)}</datalist>
-      <div className="overflow-x-auto rounded-lg border border-slate-200 bg-white">
+      <div className="overflow-x-auto rounded-lg bg-surface shadow-card">
         <table className="w-full text-sm">
-          <thead className="bg-slate-50 text-xs text-slate-500">
+          <thead className="bg-surface-2 text-xs text-label">
             <tr><th className="w-10 py-2">#</th><th className="text-left">내용</th><th className="w-32 text-right">금액</th><th className="w-36">부서</th><th className="w-44">항목</th><th className="w-32">청구자</th><th className="text-left">비고</th><th className="w-16">출처</th><th className="w-12" /></tr>
           </thead>
           <tbody>
             {rows.map((r, i) => (
               <tr key={r.id} className="border-t">
-                <td className="text-center text-slate-400">{i + 1}</td>
+                <td className="text-center text-muted">{i + 1}</td>
                 <td className="px-1 py-1"><input className={input} value={r.content} onChange={(e) => set(r.id, { content: e.target.value })} /></td>
                 <td className="px-1"><input className={`${input} text-right`} inputMode="numeric" value={r.amount ? won(r.amount) : ""} onChange={(e) => set(r.id, { amount: Number(e.target.value.replace(/\D/g, "")) })} /></td>
                 <td className="px-1"><select className={input} value={r.dept} onChange={(e) => set(r.id, { dept: e.target.value, item: "" })}><option value="">선택</option>{Object.keys(DEPARTMENTS).map((d) => <option key={d}>{d}</option>)}</select></td>
                 <td className="px-1"><select className={input} value={r.item} onChange={(e) => set(r.id, { item: e.target.value })}><option value="">선택</option>{(DEPARTMENTS[r.dept] ?? []).map((d) => <option key={d}>{d}</option>)}</select></td>
                 <td className="px-1"><input className={input} list="members" value={r.requester} onChange={(e) => set(r.id, { requester: e.target.value })} /></td>
                 <td className="px-1"><input className={input} value={r.memo} onChange={(e) => set(r.id, { memo: e.target.value })} /></td>
-                <td className="text-center text-xs text-slate-400">{r.fileId ? <a href={`/api/receipts/${r.fileId}`} className="text-blue-600" title="드라이브에 저장된 증빙 내려받기"><FontAwesomeIcon icon={faPaperclip} /> {r.source}</a> : r.source}</td>
+                <td className="text-center text-xs text-muted">{r.fileId ? <a href={`/api/receipts/${r.fileId}`} className="text-primary" title="드라이브에 저장된 증빙 내려받기"><FontAwesomeIcon icon={faPaperclip} /> {r.source}</a> : r.source}</td>
                 <td className="text-center"><button onClick={() => setRows((xs) => xs.filter((x) => x.id !== r.id))} className="text-xs text-red-500">삭제</button></td>
               </tr>
             ))}
@@ -125,8 +125,8 @@ export default function ExpenseEntryForm() {
       </div>
 
       <div className="mt-4 flex flex-wrap gap-4 text-sm">
-        <div className="rounded-lg border border-slate-200 bg-white px-4 py-3">금주 지출 합계 <b>{won(total)}원</b> · {rows.length}건</div>
-        {byDept.map(([d, n]) => <div key={d} className="rounded-lg border border-slate-200 bg-white px-4 py-3">{d} {won(n)}</div>)}
+        <div className="rounded-lg bg-surface shadow-card px-4 py-3">금주 지출 합계 <b>{won(total)}원</b> · {rows.length}건</div>
+        {byDept.map(([d, n]) => <div key={d} className="rounded-lg bg-surface shadow-card px-4 py-3">{d} {won(n)}</div>)}
       </div>
     </>
   );

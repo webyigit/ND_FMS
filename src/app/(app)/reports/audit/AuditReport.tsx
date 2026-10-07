@@ -8,8 +8,8 @@ import { auditPeriods, expenseTable, incomeTable, missionSummary, monthly, pct, 
 import { localDate } from "@/lib/todo";
 
 const won = (n: number) => (n ? n.toLocaleString("ko-KR") : "-");
-const th = "border border-slate-300 bg-slate-100 px-2 py-1.5 text-center font-semibold";
-const td = "border border-slate-300 px-2 py-1";
+const th = "border border-line bg-surface-2 px-2 py-1.5 text-center font-semibold";
+const td = "border border-line px-2 py-1";
 const MISSION_CARRY = 5000000; // 전년 이월(가상)
 const H1_MONTHS = [1, 2, 3, 4, 5, 6], ALL_MONTHS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
 
@@ -70,38 +70,38 @@ export default function AuditReport() {
   return (
     <>
       <PageHeader actions={<>
-        <span className="rounded bg-amber-100 px-2 py-1 text-xs text-amber-800">가상 데이터</span>
+        <span className="rounded bg-warning-subtle px-2 py-1 text-xs text-warning">가상 데이터</span>
         <button onClick={downloadExcel} className="no-print rounded border px-3 py-1 text-sm">엑셀 저장</button>
-        <button onClick={() => window.print()} className="no-print rounded bg-blue-600 px-3 py-1 text-sm text-white">출력·PDF</button>
+        <button onClick={() => window.print()} className="no-print rounded bg-primary px-3 py-1 text-sm text-white">출력·PDF</button>
       </>} />
-      <div className="no-print mb-4 flex flex-wrap items-center gap-3 rounded-lg border border-slate-200 bg-white p-3 text-sm">
+      <div className="no-print mb-4 flex flex-wrap items-center gap-3 rounded-lg bg-surface shadow-card p-3 text-sm">
         <select value={year} onChange={(e) => setYear(Number(e.target.value))} className="rounded border px-2 py-1.5">
           {[0, 1, 2].map((d) => <option key={d} value={Number(today.slice(0, 4)) - d}>{Number(today.slice(0, 4)) - d}년</option>)}
         </select>
         <div className="flex overflow-hidden rounded border">
-          {(["H1", "H2"] as const).map((h) => <button key={h} onClick={() => setHalf(h)} className={`px-3 py-1.5 ${half === h ? "bg-slate-800 text-white" : ""}`}>{h === "H1" ? "상반기 (1~6월)" : "하반기 (7~12월 + 연간)"}</button>)}
+          {(["H1", "H2"] as const).map((h) => <button key={h} onClick={() => setHalf(h)} className={`px-3 py-1.5 ${half === h ? "bg-primary text-white" : ""}`}>{h === "H1" ? "상반기 (1~6월)" : "하반기 (7~12월 + 연간)"}</button>)}
         </div>
         {partial && <span className="text-xs text-amber-700">기간이 끝나지 않아 오늘({today})까지 집계했어요</span>}
       </div>
 
-      <div className="space-y-6 rounded-lg border border-slate-200 bg-white p-6 text-sm print:border-0 print:p-0">
+      <div className="space-y-6 rounded-lg bg-surface shadow-card p-6 text-sm print:border-0 print:p-0">
         <div>
           <h2 className="text-center text-lg font-bold">{title}</h2>
-          <div className="text-right text-slate-500">작성일 {today}</div>
+          <div className="text-right text-label">작성일 {today}</div>
         </div>
 
         <section>
           <h3 className="mb-2 font-semibold">1. 수지 요약</h3>
           <div className={`grid gap-3 ${periods.length > 1 ? "sm:grid-cols-2" : ""}`}>
             {periods.map((p, i) => (
-              <div key={p.key} className="rounded-lg border border-slate-200 p-4">
-                <div className="mb-2 text-xs font-semibold text-slate-500">{p.label}</div>
+              <div key={p.key} className="rounded-lg border border-line p-4">
+                <div className="mb-2 text-xs font-semibold text-label">{p.label}</div>
                 <dl className="grid grid-cols-3 gap-2 text-center">
-                  <div><dt className="text-xs text-slate-500">수입</dt><dd className="font-bold text-[#17a08c]">{won(inc.general.amounts[i])}</dd></div>
-                  <div><dt className="text-xs text-slate-500">지출</dt><dd className="font-bold text-[#e5464f]">{won(exp.total.amounts[i])}</dd></div>
-                  <div><dt className="text-xs text-slate-500">수지차</dt><dd className={`font-bold ${net[i] < 0 ? "text-red-600" : ""}`}>{net[i].toLocaleString("ko-KR")}</dd></div>
+                  <div><dt className="text-xs text-label">수입</dt><dd className="font-bold text-chart-in">{won(inc.general.amounts[i])}</dd></div>
+                  <div><dt className="text-xs text-label">지출</dt><dd className="font-bold text-chart-out">{won(exp.total.amounts[i])}</dd></div>
+                  <div><dt className="text-xs text-label">수지차</dt><dd className={`font-bold ${net[i] < 0 ? "text-red-600" : ""}`}>{net[i].toLocaleString("ko-KR")}</dd></div>
                 </dl>
-                <div className="mt-2 text-center text-xs text-slate-500">수입 예산 대비 {pct(inc.general.amounts[i], inc.general.budget)} · 지출 집행률 {pct(exp.total.amounts[i], exp.total.budget)}</div>
+                <div className="mt-2 text-center text-xs text-label">수입 예산 대비 {pct(inc.general.amounts[i], inc.general.budget)} · 지출 집행률 {pct(exp.total.amounts[i], exp.total.budget)}</div>
               </div>
             ))}
           </div>
@@ -118,10 +118,10 @@ export default function AuditReport() {
             <table className="w-full min-w-[640px] border-collapse">
               <thead><tr><th className={th} rowSpan={2}>헌금구분</th><th className={th} rowSpan={2}>연예산</th>{pHead}</tr><tr>{pSub}</tr></thead>
               <tbody>
-                {inc.rows.filter((r) => r.fund !== "별도").map((r) => <tr key={r.type}><td className={td}>{r.type}{r.fund === "특별" && <span className="ml-1 text-xs text-slate-400">특별</span>}</td><td className={`${td} text-right`}>{won(r.budget)}</td>{pCells(r.amounts, r.budget)}</tr>)}
-                <tr className="bg-blue-50 font-bold"><td className={td}>{inc.general.type}</td><td className={`${td} text-right`}>{won(inc.general.budget)}</td>{pCells(inc.general.amounts, inc.general.budget)}</tr>
-                {inc.rows.filter((r) => r.fund === "별도").map((r) => <tr key={r.type}><td className={td}>{r.type}<span className="ml-1 text-xs text-slate-400">별도</span></td><td className={`${td} text-right`}>{won(r.budget)}</td>{pCells(r.amounts, r.budget)}</tr>)}
-                <tr className="bg-slate-50 font-semibold"><td className={td}>{inc.separate.type}</td><td className={`${td} text-right`}>{won(inc.separate.budget)}</td>{pCells(inc.separate.amounts, inc.separate.budget)}</tr>
+                {inc.rows.filter((r) => r.fund !== "별도").map((r) => <tr key={r.type}><td className={td}>{r.type}{r.fund === "특별" && <span className="ml-1 text-xs text-muted">특별</span>}</td><td className={`${td} text-right`}>{won(r.budget)}</td>{pCells(r.amounts, r.budget)}</tr>)}
+                <tr className="bg-primary-subtle font-bold"><td className={td}>{inc.general.type}</td><td className={`${td} text-right`}>{won(inc.general.budget)}</td>{pCells(inc.general.amounts, inc.general.budget)}</tr>
+                {inc.rows.filter((r) => r.fund === "별도").map((r) => <tr key={r.type}><td className={td}>{r.type}<span className="ml-1 text-xs text-muted">별도</span></td><td className={`${td} text-right`}>{won(r.budget)}</td>{pCells(r.amounts, r.budget)}</tr>)}
+                <tr className="bg-surface-2 font-semibold"><td className={td}>{inc.separate.type}</td><td className={`${td} text-right`}>{won(inc.separate.budget)}</td>{pCells(inc.separate.amounts, inc.separate.budget)}</tr>
               </tbody>
             </table>
           </div>
@@ -134,12 +134,12 @@ export default function AuditReport() {
               <thead><tr><th className={th} rowSpan={2}>부서</th><th className={th} rowSpan={2}>연예산</th>{pHead}<th className={th} rowSpan={2}>잔액</th></tr><tr>{pSub}</tr></thead>
               <tbody>
                 {exp.rows.map((r) => <tr key={r.dept}><td className={td}>{r.dept}</td><td className={`${td} text-right`}>{won(r.budget)}</td>{pCells(r.amounts, r.budget)}<td className={`${td} text-right`}>{won(r.budget - r.amounts[r.amounts.length - 1])}</td></tr>)}
-                <tr className="bg-blue-50 font-bold"><td className={td}>합 계</td><td className={`${td} text-right`}>{won(exp.total.budget)}</td>{pCells(exp.total.amounts, exp.total.budget)}<td className={`${td} text-right`}>{won(exp.total.budget - exp.total.amounts[exp.total.amounts.length - 1])}</td></tr>
+                <tr className="bg-primary-subtle font-bold"><td className={td}>합 계</td><td className={`${td} text-right`}>{won(exp.total.budget)}</td>{pCells(exp.total.amounts, exp.total.budget)}<td className={`${td} text-right`}>{won(exp.total.budget - exp.total.amounts[exp.total.amounts.length - 1])}</td></tr>
               </tbody>
             </table>
           </div>
-          {half === "H1" && <p className="mt-1 text-xs text-slate-500">잔액 = 연예산 − 상반기 지출</p>}
-          {half === "H2" && <p className="mt-1 text-xs text-slate-500">잔액 = 연예산 − 연간 지출</p>}
+          {half === "H1" && <p className="mt-1 text-xs text-label">잔액 = 연예산 − 상반기 지출</p>}
+          {half === "H2" && <p className="mt-1 text-xs text-label">잔액 = 연예산 − 연간 지출</p>}
         </section>
 
         <section>
@@ -152,11 +152,11 @@ export default function AuditReport() {
 
         <section className="break-inside-avoid">
           <h3 className="mb-2 font-semibold">6. 감사 의견</h3>
-          <div className="h-28 rounded border border-dashed border-slate-300 p-3 text-slate-400 print:border-slate-400">감사위원 의견 기재란 [확인 필요: 양식]</div>
-          <div className="mt-1 text-right text-xs text-slate-400">결재·서명란 직함 [확인 필요]</div>
+          <div className="h-28 rounded border border-dashed border-line p-3 text-muted print:border-slate-400">감사위원 의견 기재란 [확인 필요: 양식]</div>
+          <div className="mt-1 text-right text-xs text-muted">결재·서명란 직함 [확인 필요]</div>
           <table className="mt-1 ml-auto border-collapse text-center">
-            <tbody><tr>{["서명", "서명", "서명"].map((r, i) => <td key={i} className="border border-slate-300 px-6 py-1 text-xs text-slate-500">{r}</td>)}</tr>
-              <tr>{[0, 1, 2].map((i) => <td key={i} className="h-14 border border-slate-300 px-6" />)}</tr></tbody>
+            <tbody><tr>{["서명", "서명", "서명"].map((r, i) => <td key={i} className="border border-line px-6 py-1 text-xs text-label">{r}</td>)}</tr>
+              <tr>{[0, 1, 2].map((i) => <td key={i} className="h-14 border border-line px-6" />)}</tr></tbody>
           </table>
         </section>
       </div>

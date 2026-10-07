@@ -59,28 +59,28 @@ export default function BankImport() {
 
   return (
     <>
-      <PageHeader actions={<span className="rounded bg-amber-100 px-2 py-1 text-xs text-amber-800">데모 · 업로드 파일은 서버로 보내지 않고 브라우저에서만 읽어요</span>} />
-      <div className="mb-4 flex flex-wrap items-end gap-3 rounded-lg border border-slate-200 bg-white p-4 text-sm">
-        <label className="text-xs text-slate-500">은행
-          <select value={bank} onChange={(e) => setBank(e.target.value)} className="mt-1 block rounded border px-2 py-1.5 text-sm text-slate-900">
+      <PageHeader actions={<span className="rounded bg-warning-subtle px-2 py-1 text-xs text-warning">데모 · 업로드 파일은 서버로 보내지 않고 브라우저에서만 읽어요</span>} />
+      <div className="mb-4 flex flex-wrap items-end gap-3 rounded-lg bg-surface shadow-card p-4 text-sm">
+        <label className="text-xs text-label">은행
+          <select value={bank} onChange={(e) => setBank(e.target.value)} className="mt-1 block rounded border px-2 py-1.5 text-sm text-heading">
             {BANKS.map((b) => <option key={b}>{b}</option>)}
           </select>
         </label>
-        <label className="text-xs text-slate-500">거래내역 엑셀(.xlsx)
-          <input type="file" accept=".xlsx" onChange={(e) => e.target.files?.[0] && onFile(e.target.files[0])} className="mt-1 block text-sm text-slate-900" />
+        <label className="text-xs text-label">거래내역 엑셀(.xlsx)
+          <input type="file" accept=".xlsx" onChange={(e) => e.target.files?.[0] && onFile(e.target.files[0])} className="mt-1 block text-sm text-heading" />
         </label>
         <label className="flex items-center gap-1"><input type="checkbox" checked={depositOnly} onChange={(e) => setDepositOnly(e.target.checked)} /> 입금만 보기</label>
-        <button onClick={save} disabled={!selected.size} className="ml-auto rounded bg-blue-600 px-4 py-1.5 text-white disabled:bg-slate-300">
+        <button onClick={save} disabled={!selected.size} className="ml-auto rounded bg-primary px-4 py-1.5 text-white disabled:bg-slate-300">
           선택 {selected.size}건 금주 수입에 저장
         </button>
       </div>
-      {error && <div className="mb-3 rounded bg-red-50 px-3 py-2 text-sm text-red-700">{error}</div>}
-      {msg && <div className="mb-3 rounded bg-emerald-50 px-3 py-2 text-sm text-emerald-700">{msg}</div>}
+      {error && <div className="mb-3 rounded bg-danger-subtle px-3 py-2 text-sm text-danger">{error}</div>}
+      {msg && <div className="mb-3 rounded bg-success-subtle px-3 py-2 text-sm text-success">{msg}</div>}
 
       {view.length > 0 && (
-        <div className="overflow-x-auto rounded-lg border border-slate-200 bg-white">
+        <div className="overflow-x-auto rounded-lg bg-surface shadow-card">
           <table className="w-full text-sm">
-            <thead className="bg-slate-50 text-xs text-slate-500">
+            <thead className="bg-surface-2 text-xs text-label">
               <tr>
                 <th className="w-8 px-2 py-2"><input type="checkbox" checked={view.every((r) => selected.has(r.key))}
                   onChange={(e) => setSelected(e.target.checked ? new Set(view.filter((r) => r.deposit > 0).map((r) => r.key)) : new Set())} /></th>

@@ -35,10 +35,10 @@ export default function ClergyPay() {
   return (
     <>
       <PageHeader actions={<>
-        <span className="rounded bg-amber-100 px-2 py-1 text-xs text-amber-800">가상 데이터</span>
+        <span className="rounded bg-warning-subtle px-2 py-1 text-xs text-warning">가상 데이터</span>
         <button onClick={() => window.print()} className="no-print rounded border px-3 py-1 text-sm">출력</button>
       </>} />
-      <div className="no-print mb-4 flex flex-wrap items-end gap-2 rounded-lg border border-slate-200 bg-white p-4 text-sm">
+      <div className="no-print mb-4 flex flex-wrap items-end gap-2 rounded-lg bg-surface shadow-card p-4 text-sm">
         <select value={year} onChange={(e) => setYear(Number(e.target.value))} className={sel}>{YEARS.map((y) => <option key={y} value={y}>{y}년</option>)}</select>
         <select value={month} onChange={(e) => setMonth(Number(e.target.value))} className={sel}>
           <option value={0}>전체 월</option>{Array.from({ length: 12 }, (_, i) => <option key={i} value={i + 1}>{i + 1}월</option>)}
@@ -46,27 +46,27 @@ export default function ClergyPay() {
         <input value={name} onChange={(e) => setName(e.target.value)} placeholder="이름" className={sel} />
         <div className="ml-auto flex overflow-hidden rounded border">
           {(["month", "detail"] as const).map((v) => (
-            <button key={v} onClick={() => setView(v)} className={`px-3 py-1.5 ${view === v ? "bg-slate-800 text-white" : ""}`}>{v === "month" ? "월별 합계" : "지급 상세"}</button>
+            <button key={v} onClick={() => setView(v)} className={`px-3 py-1.5 ${view === v ? "bg-primary text-white" : ""}`}>{v === "month" ? "월별 합계" : "지급 상세"}</button>
           ))}
         </div>
       </div>
       <div className="mb-2 text-sm text-slate-600">{year}년 {month ? `${month}월` : "전체"} · {people.length}명 · 합계 <b>{won(total)}원</b></div>
 
-      <div className="overflow-x-auto rounded-lg border border-slate-200 bg-white">
+      <div className="overflow-x-auto rounded-lg bg-surface shadow-card">
         {view === "month" ? (
           <table className="w-full whitespace-nowrap text-sm">
-            <thead className="bg-slate-50 text-xs text-slate-500">
+            <thead className="bg-surface-2 text-xs text-label">
               <tr><th className="px-3 py-2 text-left">직분</th><th className="px-3 text-left">이름</th>{months.map((m) => <th key={m} className="px-3 text-right">{m}월</th>)}<th className="px-3 text-right">합계</th></tr>
             </thead>
             <tbody>
               {people.map((p) => (
                 <tr key={p.name} className="border-t">
-                  <td className="px-3 py-1.5 text-slate-500">{p.title}</td><td className="px-3">{p.name}</td>
+                  <td className="px-3 py-1.5 text-label">{p.title}</td><td className="px-3">{p.name}</td>
                   {months.map((m) => <td key={m} className="px-3 text-right">{p.byMonth[m] ? won(p.byMonth[m]) : "-"}</td>)}
                   <td className="px-3 text-right font-semibold">{won(p.byMonth.reduce((a, b) => a + b, 0))}</td>
                 </tr>
               ))}
-              <tr className="border-t bg-slate-50 font-semibold">
+              <tr className="border-t bg-surface-2 font-semibold">
                 <td className="px-3 py-1.5" colSpan={2}>합계</td>
                 {months.map((m) => <td key={m} className="px-3 text-right">{won(colTotal(m))}</td>)}
                 <td className="px-3 text-right">{won(total)}</td>
@@ -75,13 +75,13 @@ export default function ClergyPay() {
           </table>
         ) : (
           <table className="w-full text-sm">
-            <thead className="bg-slate-50 text-xs text-slate-500">
+            <thead className="bg-surface-2 text-xs text-label">
               <tr><th className="px-3 py-2 text-left">지급일</th><th className="px-3 text-left">직분</th><th className="px-3 text-left">이름</th><th className="px-3 text-left">항목</th><th className="px-3 text-right">금액</th></tr>
             </thead>
             <tbody>
               {rows.map((r, i) => (
                 <tr key={i} className="border-t">
-                  <td className="px-3 py-1.5">{r.paidAt}</td><td className="px-3 text-slate-500">{r.title}</td><td className="px-3">{r.name}</td><td className="px-3">{r.item}</td><td className="px-3 text-right">{won(r.amount)}</td>
+                  <td className="px-3 py-1.5">{r.paidAt}</td><td className="px-3 text-label">{r.title}</td><td className="px-3">{r.name}</td><td className="px-3">{r.item}</td><td className="px-3 text-right">{won(r.amount)}</td>
                 </tr>
               ))}
             </tbody>
