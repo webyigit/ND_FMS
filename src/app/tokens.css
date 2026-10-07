@@ -1,0 +1,116 @@
+/* NDFMS2 디자인 토큰 v1 (2026-10-07) — 원본: docs/design/tokens_261007_v1.css (수정은 원본과 함께)
+   출처: Rizz 공개 데모 CSS 값 추출. 원본 파일 복제 아님. 가이드: docs/디자인가이드_261007_v1.md */
+
+:root {
+  --c-primary: #22c55e;
+  --c-secondary: #95a0c5;
+  --c-success: #22c5ad;
+  --c-info: #41cbd8;
+  --c-warning: #ff9f43;
+  --c-danger: #ef4d56;
+  --c-purple: #7367f0;
+  --c-pink: #fd3c97;
+
+  --c-primary-subtle: rgba(34, 197, 94, .1);
+  --c-secondary-subtle: rgba(149, 160, 197, .1);
+  --c-success-subtle: rgba(34, 197, 173, .1);
+  --c-info-subtle: rgba(65, 203, 216, .1);
+  --c-warning-subtle: rgba(255, 159, 67, .1);
+  --c-danger-subtle: rgba(239, 77, 86, .1);
+  --c-purple-subtle: rgba(115, 103, 240, .1);
+
+  /* 차트 전용 (검증 통과, 라이트·다크 공통) */
+  --chart-in: #17a08c;
+  --chart-out: #e5464f;
+  --chart-1: #1ea951;
+  --chart-2: #1b98b5;
+  --chart-3: #7f74f2;
+  --chart-4: #cf721a;
+  --chart-5: #e8358a;
+
+  --c-bg: #f7f9fb;
+  --c-surface: #ffffff;
+  --c-surface-2: #f4f6f9;
+  --c-text: #2b2d3b;
+  --c-muted: #96a0b5;
+  --c-heading: #061237;
+  --c-label: #717fa7;
+  --c-border: #e2e7f1;
+
+  --c-sidebar-bg: var(--c-surface);
+  --c-menu-link: var(--c-heading);
+  --c-menu-icon: var(--c-muted);
+
+  --font-base: var(--font-pretendard, "Pretendard Variable"), Pretendard, -apple-system, BlinkMacSystemFont, system-ui, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+  --fs-base: .812rem;   /* 13px */
+  --fs-sm: .75rem;      /* 12px */
+  --fs-xs: .6875rem;    /* 11px */
+  --fs-card-title: 1rem;
+  --fs-page-title: 1.125rem;
+  --fs-kpi: 1.5rem;
+
+  --r: .4rem;
+  --r-sm: .25rem;
+  --r-lg: .5rem;
+  --r-menu: 10px;
+  --sh-card: 0 3px 16px rgba(142, 134, 171, .05);
+
+  --sidebar-w: 270px;
+  --sidebar-w-collapsed: 70px;
+  --topbar-h: 72px;
+  --gap: 1.5rem;
+}
+
+:root[data-theme="dark"] {
+  --c-bg: #0f1411;
+  --c-surface: #202221;
+  --c-surface-2: #25282d;
+  --c-text: #d9e1ec;
+  --c-muted: #8a93a8;
+  --c-heading: #e9eef5;
+  --c-border: #333547;
+  --c-menu-link: #a1a8bd;
+  --c-menu-icon: #4d6089;
+  --sh-card: 0 3px 16px rgba(0, 0, 0, .25);
+  color-scheme: dark;
+}
+
+/* 사이드바만 어둡게 (라이트 본문 + 다크 사이드바) */
+:root[data-sidebar="dark"] {
+  --c-sidebar-bg: #202221;
+  --c-menu-link: #a1a8bd;
+  --c-menu-icon: #4d6089;
+}
+
+/* Tailwind v4: globals.css 에서 `@import "tailwindcss";` 다음에 이 파일을 import 하면 유틸리티가 생긴다.
+   예) bg-primary, bg-primary-subtle, text-muted, text-heading, border-line, bg-surface, shadow-card, rounded-base, rounded-menu */
+@theme inline {
+  --color-primary: var(--c-primary);
+  --color-secondary: var(--c-secondary);
+  --color-success: var(--c-success);
+  --color-info: var(--c-info);
+  --color-warning: var(--c-warning);
+  --color-danger: var(--c-danger);
+  --color-purple: var(--c-purple);
+  --color-pink: var(--c-pink);
+  --color-primary-subtle: var(--c-primary-subtle);
+  --color-success-subtle: var(--c-success-subtle);
+  --color-info-subtle: var(--c-info-subtle);
+  --color-warning-subtle: var(--c-warning-subtle);
+  --color-danger-subtle: var(--c-danger-subtle);
+  --color-purple-subtle: var(--c-purple-subtle);
+  --color-chart-in: var(--chart-in);
+  --color-chart-out: var(--chart-out);
+  --color-bg: var(--c-bg);
+  --color-surface: var(--c-surface);
+  --color-surface-2: var(--c-surface-2);
+  --color-text: var(--c-text);
+  --color-muted: var(--c-muted);
+  --color-heading: var(--c-heading);
+  --color-label: var(--c-label);
+  --color-line: var(--c-border);
+  --font-sans: var(--font-base);
+  --radius-base: var(--r);
+  --radius-menu: var(--r-menu);
+  --shadow-card: var(--sh-card);
+}

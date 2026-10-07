@@ -1,0 +1,63 @@
+erDiagram
+  app_user ||--o{ social_identity : "소셜로그인"
+  household ||--o{ member : "가족"
+  member ||--o{ member_alias : "적요 별칭"
+  member ||--o{ officer_roster : "재직"
+  fund ||--o{ offering_type : "기금"
+  offering_type ||--o{ offering_type : "상위구분"
+  week ||--o{ income : "주차"
+  offering_type ||--o{ income : "헌금구분"
+  member |o--o{ income : "헌금자"
+  bank_tx |o--o| income : "은행 인입"
+  app_user {
+    uuid id PK
+    text name
+    enum status "pending/approved/blocked"
+    enum role "admin/treasurer/viewer"
+  }
+  member {
+    bigint id PK
+    text name
+    bigint household_id FK
+    bool is_household_head
+    text title "직분"
+    int display_rank "명단 순서"
+    bytea rrn_enc "주민번호 암호화"
+  }
+  household { bigint id PK
+    text label }
+  member_alias { bigint id PK
+    bigint member_id FK
+    text alias }
+  officer_roster { int year PK
+    bigint member_id PK
+    text position }
+  social_identity { text provider PK
+    text provider_uid PK
+    uuid user_id FK }
+  fund { int id PK
+    text name
+    enum kind "general/special/separate" }
+  offering_type { int id PK
+    int fund_id FK
+    int parent_id FK
+    text name
+    bool total_only
+    int amount_unit }
+  week { int id PK
+    date sunday UK
+    int week_no
+    bool closed }
+  income { bigint id PK
+    int week_id FK
+    int offering_type_id FK
+    bigint member_id FK
+    text payer_label
+    enum channel "cash/online"
+    bigint amount
+    bigint bank_tx_id FK }
+  bank_tx { bigint id PK
+    timestamptz tx_at
+    bigint deposit
+    bigint withdraw
+    text description }

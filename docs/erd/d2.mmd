@@ -1,0 +1,75 @@
+erDiagram
+  bank_account ||--o{ bank_import : "업로드"
+  bank_import ||--o{ bank_tx : "거래"
+  bank_account ||--o{ bank_tx : "계좌"
+  department ||--o{ expense_item : "항목"
+  fund ||--o{ expense_item : "기금"
+  week ||--o{ expense : "주차"
+  expense_item ||--o{ expense : "항목"
+  expense_item |o--o{ expense : "예산 전용"
+  payee |o--o{ expense : "송금처"
+  bank_tx |o--o| expense : "은행 인입"
+  receipt_file |o--o{ expense : "영수증"
+  expense_item ||--o{ fixed_expense : "고정지출"
+  payee |o--o{ fixed_expense : "송금처"
+  week ||--o| reconciliation : "검증시트"
+  week ||--o{ fund_transfer : "회계 대체"
+  fund ||--o{ fund_transfer : "from/to"
+  member |o--o{ payee : "개인 계좌"
+  bank_account { int id PK
+    text bank
+    bytea account_no_enc
+    text kind "일반/대출/외화/적금" }
+  bank_import { bigint id PK
+    text file_name
+    date period_from
+    date period_to }
+  bank_tx { bigint id PK
+    timestamptz tx_at
+    bigint withdraw
+    bigint deposit
+    bigint balance
+    text description "거래기록사항"
+    int suggested_offering_type_id
+    bool linked }
+  department { int id PK
+    text name
+    bigint head_member_id FK }
+  expense_item { int id PK
+    int department_id FK
+    int fund_id FK
+    text name }
+  expense { bigint id PK
+    int week_id FK
+    int expense_item_id FK
+    int budget_source_item_id FK
+    text content
+    bigint amount
+    bigint fee
+    uuid split_group }
+  payee { bigint id PK
+    bigint member_id FK
+    text bank
+    bytea account_no_enc }
+  receipt_file { bigint id PK
+    text storage_path
+    jsonb extracted }
+  fixed_expense { int id PK
+    int week_of_month
+    text content
+    bigint amount }
+  reconciliation { int week_id PK
+    bigint bank_balance "A"
+    bigint pending_deposit "B"
+    bigint mission_unremitted "D"
+    bigint base_surplus "H" }
+  fund_transfer { bigint id PK
+    int from_fund FK
+    int to_fund FK
+    bigint amount }
+  fund { int id PK
+    text name }
+  week { int id PK
+    date sunday }
+  member { bigint id PK
+    text name }

@@ -8,3 +8,13 @@
 ## 보안 원칙
 - 실데이터(교인명단, 헌금내역, 주민번호, 계좌번호), 키·비밀번호는 커밋하지 않는다.
 - 로컬 데이터는 `data/` 에 두며 git에서 제외된다.
+
+## 개발
+```bash
+npm install
+npm run dev     # http://localhost:3000
+npm test        # 핵심 로직 단위 테스트
+```
+- DB 스키마: `supabase/migrations/0001_init.sql`
+- 원본 엑셀 구조: [docs/원본구조분석_261007_v1.md](docs/원본구조분석_261007_v1.md)
+- Supabase 연결 전에는 수입입력 화면이 가상 데이터로 동작한다.
