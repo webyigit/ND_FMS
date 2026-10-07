@@ -41,7 +41,7 @@
   --c-menu-link: var(--c-heading);
   --c-menu-icon: var(--c-muted);
 
-  --font-base: "Be Vietnam Pro", "Pretendard", "Noto Sans KR", system-ui, -apple-system, sans-serif;
+  --font-base: var(--font-pretendard, "Pretendard Variable"), Pretendard, -apple-system, BlinkMacSystemFont, system-ui, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
   --fs-base: .812rem;   /* 13px */
   --fs-sm: .75rem;      /* 12px */
   --fs-xs: .6875rem;    /* 11px */
