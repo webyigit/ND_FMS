@@ -2,6 +2,7 @@
 <html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>NDFMS2 디자인 미리보기</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/js/all.min.js" defer></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/echarts/5.6.0/echarts.min.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@300;400;500;600&family=Noto+Sans+KR:wght@300;400;500;600&display=swap">
@@ -10,6 +11,9 @@
 :root {
   --c-primary:#22c55e; --c-secondary:#95a0c5; --c-success:#22c5ad; --c-info:#41cbd8;
   --c-warning:#ff9f43; --c-danger:#ef4d56; --c-purple:#7367f0; --c-pink:#fd3c97;
+  /* 차트 전용 색 (색각·명도 검증 통과, 라이트·다크 공통) */
+  --chart-in:#17a08c; --chart-out:#e5464f;
+  --chart-1:#1ea951; --chart-2:#1b98b5; --chart-3:#7f74f2; --chart-4:#cf721a; --chart-5:#e8358a;
   --c-primary-subtle:rgba(34,197,94,.1); --c-success-subtle:rgba(34,197,173,.1);
   --c-info-subtle:rgba(65,203,216,.1); --c-warning-subtle:rgba(255,159,67,.1);
   --c-danger-subtle:rgba(239,77,86,.1); --c-purple-subtle:rgba(115,103,240,.1);
@@ -127,14 +131,13 @@ a { color:var(--c-primary); text-decoration:none; }
 .row { display:flex; flex-wrap:wrap; gap:.5rem; align-items:center; }
 
 /* 차트 */
-.chart { width:100%; height:auto; display:block; }
-.chart text { fill:var(--c-muted); font-size:11px; font-family:var(--font-base); }
-.chart .grid-line { stroke:var(--c-border); stroke-dasharray:3 3; }
-.legend { display:flex; gap:1rem; flex-wrap:wrap; color:var(--c-muted); font-size:.75rem; }
-.legend i { display:inline-block; width:10px; height:10px; border-radius:3px; margin-right:.35rem; vertical-align:-1px; }
+.chart { width:100%; height:280px; }
+.chart-sm { width:150px; height:150px; flex:none; }
+.chart-fail { color:var(--c-muted); font-size:.75rem; padding:1rem 0; }
 .donut-wrap { display:grid; grid-template-columns:150px 1fr; gap:1.25rem; align-items:center; }
 .dlist { display:grid; gap:.6rem; margin:0; padding:0; list-style:none; }
 .dlist li { display:flex; align-items:center; gap:.5rem; }
+.dlist .sw { width:10px; height:10px; border-radius:3px; flex:none; }
 .dlist li b { margin-left:auto; font-weight:500; color:var(--c-heading); }
 
 /* 표 */
@@ -254,17 +257,21 @@ tbody tr:hover td { background:var(--c-surface-2); }
         <div class="card-header"><h2 class="card-title">주간 수입·지출</h2>
           <select class="select" id="range" aria-label="기간"><option>최근 12주</option><option>올해</option></select></div>
         <div class="card-body">
-          <div class="legend"><span><i style="background:var(--c-success)"></i>수입</span><span><i style="background:var(--c-danger)"></i>지출</span></div>
-          <svg class="chart" id="areaChart" viewBox="0 0 640 260" role="img" aria-label="주간 수입 지출 영역 차트"></svg>
+          <div class="chart" id="weeklyChart" role="img" aria-label="최근 12주 주간 수입과 지출 영역 차트"></div>
         </div>
       </div>
 
       <div class="card c4">
         <div class="card-header"><h2 class="card-title">헌금 구분별</h2><span class="badge s-info">10월</span></div>
         <div class="card-body donut-wrap">
-          <svg viewBox="0 0 120 120" width="150" height="150" id="donut" role="img" aria-label="헌금 구분별 비율 도넛 차트"></svg>
+          <div class="chart-sm" id="donutChart" role="img" aria-label="10월 헌금 구분별 비율 도넛 차트"></div>
           <ul class="dlist" id="donutList"></ul>
         </div>
+      </div>
+
+      <div class="card c12">
+        <div class="card-header"><h2 class="card-title">월별 수입·지출 (2026)</h2><span class="badge s-primary">ECharts 막대</span></div>
+        <div class="card-body"><div class="chart" id="monthlyChart" role="img" aria-label="2026년 월별 수입과 지출 막대 차트"></div></div>
       </div>
 
       <div class="card c8">
@@ -320,63 +327,115 @@ tbody tr:hover td { background:var(--c-surface-2); }
 
 <script>
 (function () {
-  var NS = 'http://www.w3.org/2000/svg';
-  function el(tag, attrs, parent) { var e = document.createElementNS(NS, tag); for (var k in attrs) e.setAttribute(k, attrs[k]); if (parent) parent.appendChild(e); return e; }
+
+  // ECharts 공통 테마: 색·글꼴은 CSS 토큰에서 읽는다 (가이드 6장 차트 규칙)
+  function tok(n) { return getComputedStyle(document.documentElement).getPropertyValue(n).trim(); }
+  function won(v) { return v.toLocaleString('ko-KR') + '만원'; }
+  function base() {
+    var t = { text: tok('--c-text'), muted: tok('--c-muted'), line: tok('--c-border'), surface: tok('--c-surface'), font: tok('--font-base') };
+    return {
+      t: t,
+      opt: {
+        textStyle: { fontFamily: t.font, color: t.muted, fontSize: 11 },
+        grid: { left: 8, right: 16, top: 40, bottom: 4, containLabel: true },
+        legend: { top: 0, left: 0, icon: 'roundRect', itemWidth: 10, itemHeight: 10, itemGap: 16, textStyle: { color: t.text, fontSize: 12 } },
+        tooltip: { trigger: 'axis', backgroundColor: t.surface, borderColor: t.line, borderWidth: 1, padding: [8, 12],
+          textStyle: { color: t.text, fontSize: 12, fontFamily: t.font }, extraCssText: 'box-shadow:0 6px 20px rgba(0,0,0,.08);border-radius:6px;',
+          valueFormatter: function (v) { return won(v); } },
+        xAxis: { type: 'category', axisLine: { lineStyle: { color: t.line } }, axisTick: { show: false }, axisLabel: { color: t.muted, margin: 10 } },
+        yAxis: { type: 'value', splitLine: { lineStyle: { color: t.line, type: [3, 3] } }, axisLabel: { color: t.muted, formatter: function (v) { return v ? v.toLocaleString('ko-KR') + '만' : '0'; } } }
+      }
+    };
+  }
+  function merge(a, b) { for (var k in b) { if (b[k] && typeof b[k] === 'object' && !Array.isArray(b[k]) && a[k] && typeof a[k] === 'object') merge(a[k], b[k]); else a[k] = b[k]; } return a; }
+  function fade(hex, a) { var n = parseInt(hex.slice(1), 16); return 'rgba(' + (n >> 16) + ',' + (n >> 8 & 255) + ',' + (n & 255) + ',' + a + ')'; }
 
   // 예시 데이터 (만원)
   var weeks = ['7.20','7.27','8.03','8.10','8.17','8.24','8.31','9.07','9.14','9.21','9.28','10.04'];
   var inc = [980,1120,1040,1210,990,1150,1300,1080,1190,1105,1150,1248];
   var out = [640,720,810,690,760,705,880,650,700,690,699,722];
+  var months = ['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월'];
+  var mIn = [4620,4380,4910,5120,4760,4980,5230,4870,5010,1248];
+  var mOut = [3410,3290,3880,3560,3720,4150,3640,3390,3180,722];
+  var offerings = [['십일조',52],['주일헌금',24],['감사헌금',12],['선교헌금',8],['기타',4]];
 
-  function drawArea() {
-    var svg = document.getElementById('areaChart'); svg.innerHTML = '';
-    var W = 640, H = 260, L = 62, R = 24, T = 12, B = 28, max = 1500;
-    var x = function (i) { return L + i * (W - L - R) / (weeks.length - 1); };
-    var y = function (v) { return T + (1 - v / max) * (H - T - B); };
-    var defs = el('defs', {}, svg);
-    [['gIn','--c-success'],['gOut','--c-danger']].forEach(function (g) {
-      var lg = el('linearGradient', { id: g[0], x1: 0, y1: 0, x2: 0, y2: 1 }, defs);
-      el('stop', { offset: '0%', 'stop-color': 'var(' + g[1] + ')', 'stop-opacity': .3 }, lg);
-      el('stop', { offset: '100%', 'stop-color': 'var(' + g[1] + ')', 'stop-opacity': 0 }, lg);
-    });
-    for (var v = 0; v <= max; v += 500) {
-      el('line', { x1: L, x2: W - R, y1: y(v), y2: y(v), class: 'grid-line' }, svg);
-      el('text', { x: L - 8, y: y(v) + 4, 'text-anchor': 'end' }, svg).textContent = v === 0 ? '0' : v.toLocaleString() + '만';
+  var charts = {};
+  function chart(id) {
+    var dom = document.getElementById(id);
+    if (!window.echarts) { dom.innerHTML = '<p class="chart-fail">차트 라이브러리를 불러오지 못했어요. 네트워크를 확인한 뒤 새로고침하세요.</p>'; return null; }
+    if (charts[id]) charts[id].dispose();
+    return (charts[id] = echarts.init(dom, null, { renderer: 'svg' }));
+  }
+
+  function renderCharts() {
+    var b, c, cin = tok('--chart-in'), cout = tok('--chart-out');
+
+    // 1) 주간 수입·지출: 선 + 영역 그라디언트, 마지막 점 강조
+    if ((c = chart('weeklyChart'))) {
+      b = base();
+      var area = function (name, data, color) {
+        return { name: name, type: 'line', data: data, smooth: .35, symbol: 'circle', symbolSize: 8, showSymbol: false,
+          lineStyle: { width: 2, color: color }, itemStyle: { color: color, borderColor: b.t.surface, borderWidth: 2 },
+          areaStyle: { color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [{ offset: 0, color: fade(color, .28) }, { offset: 1, color: fade(color, 0) }]) },
+          emphasis: { focus: 'series' },
+          markPoint: { symbol: 'circle', symbolSize: 9, itemStyle: { color: b.t.surface, borderColor: color, borderWidth: 2 }, label: { show: false },
+            data: [{ coord: [data.length - 1, data[data.length - 1]] }] } };
+      };
+      c.setOption(merge(b.opt, {
+        tooltip: { axisPointer: { type: 'line', lineStyle: { color: b.t.muted, type: [4, 4] } } },
+        xAxis: { data: weeks, boundaryGap: false },
+        series: [area('수입', inc, cin), area('지출', out, cout)]
+      }));
     }
-    weeks.forEach(function (w, i) { if (i % 2 === 1 || i === weeks.length - 1) el('text', { x: x(i), y: H - 8, 'text-anchor': 'middle' }, svg).textContent = w; });
-    [[inc,'gIn','--c-success'],[out,'gOut','--c-danger']].forEach(function (s) {
-      var pts = s[0].map(function (v, i) { return x(i) + ',' + y(v); }).join(' L');
-      el('path', { d: 'M' + x(0) + ',' + y(0) + ' L' + pts + ' L' + x(s[0].length - 1) + ',' + y(0) + 'Z', fill: 'url(#' + s[1] + ')' }, svg);
-      el('path', { d: 'M' + pts, fill: 'none', stroke: 'var(' + s[2] + ')', 'stroke-width': 2, 'stroke-linejoin': 'round' }, svg);
-      var li = s[0].length - 1;
-      el('circle', { cx: x(li), cy: y(s[0][li]), r: 4, fill: 'var(--c-surface)', stroke: 'var(' + s[2] + ')', 'stroke-width': 2 }, svg);
-    });
+
+    // 2) 월별 수입·지출: 묶음 막대, 위쪽 모서리 4px, 막대 사이 2px
+    if ((c = chart('monthlyChart'))) {
+      b = base();
+      var bar = function (name, data, color) {
+        return { name: name, type: 'bar', data: data, barMaxWidth: 16, barGap: '12%', itemStyle: { color: color, borderRadius: [4, 4, 0, 0] },
+          emphasis: { focus: 'series' } };
+      };
+      c.setOption(merge(b.opt, {
+        tooltip: { axisPointer: { type: 'shadow', shadowStyle: { color: fade('#96a0b5', .08) } } },
+        xAxis: { data: months },
+        series: [bar('수입', mIn, cin), bar('지출', mOut, cout)]
+      }));
+    }
+
+    // 3) 헌금 구분별 도넛: 범주 색 고정 순서, 조각 사이 2px 간격
+    if ((c = chart('donutChart'))) {
+      b = base();
+      var pal = ['--chart-1','--chart-2','--chart-3','--chart-4','--chart-5'].map(tok);
+      c.setOption({
+        textStyle: b.opt.textStyle,
+        tooltip: { trigger: 'item', backgroundColor: b.t.surface, borderColor: b.t.line, textStyle: { color: b.t.text, fontSize: 12 },
+          formatter: function (p) { return p.marker + p.name + ' <b>' + p.value + '%</b>'; } },
+        graphic: [{ type: 'text', left: 'center', top: 56, style: { text: '4,820', fill: tok('--c-heading'), font: '600 16px ' + b.t.font } },
+                  { type: 'text', left: 'center', top: 78, style: { text: '만원 (10월)', fill: b.t.muted, font: '10px ' + b.t.font } }],
+        series: [{ type: 'pie', radius: ['68%', '92%'], center: ['50%', '50%'], avoidLabelOverlap: true, label: { show: false },
+          itemStyle: { borderColor: b.t.surface, borderWidth: 2, borderRadius: 3 },
+          emphasis: { scale: true, scaleSize: 4 },
+          data: offerings.map(function (o, i) { return { name: o[0], value: o[1], itemStyle: { color: pal[i] } }; }) }]
+      });
+      var list = document.getElementById('donutList'); list.innerHTML = '';
+      offerings.forEach(function (o, i) {
+        var li = document.createElement('li');
+        li.innerHTML = '<span class="sw" style="background:var(' + ['--chart-1','--chart-2','--chart-3','--chart-4','--chart-5'][i] + ')"></span>' + o[0] + '<b class="num">' + o[1] + '%</b>';
+        list.appendChild(li);
+      });
+    }
   }
 
-  function drawDonut() {
-    var data = [['십일조',52,'--c-primary'],['주일헌금',24,'--c-success'],['감사헌금',12,'--c-info'],['선교헌금',8,'--c-warning'],['기타',4,'--c-purple']];
-    var svg = document.getElementById('donut'), list = document.getElementById('donutList');
-    var r = 46, c = 2 * Math.PI * r, off = 0;
-    el('circle', { cx: 60, cy: 60, r: r, fill: 'none', stroke: 'var(--c-surface-2)', 'stroke-width': 14 }, svg);
-    data.forEach(function (d) {
-      var len = c * d[1] / 100;
-      el('circle', { cx: 60, cy: 60, r: r, fill: 'none', stroke: 'var(' + d[2] + ')', 'stroke-width': 14, 'stroke-dasharray': (len - 1.5) + ' ' + (c - len + 1.5), 'stroke-dashoffset': -off, transform: 'rotate(-90 60 60)' }, svg);
-      off += len;
-      var li = document.createElement('li');
-      li.innerHTML = '<i style="width:10px;height:10px;border-radius:3px;background:var(' + d[2] + ')"></i>' + d[0] + '<b class="num">' + d[1] + '%</b>';
-      list.appendChild(li);
-    });
-    var t = el('text', { x: 60, y: 57, 'text-anchor': 'middle', style: 'fill:var(--c-heading);font-size:15px;font-weight:600' }, svg); t.textContent = '4,820';
-    var t2 = el('text', { x: 60, y: 73, 'text-anchor': 'middle', style: 'fill:var(--c-muted);font-size:9px' }, svg); t2.textContent = '만원 (10월)';
-  }
-
-  drawArea(); drawDonut();
+  renderCharts();
+  window.addEventListener('resize', function () { for (var k in charts) charts[k] && charts[k].resize(); });
 
   document.getElementById('themeToggle').addEventListener('click', function () {
     var root = document.documentElement;
     var dark = root.getAttribute('data-theme') ? root.getAttribute('data-theme') === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches;
     root.setAttribute('data-theme', dark ? 'light' : 'dark');
+    renderCharts();
   });
+  matchMedia('(prefers-color-scheme: dark)').addEventListener('change', renderCharts);
   document.getElementById('navToggle').addEventListener('click', function () { document.body.classList.toggle('nav-open'); });
   document.getElementById('scrim').addEventListener('click', function () { document.body.classList.remove('nav-open'); });
 })();

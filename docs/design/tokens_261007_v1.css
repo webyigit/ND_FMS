@@ -19,6 +19,15 @@
   --c-danger-subtle: rgba(239, 77, 86, .1);
   --c-purple-subtle: rgba(115, 103, 240, .1);
 
+  /* 차트 전용 (검증 통과, 라이트·다크 공통) */
+  --chart-in: #17a08c;
+  --chart-out: #e5464f;
+  --chart-1: #1ea951;
+  --chart-2: #1b98b5;
+  --chart-3: #7f74f2;
+  --chart-4: #cf721a;
+  --chart-5: #e8358a;
+
   --c-bg: #f7f9fb;
   --c-surface: #ffffff;
   --c-surface-2: #f4f6f9;
@@ -90,6 +99,8 @@
   --color-warning-subtle: var(--c-warning-subtle);
   --color-danger-subtle: var(--c-danger-subtle);
   --color-purple-subtle: var(--c-purple-subtle);
+  --color-chart-in: var(--chart-in);
+  --color-chart-out: var(--chart-out);
   --color-bg: var(--c-bg);
   --color-surface: var(--c-surface);
   --color-surface-2: var(--c-surface-2);
