@@ -1,0 +1,19 @@
+# 실데이터·비밀정보
+data/*
+!data/.gitkeep
+.env
+.env.*
+!.env.example
+*.xlsx
+*.xls
+*.csv
+
+# Node / Next.js
+node_modules/
+.next/
+out/
+build/
+dist/
+.vercel/
+*.log
+.DS_Store
