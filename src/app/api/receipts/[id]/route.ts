@@ -1,7 +1,7 @@
 import { downloadReceipt, driveConfigured } from "@/lib/drive";
 
 // 관리자 내려받기 (드라이브 파일을 서버가 대신 받아 전달)
-// TODO(인증): 관리자 세션 확인은 로그인(Supabase) 연결 후 추가 [확인 필요]
+// 인증: DB 연결 시 src/proxy.ts 가 승인된 관리자·재정부만 통과시킨다
 export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   if (!driveConfigured()) return new Response("드라이브 연결 설정이 아직 없어요.", { status: 503 });
   const { id } = await params;

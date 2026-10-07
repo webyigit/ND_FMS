@@ -1,39 +1,93 @@
 "use client";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import PageHeader from "@/components/PageHeader";
-import { MEMBERS, OFFERING_TYPES, currentSunday, type Member } from "@/lib/demo";
+import { currentSunday, type Member } from "@/lib/demo";
 import { sortForList } from "@/lib/offeringOrder";
-
-type Entry = { id: string; typeId: number; channel: "cash" | "online"; memberId: number | null; name: string; amount: number; memo: string };
+import { useRefData, type RefData } from "@/lib/db/refData";
+import { dbError, incomeSig, loadIncome, saveIncome, type IncomeEntry as Entry } from "@/lib/db/weekly";
+import { supabaseBrowser } from "@/lib/supabase/client";
 
 const KEY_TYPE = "ndfms.income.type"; // 헌금구분은 바꾸기 전까지 유지
 const KEY_DRAFT = "ndfms.income.draft"; // 완료 전까지 계속 입력(임시저장)
+const KEY_META = "ndfms.income.draft.meta"; // {sunday, savedSig}: 어느 주일 것이고 DB와 같은지
 const won = (n: number) => n.toLocaleString("ko-KR");
 const load = <T,>(k: string, d: T): T => {
   try { const v = localStorage.getItem(k); return v ? (JSON.parse(v) as T) : d; } catch { return d; }
 };
+type Meta = { sunday: string; savedSig: string | null };
 
 export default function IncomeEntryForm() {
-  const [sunday, setSunday] = useState(currentSunday);
-  const [typeId, setTypeId] = useState(() => load(KEY_TYPE, 1));
+  const { ref, error } = useRefData();
+  if (error) return <><PageHeader /><div className="rounded bg-danger-subtle px-3 py-2 text-sm text-danger">기준정보를 불러오지 못했어요: {error}</div></>;
+  if (!ref) return <><PageHeader /><div className="text-sm text-muted">불러오는 중…</div></>;
+  if (!ref.offeringTypes.length) return <><PageHeader /><div className="rounded bg-warning-subtle px-3 py-2 text-sm text-warning">헌금구분이 없어요. 설정 &gt; 헌금구분을 먼저 채워 주세요(supabase/seed.sql).</div></>;
+  return <Form ref_={ref} />;
+}
+
+function Form({ ref_ }: { ref_: RefData }) {
+  const { offeringTypes: OFFERING_TYPES, members: MEMBERS, demo } = ref_;
+  const sb = supabaseBrowser();
+  const [meta0] = useState(() => load<Meta | null>(KEY_META, null));
+  const [sunday, setSunday] = useState(() => (!demo && meta0?.sunday) || currentSunday());
+  const [typeId, setTypeId] = useState(() => {
+    const t = load(KEY_TYPE, OFFERING_TYPES[0]?.id ?? 1);
+    return OFFERING_TYPES.some((o) => o.id === t) ? t : OFFERING_TYPES[0]?.id ?? 1;
+  });
   const [channel, setChannel] = useState<"cash" | "online">("cash");
   const [query, setQuery] = useState("");
   const [picked, setPicked] = useState<Member | null>(null);
   const [amount, setAmount] = useState("");
   const [memo, setMemo] = useState("");
   const [entries, setEntries] = useState<Entry[]>(() => load<Entry[]>(KEY_DRAFT, []));
+  const [savedSig, setSavedSig] = useState<string | null>(() => meta0?.savedSig ?? null);
+  // 처음 열 때: 저장 안 한 입력이 있으면 이어서, 없으면 DB에서 불러온다
+  const [resumed] = useState(() => !demo && entries.length > 0 && meta0?.savedSig !== incomeSig(entries));
   const [editId, setEditId] = useState<string | null>(null);
+  const [busy, setBusy] = useState(!demo && !resumed);
+  const [note, setNote] = useState<{ ok: boolean; text: string } | null>(resumed ? { ok: true, text: "저장하지 않은 입력을 이어서 보여드려요." } : null);
   const nameRef = useRef<HTMLInputElement>(null);
   const amountRef = useRef<HTMLInputElement>(null);
+  const dirty = !demo && savedSig !== incomeSig(entries);
 
   useEffect(() => { try { localStorage.setItem(KEY_TYPE, JSON.stringify(typeId)); } catch {} }, [typeId]);
   useEffect(() => { try { localStorage.setItem(KEY_DRAFT, JSON.stringify(entries)); } catch {} }, [entries]);
+  useEffect(() => { try { localStorage.setItem(KEY_META, JSON.stringify({ sunday, savedSig })); } catch {} }, [sunday, savedSig]);
+
+  // DB에 저장된 그 주일 입력을 불러온다
+  const pull = useCallback((day: string) => sb && loadIncome(sb, day).then(
+    (xs) => { setEntries(xs); setSavedSig(incomeSig(xs)); },
+    (e) => setNote({ ok: false, text: `불러오지 못했어요: ${dbError(e)}` }),
+  ).finally(() => setBusy(false)), [sb]);
+  const fetchWeek = (day: string) => { setBusy(true); setNote(null); pull(day); };
+
+  useEffect(() => {
+    if (!demo && !resumed) pull(sunday);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const changeSunday = (day: string) => {
+    if (!day) return;
+    if (dirty && !confirm("저장하지 않은 입력이 있어요. 버리고 다른 주일로 갈까요?")) return;
+    setSunday(day); reset();
+    if (!demo) fetchWeek(day);
+  };
+
+  const save = async () => {
+    if (!sb) return;
+    setBusy(true); setNote(null);
+    try {
+      const n = await saveIncome(sb, sunday, entries);
+      setSavedSig(incomeSig(entries));
+      setNote({ ok: true, text: `${sunday} 주일 수입 ${n}건을 저장했어요.` });
+    } catch (e) { setNote({ ok: false, text: `저장하지 못했어요: ${dbError(e)}` }); }
+    finally { setBusy(false); }
+  };
 
   const type = OFFERING_TYPES.find((t) => t.id === typeId) ?? OFFERING_TYPES[0];
   const unit = type.unit ?? 1;
   const suggestions = useMemo(
     () => (query.length >= 2 && !picked ? MEMBERS.filter((m) => m.name.includes(query)).slice(0, 8) : []),
-    [query, picked],
+    [query, picked, MEMBERS],
   );
 
   const reset = () => { setQuery(""); setPicked(null); setAmount(""); setMemo(""); setEditId(null); };
@@ -68,12 +122,14 @@ export default function IncomeEntryForm() {
 
   return (
     <>
-      <PageHeader actions={<span className="rounded bg-warning-subtle px-2 py-1 text-xs text-warning">데모 데이터 · DB 연결 전 브라우저에만 임시저장</span>} />
+      <PageHeader actions={demo
+        ? <span className="rounded bg-warning-subtle px-2 py-1 text-xs text-warning">데모 데이터 · DB 연결 전 브라우저에만 임시저장</span>
+        : dirty && <span className="rounded bg-warning-subtle px-2 py-1 text-xs text-warning">저장 안 됨</span>} />
 
       <div className="mb-6 rounded-lg bg-surface shadow-card p-4">
         <div className="grid gap-3 md:grid-cols-[140px_180px_160px_1fr_160px_auto]">
           <label className="text-xs text-label">주일
-            <input type="date" value={sunday} onChange={(e) => setSunday(e.target.value)} className="mt-1 w-full rounded border px-2 py-1.5 text-sm text-heading" />
+            <input type="date" value={sunday} onChange={(e) => changeSunday(e.target.value)} className="mt-1 w-full rounded border px-2 py-1.5 text-sm text-heading" />
           </label>
           <label className="text-xs text-label">헌금구분 (고정)
             <select value={typeId} onChange={(e) => { setTypeId(Number(e.target.value)); reset(); }} className="mt-1 w-full rounded border px-2 py-1.5 text-sm text-heading">
@@ -118,8 +174,11 @@ export default function IncomeEntryForm() {
 
       <div className="mb-3 flex items-center justify-between text-sm">
         <div>{sunday} 주일 · {entries.length}건 · 합계 <b>{won(grand)}원</b></div>
-        <button disabled className="rounded border px-3 py-1.5 text-muted" title="DB 연결 후 사용">입력 완료(저장)</button>
+        {demo
+          ? <button disabled className="rounded border px-3 py-1.5 text-muted" title="DB 연결 후 사용">입력 완료(저장)</button>
+          : <button onClick={save} disabled={busy || !dirty} className="rounded bg-primary px-4 py-1.5 text-white disabled:bg-slate-300">{busy ? "처리 중…" : dirty ? "입력 완료(저장)" : "저장됨"}</button>}
       </div>
+      {note && <div className={`mb-3 rounded px-3 py-2 text-sm ${note.ok ? "bg-success-subtle text-success" : "bg-danger-subtle text-danger"}`}>{note.text}</div>}
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         {byType.map(({ t, rows, total }) => (
