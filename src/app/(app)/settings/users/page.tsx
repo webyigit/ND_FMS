@@ -1,5 +1,8 @@
-import Todo from "@/components/Todo";
+"use client";
+import dynamic from "next/dynamic";
+
+const UserAdmin = dynamic(() => import("./UserAdmin"), { ssr: false });
 
 export default function Page() {
-  return <Todo spec={["가입 승인, 권한, 제거, 접근차단"]} />;
+  return <UserAdmin />;
 }

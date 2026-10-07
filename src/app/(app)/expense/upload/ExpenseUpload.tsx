@@ -4,7 +4,7 @@ import Link from "next/link";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faCamera, faCloudArrowUp, faFileExcel, faFilePdf, faImage, faTrash } from "@fortawesome/free-solid-svg-icons";
 import PageHeader from "@/components/PageHeader";
-import { DEPARTMENTS } from "@/lib/demo";
+import { useRefData } from "@/lib/db/refData";
 import { readFirstSheet } from "@/lib/bank/readXlsx";
 import { ACCEPT, fileKind, parseCsv, parseExpenseSheet, type SheetExpense } from "@/lib/expenseUpload";
 
@@ -31,6 +31,7 @@ async function shrink(f: File): Promise<{ blob: Blob; preview: boolean }> {
 }
 
 export default function ExpenseUpload() {
+  const DEPARTMENTS = useRefData().ref?.departments ?? {};
   const [docs, setDocs] = useState<Evidence[]>([]);
   const [sheet, setSheet] = useState<SheetRow[]>([]);
   const [msg, setMsg] = useState<{ ok: boolean; text: string }[]>([]);

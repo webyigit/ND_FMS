@@ -36,7 +36,8 @@ export const MEMBERS: Member[] = [
 export function currentSunday(d = new Date()) {
   const s = new Date(d);
   s.setDate(s.getDate() - s.getDay());
-  return s.toISOString().slice(0, 10);
+  // 현지(한국) 날짜로 만든다. toISOString은 UTC라 주일 오전 9시 전에는 토요일이 된다.
+  return `${s.getFullYear()}-${String(s.getMonth() + 1).padStart(2, "0")}-${String(s.getDate()).padStart(2, "0")}`;
 }
 
 // 원본 워크북의 부서 → 항목(원본구조분석 기준)

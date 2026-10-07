@@ -1,28 +1,80 @@
 "use client";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import ExcelJS from "exceljs";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faPaperclip } from "@fortawesome/free-solid-svg-icons";
 import PageHeader from "@/components/PageHeader";
-import { DEPARTMENTS, FIXED_EXPENSES, MEMBERS, currentSunday, weekOfMonth } from "@/lib/demo";
+import { currentSunday, weekOfMonth } from "@/lib/demo";
+import { useRefData, type RefData } from "@/lib/db/refData";
+import { dbError, expenseProblems, expenseSig, loadExpense, saveExpense, type ExpenseRow as Row } from "@/lib/db/weekly";
+import { supabaseBrowser } from "@/lib/supabase/client";
 import { readFirstSheet } from "@/lib/bank/readXlsx";
 import { parseNonghyupRows, type BankTx } from "@/lib/bank/nonghyup";
 
-type Row = { id: string; content: string; amount: number; dept: string; item: string; requester: string; memo: string; source: "직접" | "고정" | "은행" | "증빙" | "엑셀"; fileId?: string };
-
-const KEY = "ndfms.expense.draft";
+const KEY = "ndfms.expense.draft"; // 지출증빙 올리기 화면도 이 키에 행을 덧붙인다
+const KEY_META = "ndfms.expense.draft.meta"; // {sunday, savedSig}
 const won = (n: number) => n.toLocaleString("ko-KR");
 const blank = (): Row => ({ id: crypto.randomUUID(), content: "", amount: 0, dept: "", item: "", requester: "", memo: "", source: "직접" });
 const load = (): Row[] => { try { return JSON.parse(localStorage.getItem(KEY) ?? "[]"); } catch { return []; } };
+type Meta = { sunday: string; savedSig: string | null };
+const loadMeta = (): Meta | null => { try { return JSON.parse(localStorage.getItem(KEY_META) ?? "null"); } catch { return null; } };
 
 export default function ExpenseEntryForm() {
-  const [sunday, setSunday] = useState(currentSunday);
+  const { ref, error } = useRefData();
+  if (error) return <><PageHeader /><div className="rounded bg-danger-subtle px-3 py-2 text-sm text-danger">기준정보를 불러오지 못했어요: {error}</div></>;
+  if (!ref) return <><PageHeader /><div className="text-sm text-muted">불러오는 중…</div></>;
+  return <Form ref_={ref} />;
+}
+
+function Form({ ref_ }: { ref_: RefData }) {
+  const { departments: DEPARTMENTS, fixedExpenses: FIXED_EXPENSES, members: MEMBERS, demo } = ref_;
+  const sb = supabaseBrowser();
+  const [meta0] = useState(loadMeta);
+  const [sunday, setSunday] = useState(() => (!demo && meta0?.sunday) || currentSunday());
   const [rows, setRows] = useState<Row[]>(load);
+  const [savedSig, setSavedSig] = useState<string | null>(() => meta0?.savedSig ?? null);
   const [bankTx, setBankTx] = useState<(BankTx & { key: string })[]>([]);
   const [pick, setPick] = useState<Set<string>>(new Set());
-  const [msg, setMsg] = useState("");
+  // 처음 열 때: 저장 안 한 행(증빙 올리기에서 넘어온 것 포함)이 있으면 이어서, 없으면 DB에서
+  const [resumed] = useState(() => !demo && rows.length > 0 && meta0?.savedSig !== expenseSig(rows));
+  const [msg, setMsg] = useState(resumed ? "저장하지 않은 지출을 이어서 보여드려요." : "");
+  const [busy, setBusy] = useState(!demo && !resumed);
+  const [err, setErr] = useState("");
+  const dirty = !demo && savedSig !== expenseSig(rows);
 
   useEffect(() => { try { localStorage.setItem(KEY, JSON.stringify(rows)); } catch {} }, [rows]);
+  useEffect(() => { try { localStorage.setItem(KEY_META, JSON.stringify({ sunday, savedSig })); } catch {} }, [sunday, savedSig]);
+
+  const pull = useCallback((day: string) => sb && loadExpense(sb, day).then(
+    (xs) => { setRows(xs); setSavedSig(expenseSig(xs)); },
+    (e) => setErr(`불러오지 못했어요: ${dbError(e)}`),
+  ).finally(() => setBusy(false)), [sb]);
+  const fetchWeek = (day: string) => { setBusy(true); setErr(""); setMsg(""); pull(day); };
+
+  useEffect(() => {
+    if (!demo && !resumed) pull(sunday);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const changeSunday = (day: string) => {
+    if (!day) return;
+    if (dirty && !confirm("저장하지 않은 지출이 있어요. 버리고 다른 주일로 갈까요?")) return;
+    setSunday(day); setMsg("");
+    if (!demo) fetchWeek(day);
+  };
+
+  const save = async () => {
+    if (!sb) return;
+    const problems = expenseProblems(rows);
+    if (problems.length) return setErr(`저장 전에 채워 주세요. ${problems.join(", ")}`);
+    setBusy(true); setErr(""); setMsg("");
+    try {
+      const n = await saveExpense(sb, sunday, rows);
+      setSavedSig(expenseSig(rows));
+      setMsg(`${sunday} 주일 지출 ${n}건을 저장했어요.`);
+    } catch (e) { setErr(`저장하지 못했어요: ${dbError(e)}`); }
+    finally { setBusy(false); }
+  };
 
   const set = (id: string, patch: Partial<Row>) => setRows((xs) => xs.map((x) => (x.id === id ? { ...x, ...patch } : x)));
   const total = rows.reduce((s, r) => s + r.amount, 0);
@@ -69,11 +121,13 @@ export default function ExpenseEntryForm() {
   const input = "w-full rounded border px-1.5 py-1 text-sm";
   return (
     <>
-      <PageHeader actions={<span className="rounded bg-warning-subtle px-2 py-1 text-xs text-warning">데모 데이터 · 브라우저에만 임시저장</span>} />
+      <PageHeader actions={demo
+        ? <span className="rounded bg-warning-subtle px-2 py-1 text-xs text-warning">데모 데이터 · 브라우저에만 임시저장</span>
+        : dirty && <span className="rounded bg-warning-subtle px-2 py-1 text-xs text-warning">저장 안 됨</span>} />
 
       <div className="mb-4 flex flex-wrap items-end gap-2 rounded-lg bg-surface shadow-card p-4 text-sm">
         <label className="text-xs text-label">주일
-          <input type="date" value={sunday} onChange={(e) => setSunday(e.target.value)} className="mt-1 block rounded border px-2 py-1.5 text-sm text-heading" />
+          <input type="date" value={sunday} onChange={(e) => changeSunday(e.target.value)} className="mt-1 block rounded border px-2 py-1.5 text-sm text-heading" />
         </label>
         <button onClick={loadFixed} className="rounded border px-3 py-1.5">고정지출 불러오기</button>
         <label className="cursor-pointer rounded border px-3 py-1.5">은행 엑셀 업로드
@@ -85,6 +139,7 @@ export default function ExpenseEntryForm() {
         <button onClick={downloadTransfer} disabled={!rows.length} className="ml-auto rounded bg-primary px-4 py-1.5 text-white disabled:bg-slate-300">송금용 파일 다운로드</button>
       </div>
       {msg && <div className="mb-3 rounded bg-success-subtle px-3 py-2 text-sm text-success">{msg}</div>}
+      {err && <div className="mb-3 rounded bg-danger-subtle px-3 py-2 text-sm text-danger">{err}</div>}
 
       {bankTx.length > 0 && (
         <div className="mb-4 rounded-lg border border-primary bg-surface p-3 text-sm">
@@ -126,6 +181,7 @@ export default function ExpenseEntryForm() {
 
       <div className="mt-4 flex flex-wrap gap-4 text-sm">
         <div className="rounded-lg bg-surface shadow-card px-4 py-3">금주 지출 합계 <b>{won(total)}원</b> · {rows.length}건</div>
+        {!demo && <button onClick={save} disabled={busy || !dirty} className="rounded bg-primary px-4 py-1.5 text-white disabled:bg-slate-300">{busy ? "처리 중…" : dirty ? "입력 완료(저장)" : "저장됨"}</button>}
         {byDept.map(([d, n]) => <div key={d} className="rounded-lg bg-surface shadow-card px-4 py-3">{d} {won(n)}</div>)}
       </div>
     </>
