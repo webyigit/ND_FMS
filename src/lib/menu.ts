@@ -27,6 +27,7 @@ export const MENU: MenuGroup[] = [
       { href: "/expense/report", label: "금주 수입/지출 리포트" },
       { href: "/expense/fixed", label: "고정지출관리" },
       { href: "/expense/accounts", label: "은행계좌관리" },
+      { href: "/expense/clergy-pay", label: "교역자급여내역" },
       { href: "/expense/history", label: "과거 지출내역" },
     ],
   },

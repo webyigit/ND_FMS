@@ -65,3 +65,26 @@ export const FIXED_EXPENSES: FixedExpense[] = [
 
 /** 그 달의 몇째 주일인지 */
 export const weekOfMonth = (sunday: string) => Math.ceil(Number(sunday.slice(8, 10)) / 7);
+
+// 교역자급여내역용 가상 데이터(실명·실금액 아님)
+export const CLERGY_TITLES = ["원로목사", "담임목사", "부목사", "전도사"] as const;
+export type ClergyPay = { year: number; month: number; name: string; title: (typeof CLERGY_TITLES)[number]; item: string; amount: number; paidAt: string };
+
+export const CLERGY_PAY: ClergyPay[] = (() => {
+  const people: { name: string; title: ClergyPay["title"]; items: [string, number][] }[] = [
+    { name: "가원로", title: "원로목사", items: [["원로목사사례비", 1000000]] },
+    { name: "나담임", title: "담임목사", items: [["담임목사사례비", 3000000], ["목양비", 300000]] },
+    { name: "다부목", title: "부목사", items: [["부교역자사례비", 2000000]] },
+    { name: "라전도", title: "전도사", items: [["아동부 전도사 사례비", 800000]] },
+    { name: "마전도", title: "전도사", items: [["중고등부 전도사 사례비", 800000]] },
+  ];
+  const out: ClergyPay[] = [];
+  for (const year of [2025, 2026])
+    for (let month = 1; month <= 12; month++) {
+      if (year === 2026 && month > 9) break;
+      for (const p of people)
+        for (const [item, amount] of p.items)
+          out.push({ year, month, name: p.name, title: p.title, item, amount, paidAt: `${year}-${String(month).padStart(2, "0")}-05` });
+    }
+  return out;
+})();
