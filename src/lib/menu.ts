@@ -1,5 +1,5 @@
 import type { IconDefinition } from "@fortawesome/fontawesome-svg-core";
-import { faGaugeHigh, faHandHoldingDollar, faWallet, faEarthAsia, faFileInvoice, faCalculator, faGear, faInbox, faListCheck } from "@fortawesome/free-solid-svg-icons";
+import { faGaugeHigh, faHandHoldingDollar, faWallet, faEarthAsia, faFileInvoice, faCalculator, faGear, faInbox, faListCheck, faBullhorn } from "@fortawesome/free-solid-svg-icons";
 
 // 요구사항정의 메뉴 구조 (아이콘: Font Awesome)
 export type MenuItem = { href: string; label: string };
@@ -8,6 +8,7 @@ export type MenuGroup = { label: string; icon: IconDefinition; items: MenuItem[]
 export const MENU: MenuGroup[] = [
   { label: "대시보드", icon: faGaugeHigh, items: [{ href: "/dashboard", label: "대시보드" }] },
   { label: "TODO LIST", icon: faListCheck, items: [{ href: "/todo", label: "TODO LIST" }] },
+  { label: "공지사항", icon: faBullhorn, items: [{ href: "/notices", label: "공지사항" }] },
   {
     label: "수입관리", icon: faHandHoldingDollar,
     items: [
@@ -65,7 +66,6 @@ export const MENU: MenuGroup[] = [
       { href: "/settings/officers", label: "재직명단" },
       { href: "/settings/members", label: "교인명단" },
       { href: "/settings/offering-types", label: "헌금구분" },
-      { href: "/settings/notices", label: "공지사항" },
       { href: "/settings/audit", label: "시스템 사용내역" },
     ],
   },
