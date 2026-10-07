@@ -1,12 +1,14 @@
 "use client";
 import { useEffect, useMemo, useState } from "react";
 import ExcelJS from "exceljs";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faPaperclip } from "@fortawesome/free-solid-svg-icons";
 import PageHeader from "@/components/PageHeader";
 import { DEPARTMENTS, FIXED_EXPENSES, MEMBERS, currentSunday, weekOfMonth } from "@/lib/demo";
 import { readFirstSheet } from "@/lib/bank/readXlsx";
 import { parseNonghyupRows, type BankTx } from "@/lib/bank/nonghyup";
 
-type Row = { id: string; content: string; amount: number; dept: string; item: string; requester: string; memo: string; source: "직접" | "고정" | "은행" | "증빙" | "엑셀" };
+type Row = { id: string; content: string; amount: number; dept: string; item: string; requester: string; memo: string; source: "직접" | "고정" | "은행" | "증빙" | "엑셀"; fileId?: string };
 
 const KEY = "ndfms.expense.draft";
 const won = (n: number) => n.toLocaleString("ko-KR");
@@ -114,7 +116,7 @@ export default function ExpenseEntryForm() {
                 <td className="px-1"><select className={input} value={r.item} onChange={(e) => set(r.id, { item: e.target.value })}><option value="">선택</option>{(DEPARTMENTS[r.dept] ?? []).map((d) => <option key={d}>{d}</option>)}</select></td>
                 <td className="px-1"><input className={input} list="members" value={r.requester} onChange={(e) => set(r.id, { requester: e.target.value })} /></td>
                 <td className="px-1"><input className={input} value={r.memo} onChange={(e) => set(r.id, { memo: e.target.value })} /></td>
-                <td className="text-center text-xs text-slate-400">{r.source}</td>
+                <td className="text-center text-xs text-slate-400">{r.fileId ? <a href={`/api/receipts/${r.fileId}`} className="text-blue-600" title="드라이브에 저장된 증빙 내려받기"><FontAwesomeIcon icon={faPaperclip} /> {r.source}</a> : r.source}</td>
                 <td className="text-center"><button onClick={() => setRows((xs) => xs.filter((x) => x.id !== r.id))} className="text-xs text-red-500">삭제</button></td>
               </tr>
             ))}

@@ -145,3 +145,13 @@ describe("지출증빙 올리기", () => {
     expect(parseExpenseSheet(rows).rows[0]).toMatchObject({ content: "사무용품, 복사지", amount: 30000 });
   });
 });
+
+import { receiptFileName, receiptFolder } from "../drive";
+describe("드라이브 증빙 이름 규칙", () => {
+  it("연/월 폴더와 파일명", () => {
+    expect(receiptFolder("2026-10-04")).toEqual(["지출증빙", "2026", "10"]);
+    expect(receiptFileName({ date: "2026-10-04", dept: "관리부", content: "주보 인쇄/10월", amount: 120000, ext: "JPG", id: "ab12cd34" }))
+      .toBe("261004_관리부_주보-인쇄-10월_120000원_ab12.jpg");
+    expect(receiptFileName({ date: "2026-10-04", ext: "pdf", id: "ffff0000" })).toBe("261004_미지정_증빙_ffff.pdf");
+  });
+});

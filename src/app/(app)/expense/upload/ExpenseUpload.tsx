@@ -14,7 +14,7 @@ const won = (n: number) => n.toLocaleString("ko-KR");
 const size = (b: number) => (b > 1024 * 1024 ? `${(b / 1024 / 1024).toFixed(1)}MB` : `${Math.round(b / 1024)}KB`);
 
 type Fields = { date: string; content: string; amount: number; dept: string; item: string; requester: string; memo: string };
-type Evidence = Fields & { id: string; kind: "pdf" | "image"; name: string; url: string; size: number; origSize: number; preview: boolean };
+type Evidence = Fields & { id: string; kind: "pdf" | "image"; name: string; url: string; blob: Blob; size: number; origSize: number; preview: boolean };
 type SheetRow = SheetExpense & { id: string; pick: boolean; file: string };
 
 /** 사진은 긴 변 2000px JPEG로 줄여 올린다(폰 사진 5~10MB → 수백KB). HEIC 등 브라우저가 못 여는 형식은 원본 유지 */
@@ -61,7 +61,7 @@ export default function ExpenseUpload() {
       const { blob, preview } = k === "image" ? await shrink(f) : { blob: f as Blob, preview: true };
       const url = URL.createObjectURL(blob);
       urls.current.push(url);
-      setDocs((xs) => [...xs, { ...blankF(), id: crypto.randomUUID(), kind: k, name: f.name, url, size: blob.size, origSize: f.size, preview }]);
+      setDocs((xs) => [...xs, { ...blankF(), id: crypto.randomUUID(), kind: k, name: f.name, url, blob, size: blob.size, origSize: f.size, preview }]);
       notes.push({ ok: true, text: `${f.name}: 올렸어요${blob.size < f.size ? ` (${size(f.size)} → ${size(blob.size)})` : ""}. 내용·금액을 확인해 주세요.` });
     }
     setMsg(notes);
@@ -71,18 +71,39 @@ export default function ExpenseUpload() {
   const setRow = (id: string, p: Partial<SheetRow>) => setSheet((xs) => xs.map((x) => (x.id === id ? { ...x, ...p } : x)));
 
   const ready = [...docs.filter((d) => d.amount > 0), ...sheet.filter((r) => r.pick)];
-  const send = () => {
+  const [busy, setBusy] = useState(false);
+  /** 증빙은 압축본을 드라이브(지출증빙/연/월)에 저장한 뒤 지출입력으로 보낸다. 드라이브 미연결이면 저장 없이 보낸다 */
+  const send = async () => {
+    setBusy(true);
+    const notes: { ok: boolean; text: string }[] = [];
+    const saved = new Map<string, { id: string; name: string }>();
+    for (const d of docs.filter((x) => x.amount > 0)) {
+      const fd = new FormData();
+      fd.append("file", new File([d.blob], d.kind === "image" && d.blob.type === "image/jpeg" ? d.name.replace(/\.\w+$/, ".jpg") : d.name, { type: d.blob.type }));
+      (["date", "dept", "item", "content"] as const).forEach((k) => fd.append(k, d[k]));
+      fd.append("amount", String(d.amount));
+      try {
+        const res = await fetch("/api/receipts", { method: "POST", body: fd });
+        const j = await res.json();
+        if (res.ok) saved.set(d.id, { id: j.id, name: j.name });
+        else notes.push({ ok: false, text: `${d.name}: 드라이브에 저장하지 못했어요. ${j.error} 지출 행만 넣었어요.` });
+      } catch { notes.push({ ok: false, text: `${d.name}: 드라이브 저장 중 연결이 끊겼어요. 지출 행만 넣었어요.` }); }
+    }
     let draft: unknown[] = [];
     try { draft = JSON.parse(localStorage.getItem(DRAFT) ?? "[]"); } catch {}
-    const add = ready.map((r) => ({
-      id: crypto.randomUUID(), content: r.content, amount: r.amount, dept: r.dept, item: r.item, requester: r.requester,
-      memo: [r.memo, "kind" in r ? `증빙:${r.name}` : `엑셀:${r.file}`].filter(Boolean).join(" · "),
-      source: "kind" in r ? "증빙" : "엑셀",
-    }));
+    const add = ready.map((r) => {
+      const f = "kind" in r ? saved.get(r.id) : undefined;
+      return {
+        id: crypto.randomUUID(), content: r.content, amount: r.amount, dept: r.dept, item: r.item, requester: r.requester,
+        memo: [r.memo, "kind" in r ? `증빙:${f?.name ?? r.name}` : `엑셀:${r.file}`].filter(Boolean).join(" · "),
+        source: "kind" in r ? "증빙" : "엑셀", fileId: f?.id,
+      };
+    });
     try { localStorage.setItem(DRAFT, JSON.stringify([...draft, ...add])); } catch {}
     setDocs((xs) => xs.filter((d) => !(d.amount > 0)));
     setSheet((xs) => xs.filter((r) => !r.pick));
-    setMsg([{ ok: true, text: `지출입력에 ${add.length}건을 넣었어요.` }]);
+    setMsg([{ ok: true, text: `지출입력에 ${add.length}건을 넣었어요${saved.size ? ` (증빙 ${saved.size}건 드라이브 저장)` : ""}.` }, ...notes]);
+    setBusy(false);
   };
 
   const input = "w-full rounded border px-2 py-1.5 text-sm";
@@ -101,7 +122,7 @@ export default function ExpenseUpload() {
 
   return (
     <>
-      <PageHeader actions={<span className="rounded bg-amber-100 px-2 py-1 text-xs text-amber-800">서버 저장은 DB 연결 후 · 지금은 이 화면에서만 보관</span>} />
+      <PageHeader actions={<span className="rounded bg-amber-100 px-2 py-1 text-xs text-amber-800">증빙 사진·PDF는 압축해 드라이브 저장 · 지출 행은 DB 연결 후 저장</span>} />
 
       <div
         onDragOver={(e) => { e.preventDefault(); setDrag(true); }} onDragLeave={() => setDrag(false)}
@@ -140,7 +161,7 @@ export default function ExpenseUpload() {
                 </a>
                 <div className="min-w-0 flex-1 space-y-1.5">
                   <div className="flex items-center justify-between gap-2 text-xs text-slate-500">
-                    <span className="truncate">{d.name} · {size(d.size)}</span>
+                    <a href={d.url} download={d.name} className="truncate underline-offset-2 hover:underline" title="압축본 내려받기">{d.name} · {size(d.size)}</a>
                     <button onClick={() => setDocs((xs) => xs.filter((x) => x.id !== d.id))} className="text-red-500" aria-label="삭제"><FontAwesomeIcon icon={faTrash} /></button>
                   </div>
                   <div className="flex gap-1.5">
@@ -190,10 +211,10 @@ export default function ExpenseUpload() {
       {(docs.length > 0 || sheet.length > 0) && (
         <div className="sticky bottom-2 flex flex-wrap items-center gap-3 rounded-lg border border-slate-200 bg-white px-4 py-3 text-sm shadow">
           <span>보낼 지출 <b>{ready.length}건</b> · {won(ready.reduce((s, r) => s + r.amount, 0))}원</span>
-          <span className="text-xs text-slate-400">증빙은 금액을 넣은 것만 보내요</span>
+          <span className="text-xs text-slate-400">증빙은 금액을 넣은 것만 보내요 · 사진은 압축본을 드라이브에 저장</span>
           <div className="ml-auto flex gap-2">
             <Link href="/expense/entry" className="rounded border px-3 py-1.5">지출입력 보기</Link>
-            <button onClick={send} disabled={!ready.length} className="rounded bg-blue-600 px-4 py-1.5 text-white disabled:bg-slate-300">지출입력으로 보내기</button>
+            <button onClick={send} disabled={!ready.length || busy} className="rounded bg-blue-600 px-4 py-1.5 text-white disabled:bg-slate-300">{busy ? "저장 중…" : "지출입력으로 보내기"}</button>
           </div>
         </div>
       )}
