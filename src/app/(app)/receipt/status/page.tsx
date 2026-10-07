@@ -1,5 +1,8 @@
-import Todo from "@/components/Todo";
+"use client";
+import dynamic from "next/dynamic";
+
+const ReceiptList = dynamic(() => import("../_parts/ReceiptList"), { ssr: false });
 
 export default function Page() {
-  return <Todo spec={["연도별 발행현황, 이름·금액·주소·주민번호 검색", "기부금 관리대장"]} />;
+  return <ReceiptList mode="status" />;
 }
