@@ -1,5 +1,9 @@
-import Todo from "@/components/Todo";
+"use client";
+import dynamic from "next/dynamic";
+import DbOnly from "@/components/ui/DbOnly";
+
+const PersonOfferings = dynamic(() => import("./PersonOfferings"), { ssr: false });
 
 export default function Page() {
-  return <Todo spec={["헌금구분·이름 검색, 총합계", "여러 명 선택해 합계(기부금영수증 발행 조건)", "가족 단위 합산", "1년 개인별 총합계"]} />;
+  return <DbOnly what="개인별 헌금현황"><PersonOfferings /></DbOnly>;
 }

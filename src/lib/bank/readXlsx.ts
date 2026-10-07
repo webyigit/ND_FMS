@@ -1,6 +1,6 @@
 import ExcelJS from "exceljs";
 
-/** xlsx 첫 시트를 2차원 값 배열로 읽는다(서버 전용) */
+/** xlsx 첫 시트를 2차원 값 배열로 읽는다(브라우저·서버 공용) */
 export async function readFirstSheet(buf: ArrayBuffer) {
   const wb = new ExcelJS.Workbook();
   await wb.xlsx.load(buf);

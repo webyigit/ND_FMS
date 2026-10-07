@@ -2,18 +2,22 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 export type IncomeEntry = { id: string; typeId: number; channel: "cash" | "online"; memberId: number | null; name: string; amount: number; memo: string };
-export type ExpenseSource = "직접" | "고정" | "은행" | "증빙" | "엑셀";
+export type ExpenseSource = "직접" | "고정" | "은행" | "증빙" | "엑셀" | "신청";
 export type ExpenseRow = { id: string; content: string; amount: number; dept: string; item: string; requester: string; memo: string; source: ExpenseSource; fileId?: string };
 
+/** DB에서 불러온 행의 id ("db-12" → 12). 새 행은 null → 저장 시 새로 넣는다 */
+const dbId = (id: string) => (id.startsWith("db-") ? Number(id.slice(3)) : null);
+
 export const toIncomePayload = (xs: IncomeEntry[]) =>
-  xs.map((e) => ({ offering_type_id: e.typeId, member_id: e.memberId, payer_label: e.name, channel: e.channel, amount: e.amount, memo: e.memo || null }));
+  xs.map((e) => ({ id: dbId(e.id), offering_type_id: e.typeId, member_id: e.memberId, payer_label: e.name, channel: e.channel, amount: e.amount, memo: e.memo || null }));
 
 export const toExpensePayload = (xs: ExpenseRow[]) =>
-  xs.map((r) => ({ dept: r.dept, item: r.item, content: r.content.trim(), amount: r.amount, requester: r.requester.trim(), memo: r.memo || null, source: r.source, drive_file_id: r.fileId ?? null }));
+  xs.map((r) => ({ id: dbId(r.id), dept: r.dept, item: r.item, content: r.content.trim(), amount: r.amount, requester: r.requester.trim(), memo: r.memo || null, source: r.source, drive_file_id: r.fileId ?? null }));
 
 /** 저장 여부 비교용 서명(화면용 id는 빼고 내용만) */
-export const incomeSig = (xs: IncomeEntry[]) => JSON.stringify(toIncomePayload(xs));
-export const expenseSig = (xs: ExpenseRow[]) => JSON.stringify(toExpensePayload(xs));
+const noId = <T extends { id: unknown }>({ id: _, ...rest }: T) => rest; // eslint-disable-line @typescript-eslint/no-unused-vars
+export const incomeSig = (xs: IncomeEntry[]) => JSON.stringify(toIncomePayload(xs).map(noId));
+export const expenseSig = (xs: ExpenseRow[]) => JSON.stringify(toExpensePayload(xs).map(noId));
 
 /** 저장 전에 고쳐야 할 지출 행 (1부터 센 행 번호와 이유) */
 export function expenseProblems(xs: ExpenseRow[]): string[] {
@@ -32,7 +36,7 @@ type ExpenseDbRow = {
   expense_item: { name: string; department: { name: string } | null } | null;
   receipt_file: { drive_file_id: string | null } | null;
 };
-const SOURCES: ExpenseSource[] = ["직접", "고정", "은행", "증빙", "엑셀"];
+const SOURCES: ExpenseSource[] = ["직접", "고정", "은행", "증빙", "엑셀", "신청"];
 export const fromExpenseRows = (rows: ExpenseDbRow[]): ExpenseRow[] =>
   rows.map((r) => ({
     id: `db-${r.id}`, content: r.content, amount: Number(r.amount),

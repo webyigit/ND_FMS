@@ -1,5 +1,9 @@
-import Todo from "@/components/Todo";
+"use client";
+import dynamic from "next/dynamic";
+import DbOnly from "@/components/ui/DbOnly";
+
+const AuditLog = dynamic(() => import("./AuditLog"), { ssr: false });
 
 export default function Page() {
-  return <Todo spec={["메뉴 클릭, 접속자, 데이터 변경 이력 검색"]} />;
+  return <DbOnly what="시스템 사용내역"><AuditLog /></DbOnly>;
 }

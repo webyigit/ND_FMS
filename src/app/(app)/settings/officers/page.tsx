@@ -1,5 +1,9 @@
-import Todo from "@/components/Todo";
+"use client";
+import dynamic from "next/dynamic";
+import DbOnly from "@/components/ui/DbOnly";
+
+const OfficerRoster = dynamic(() => import("./OfficerRoster"), { ssr: false });
 
 export default function Page() {
-  return <Todo spec={["연도별 재직 명단"]} />;
+  return <DbOnly what="재직명단"><OfficerRoster /></DbOnly>;
 }

@@ -1,44 +1,43 @@
-// TODO LIST 저장소. DB 연결 전에는 브라우저(localStorage)에 저장한다.
-import { useSyncExternalStore } from "react";
+// TODO LIST 저장소. DB 연결 시 todo 표(본인 것만), 데모 모드는 브라우저(localStorage).
+import { listStore, rows, useListStore } from "./work/store";
 
 export type Todo = { id: string; date: string; text: string; done: boolean; createdAt: string };
 
-const KEY = "ndfms.todo";
-const EVENT = "ndfms-todo-change";
-let cache: Todo[] | null = null;
+type Row = { id: string; due_date: string; content: string; done: boolean; created_at: string };
+export const fromTodoRow = (r: Row): Todo => ({ id: r.id, date: r.due_date, text: r.content, done: r.done, createdAt: r.created_at });
 
-function read(): Todo[] {
-  if (cache) return cache;
-  try { cache = JSON.parse(localStorage.getItem(KEY) ?? "[]"); } catch { cache = []; }
-  return cache!;
-}
+const store = listStore<Todo>("ndfms.todo", async (sb) =>
+  (await rows<Row>(sb.from("todo").select("id, due_date, content, done, created_at").order("due_date"))).map(fromTodoRow));
 
-function write(next: Todo[]) {
-  cache = next;
-  try { localStorage.setItem(KEY, JSON.stringify(next)); } catch {}
-  window.dispatchEvent(new Event(EVENT));
-}
-
-const subscribe = (cb: () => void) => {
-  const onStorage = (e: StorageEvent) => { if (e.key === KEY) { cache = null; cb(); } };
-  window.addEventListener(EVENT, cb);
-  window.addEventListener("storage", onStorage);
-  return () => { window.removeEventListener(EVENT, cb); window.removeEventListener("storage", onStorage); };
-};
-const EMPTY: Todo[] = [];
-
-export const useTodos = () => useSyncExternalStore(subscribe, read, () => EMPTY);
+export const useTodoState = () => useListStore(store);
+export const useTodos = () => useTodoState().items;
 
 /** 날짜순(같은 날은 입력순), 완료 건은 아래로 */
 export const sortTodos = (xs: Todo[]) =>
   [...xs].sort((a, b) => Number(a.done) - Number(b.done) || a.date.localeCompare(b.date) || a.createdAt.localeCompare(b.createdAt));
 
+const find = (id: string) => store.get().items.find((t) => t.id === id);
+
 export const todoActions = {
-  add: (date: string, text: string) =>
-    write([...read(), { id: crypto.randomUUID(), date, text: text.trim(), done: false, createdAt: new Date().toISOString() }]),
-  toggle: (id: string) => write(read().map((t) => (t.id === id ? { ...t, done: !t.done } : t))),
-  update: (id: string, patch: Partial<Pick<Todo, "date" | "text">>) => write(read().map((t) => (t.id === id ? { ...t, ...patch } : t))),
-  remove: (id: string) => write(read().filter((t) => t.id !== id)),
+  add: async (date: string, text: string) => {
+    if (!store.db) return store.write([...store.read(), { id: crypto.randomUUID(), date, text: text.trim(), done: false, createdAt: new Date().toISOString() }]);
+    await store.run((sb) => sb.from("todo").insert({ due_date: date, content: text.trim() }));
+  },
+  toggle: async (id: string) => {
+    if (!store.db) return store.write(store.read().map((t) => (t.id === id ? { ...t, done: !t.done } : t)));
+    const done = !find(id)?.done;
+    await store.run((sb) => sb.from("todo").update({ done, done_at: done ? new Date().toISOString() : null }).eq("id", id));
+  },
+  update: async (id: string, patch: Partial<Pick<Todo, "date" | "text">>) => {
+    if (!store.db) return store.write(store.read().map((t) => (t.id === id ? { ...t, ...patch } : t)));
+    await store.run((sb) => sb.from("todo").update({
+      ...(patch.date ? { due_date: patch.date } : {}), ...(patch.text ? { content: patch.text.trim() } : {}),
+    }).eq("id", id));
+  },
+  remove: async (id: string) => {
+    if (!store.db) return store.write(store.read().filter((t) => t.id !== id));
+    await store.run((sb) => sb.from("todo").delete().eq("id", id));
+  },
 };
 
 /** 기기 시간대 기준 YYYY-MM-DD */

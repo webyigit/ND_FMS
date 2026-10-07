@@ -18,15 +18,21 @@ export default function UserAdmin() {
   const [users, setUsers] = useState<U[]>([]);
   const [me, setMe] = useState<string | null>(null);
   const [err, setErr] = useState("");
+  const [depts, setDepts] = useState<{ id: number; name: string }[]>([]);
+  const [links, setLinks] = useState<{ user_id: string; department_id: number }[]>([]);
 
   const fetchAll = useCallback(() => {
     if (!sb) return;
     Promise.all([
       sb.auth.getUser(),
       sb.from("app_user").select("id, name, phone, status, role, created_at, approved_at").order("status").order("created_at", { ascending: false }),
-    ]).then(([{ data: auth }, { data, error }]) => {
+      sb.from("department").select("id, name").order("sort_order"),
+      sb.from("user_department").select("user_id, department_id"),
+    ]).then(([{ data: auth }, { data, error }, d, l]) => {
       setMe(auth.user?.id ?? null);
       if (error) setErr(dbError(error)); else setUsers(data as U[]);
+      setDepts((d.data ?? []) as { id: number; name: string }[]);
+      setLinks((l.data ?? []) as { user_id: string; department_id: number }[]);
     });
   }, [sb]);
   useEffect(fetchAll, [fetchAll]);
@@ -40,6 +46,18 @@ export default function UserAdmin() {
     fetchAll();
   };
 
+  // 부서장 ↔ 부서 연결: 부서장은 연결된 부서의 예산·지출만 본다
+  const link = async (u: U, departmentId: number, on: boolean) => {
+    if (!sb || !departmentId) return;
+    setErr("");
+    const { error } = on
+      ? await sb.from("user_department").insert({ user_id: u.id, department_id: departmentId })
+      : await sb.from("user_department").delete().eq("user_id", u.id).eq("department_id", departmentId);
+    if (error) return setErr(dbError(error));
+    fetchAll();
+  };
+  const deptName = (id: number) => depts.find((d) => d.id === id)?.name ?? id;
+
   if (!sb) return <><PageHeader /><div className="rounded bg-warning-subtle px-3 py-2 text-sm text-warning">데모 모드예요. DB를 연결하면 가입 승인·권한을 여기서 관리해요.</div></>;
   const pending = users.filter((u) => u.status === "pending").length;
 
@@ -50,7 +68,7 @@ export default function UserAdmin() {
       <div className="overflow-x-auto rounded-lg bg-surface shadow-card">
         <table className="w-full text-sm">
           <thead className="bg-surface-2 text-xs text-label">
-            <tr><th className="px-4 py-2 text-left">이름</th><th className="text-left">휴대폰</th><th>상태</th><th>권한</th><th>가입일</th><th className="w-40" /></tr>
+            <tr><th className="px-4 py-2 text-left">이름</th><th className="text-left">휴대폰</th><th>상태</th><th>권한</th><th className="text-left">맡은 부서(부서장)</th><th>가입일</th><th className="w-40" /></tr>
           </thead>
           <tbody>
             {users.map((u) => (
@@ -62,6 +80,24 @@ export default function UserAdmin() {
                   <select value={u.role} onChange={(e) => update(u, { role: e.target.value })} className="rounded border px-2 py-1 text-sm">
                     {ROLES.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
                   </select>
+                </td>
+                <td className="text-xs">
+                  {(u.role === "dept_head" || links.some((l) => l.user_id === u.id)) && (
+                    <div className="flex flex-wrap items-center gap-1">
+                      {links.filter((l) => l.user_id === u.id).map((l) => (
+                        <span key={l.department_id} className="rounded bg-primary-subtle px-2 py-0.5 text-primary">
+                          {deptName(l.department_id)}
+                          <button onClick={() => link(u, l.department_id, false)} aria-label="연결 해제" className="ml-1 text-muted">×</button>
+                        </span>
+                      ))}
+                      {u.role === "dept_head" && (
+                        <select value="" onChange={(e) => link(u, Number(e.target.value), true)} className="rounded border px-1 py-0.5 text-xs">
+                          <option value="">+ 부서</option>
+                          {depts.filter((d) => !links.some((l) => l.user_id === u.id && l.department_id === d.id)).map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
+                        </select>
+                      )}
+                    </div>
+                  )}
                 </td>
                 <td className="text-center text-xs text-label">{u.created_at.slice(0, 10)}</td>
                 <td className="px-2 text-right text-xs">
@@ -78,7 +114,7 @@ export default function UserAdmin() {
           </tbody>
         </table>
       </div>
-      <p className="mt-3 text-xs text-muted">재정 화면은 승인된 관리자·재정부 권한만 들어올 수 있어요. 처음 가입한 사람이 관리자가 돼요.</p>
+      <p className="mt-3 text-xs text-muted">재정 화면은 승인된 관리자·재정부 권한만 들어올 수 있어요. 처음 가입한 사람이 관리자가 돼요. 부서장은 부서장 페이지(/m)에서 연결된 부서의 예산·지출만 보고, 부서장·목회자는 지출신청하기(/request)를 쓸 수 있어요.</p>
     </>
   );
 }

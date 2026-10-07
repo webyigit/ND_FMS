@@ -1,5 +1,9 @@
-import Todo from "@/components/Todo";
+"use client";
+import dynamic from "next/dynamic";
+
+// 주소창 값(신청·수정·재발행)을 브라우저에서 읽으므로 클라이언트에서만 렌더링
+const IssueForm = dynamic(() => import("./IssueForm"), { ssr: false });
 
 export default function Page() {
-  return <Todo spec={["정부 양식 화면에 기부자 정보 표시", "기부자 검색(지난 발행 기록 팝업) 또는 직접 입력", "가족 합산 금액을 발행 당사자에게", "발행번호 {연도}-{PN|CP}{일련}-{MMDD}", "발행 후 목록에서 수정/삭제"]} />;
+  return <IssueForm />;
 }

@@ -3,25 +3,26 @@ import { useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faMagnifyingGlass, faPen, faThumbtack } from "@fortawesome/free-solid-svg-icons";
 import PageHeader from "@/components/PageHeader";
-import { boardActions, listPosts, usePosts, type Post } from "@/lib/board";
+import Notice from "@/components/ui/Notice";
+import { authorAuto, boardActions, listPosts, usePostState, type Post } from "@/lib/board";
 
-const AUTHOR = "ndfms.board.author"; // 로그인 연결 전까지 작성자 이름을 기억
+const AUTHOR = "ndfms.board.author"; // 데모 모드에서 작성자 이름을 기억
 const blank = () => ({ title: "", body: "", author: (() => { try { return localStorage.getItem(AUTHOR) ?? ""; } catch { return ""; } })(), pinned: false });
 const day = (iso: string) => iso.slice(0, 10);
 
 export default function Board() {
-  const posts = usePosts();
+  const st = usePostState();
+  const posts = st.items;
   const [q, setQ] = useState("");
   const [open, setOpen] = useState<string | null>(null);
   const [form, setForm] = useState<(ReturnType<typeof blank> & { id?: string }) | null>(null);
   const list = listPosts(posts, q);
   const cur = posts.find((p) => p.id === open);
 
-  const save = () => {
+  const save = async () => {
     if (!form || !form.title.trim()) return;
-    try { localStorage.setItem(AUTHOR, form.author); } catch {}
-    boardActions.save(form);
-    setForm(null);
+    if (!authorAuto) try { localStorage.setItem(AUTHOR, form.author); } catch {}
+    if ((await boardActions.save(form)) !== false) setForm(null);
   };
   const edit = (p: Post) => setForm({ id: p.id, title: p.title, body: p.body, author: p.author, pinned: p.pinned });
   const del = (p: Post) => { if (confirm(`'${p.title}' 글을 삭제할까요?`)) { boardActions.remove(p.id); setOpen(null); } };
@@ -30,15 +31,16 @@ export default function Board() {
   return (
     <>
       <PageHeader actions={<>
-        <span className="rounded bg-warning-subtle px-2 py-1 text-xs text-warning">DB 연결 전 브라우저에만 저장</span>
+        {!authorAuto && <span className="rounded bg-warning-subtle px-2 py-1 text-xs text-warning">데모: 이 브라우저에만 저장</span>}
         {!form && <button onClick={() => { setForm(blank()); setOpen(null); }} className="rounded bg-primary px-4 py-1.5 text-sm text-white"><FontAwesomeIcon icon={faPen} /> 글쓰기</button>}
       </>} />
+      {st.error && <Notice kind="error">{st.error}</Notice>}
 
       {form && (
         <div className="mb-6 rounded-lg bg-surface shadow-card p-4 text-sm">
           <div className="mb-2 flex flex-wrap gap-2">
             <input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} placeholder="제목" className={`${input} min-w-[240px] flex-1`} autoFocus />
-            <input value={form.author} onChange={(e) => setForm({ ...form, author: e.target.value })} placeholder="작성자" className={`${input} w-32`} />
+            {!authorAuto && <input value={form.author} onChange={(e) => setForm({ ...form, author: e.target.value })} placeholder="작성자" className={`${input} w-32`} />}
           </div>
           <textarea value={form.body} onChange={(e) => setForm({ ...form, body: e.target.value })} placeholder="재정 관련 기록을 남겨주세요 (회의 내용, 처리 경과, 인수인계 등)" rows={8} className={input} />
           <div className="mt-2 flex items-center gap-2">
@@ -70,7 +72,7 @@ export default function Board() {
         <table className="w-full">
           <thead className="bg-surface-2 text-xs text-label"><tr><th className="w-14 py-2">번호</th><th className="text-left">제목</th><th className="hidden w-28 sm:table-cell">작성자</th><th className="w-24">작성일</th></tr></thead>
           <tbody>
-            {list.length === 0 && <tr><td colSpan={4} className="py-8 text-center text-muted">{q ? "검색 결과가 없어요" : "아직 글이 없어요. 첫 기록을 남겨보세요."}</td></tr>}
+            {list.length === 0 && <tr><td colSpan={4} className="py-8 text-center text-muted">{q ? "검색 결과가 없어요" : st.loaded ? "아직 글이 없어요. 첫 기록을 남겨보세요." : "불러오는 중…"}</td></tr>}
             {list.map((p) => (
               <tr key={p.id} onClick={() => { setOpen(p.id); setForm(null); }} className={`cursor-pointer border-t hover:bg-surface-2 ${open === p.id ? "bg-primary-subtle" : ""}`}>
                 <td className="py-2 text-center text-muted">{p.pinned ? <FontAwesomeIcon icon={faThumbtack} className="text-red-500" /> : posts.length - posts.findIndex((x) => x.id === p.id)}</td>

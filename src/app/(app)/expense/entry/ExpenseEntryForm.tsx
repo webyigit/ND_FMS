@@ -72,6 +72,7 @@ function Form({ ref_ }: { ref_: RefData }) {
       const n = await saveExpense(sb, sunday, rows);
       setSavedSig(expenseSig(rows));
       setMsg(`${sunday} 주일 지출 ${n}건을 저장했어요.`);
+      pull(sunday); // 새 행의 DB id를 받아 다음 저장 때 같은 행을 고치게
     } catch (e) { setErr(`저장하지 못했어요: ${dbError(e)}`); }
     finally { setBusy(false); }
   };

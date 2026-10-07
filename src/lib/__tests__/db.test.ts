@@ -8,7 +8,8 @@ const exp: ExpenseRow = { id: "b", content: " 전기요금 ", amount: 300000, de
 
 describe("주간 입력 ↔ DB", () => {
   it("수입 payload와 되읽기", () => {
-    expect(toIncomePayload([inc])).toEqual([{ offering_type_id: 1, member_id: 3, payer_label: "가나다", channel: "cash", amount: 100000, memo: null }]);
+    expect(toIncomePayload([inc, { ...inc, id: "db-7" }]).map((r) => r.id)).toEqual([null, 7]);
+    expect(toIncomePayload([inc])).toEqual([{ id: null, offering_type_id: 1, member_id: 3, payer_label: "가나다", channel: "cash", amount: 100000, memo: null }]);
     const back = fromIncomeRows([{ id: 9, offering_type_id: 1, member_id: 3, payer_label: "가나다", channel: "cash", amount: 100000, memo: null }]);
     expect(incomeSig(back)).toBe(incomeSig([inc])); // 저장 직후 다시 불러오면 '저장됨'
   });

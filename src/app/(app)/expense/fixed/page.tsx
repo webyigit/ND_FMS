@@ -1,5 +1,8 @@
-import Todo from "@/components/Todo";
+"use client";
+import dynamic from "next/dynamic";
+
+const FixedExpenses = dynamic(() => import("./FixedExpenses"), { ssr: false });
 
 export default function Page() {
-  return <Todo spec={["매주 정기 지출 항목(N째주) 관리"]} />;
+  return <FixedExpenses />;
 }

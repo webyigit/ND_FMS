@@ -37,7 +37,8 @@ export function parseAmount(v: Cell): number {
 }
 
 export function parseDateTime(v: Cell): string {
-  if (v instanceof Date) return v.toISOString();
+  // 엑셀 날짜 셀은 벽시계 시각이 UTC 필드에 담겨 온다 → 한국 시각으로 다시 붙인다
+  if (v instanceof Date) return v.toISOString().slice(0, 19) + "+09:00";
   const m = String(v ?? "").match(/(\d{4})[./-](\d{1,2})[./-](\d{1,2})(?:\s+(\d{1,2}):(\d{2})(?::(\d{2}))?)?/);
   if (!m) throw new Error(`거래일시 형식 오류: ${v}`);
   const [, y, mo, d, h = "0", mi = "0", s = "0"] = m;
