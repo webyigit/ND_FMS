@@ -18,8 +18,8 @@ export default function ExpenseHistory() {
 }
 
 function Screen() {
-  // 기본은 작년: 지난 내역 찾기용 화면
-  const [year, setYear] = useState(thisYear() - 1);
+  // 기본은 올해, 지난 연도는 연도 선택으로
+  const [year, setYear] = useState(thisYear());
   const [month, setMonth] = useState(0);
   const [f, setF] = useState<HistFilter>({});
   const [view, setView] = useState<"list" | "month">("list");
