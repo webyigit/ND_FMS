@@ -1,28 +1,32 @@
 "use client";
 import { useState } from "react";
 import PageHeader from "@/components/PageHeader";
-import { CHANNELS, noticeActions, useNotices, type Channel, type Notice } from "@/lib/notice";
+import Notice from "@/components/ui/Notice";
+import { isDbConfigured } from "@/lib/supabase/config";
+import { CHANNELS, noticeActions, useNoticeState, type Channel, type Notice as Item } from "@/lib/notice";
 
 const blank = { channel: "all" as Channel, title: "", body: "", pinned: false };
 const label = (c: Channel) => CHANNELS.find((x) => x.value === c)?.label;
 const WHERE: Record<Channel, string> = { dept_head: "부서장 모바일(/m/notice)", member: "성도 공지(/notice)", all: "부서장 모바일 + 성도 공지" };
 
 export default function NoticeAdmin() {
-  const notices = useNotices();
+  const st = useNoticeState();
+  const notices = st.items;
   const [form, setForm] = useState<typeof blank & { id?: string }>(blank);
   const [filter, setFilter] = useState<Channel | "">("");
 
-  const save = () => {
+  const save = async () => {
     if (!form.title.trim()) return;
-    noticeActions.save(form);
-    setForm(blank);
+    if ((await noticeActions.save(form)) !== false) setForm(blank);
   };
-  const edit = (n: Notice) => setForm({ id: n.id, channel: n.channel, title: n.title, body: n.body, pinned: n.pinned });
+  const del = (n: Item) => confirm(`'${n.title}' 공지를 삭제할까요?`) && noticeActions.remove(n.id);
+  const edit = (n: Item) => setForm({ id: n.id, channel: n.channel, title: n.title, body: n.body, pinned: n.pinned });
   const list = notices.filter((n) => !filter || n.channel === filter);
 
   return (
     <>
-      <PageHeader actions={<span className="rounded bg-warning-subtle px-2 py-1 text-xs text-warning">DB 연결 전 브라우저에만 저장</span>} />
+      <PageHeader actions={!isDbConfigured && <span className="rounded bg-warning-subtle px-2 py-1 text-xs text-warning">데모: 이 브라우저에만 저장</span>} />
+      {st.error && <Notice kind="error">{st.error}</Notice>}
       <div className="mb-6 rounded-lg bg-surface shadow-card p-4 text-sm">
         <div className="mb-3 flex flex-wrap items-center gap-3">
           <span className="text-label">게재 채널</span>
@@ -50,7 +54,7 @@ export default function NoticeAdmin() {
       <table className="w-full rounded-lg bg-surface shadow-card text-sm">
         <thead className="bg-surface-2 text-xs text-label"><tr><th className="w-20 py-2">채널</th><th className="text-left">제목</th><th className="w-28">게재일</th><th className="w-24" /></tr></thead>
         <tbody>
-          {list.length === 0 && <tr><td colSpan={4} className="py-6 text-center text-muted">공지사항이 없어요</td></tr>}
+          {list.length === 0 && <tr><td colSpan={4} className="py-6 text-center text-muted">{st.loaded ? "공지사항이 없어요" : "불러오는 중…"}</td></tr>}
           {list.map((n) => (
             <tr key={n.id} className="border-t">
               <td className="py-2 text-center"><span className="rounded bg-surface-2 px-2 py-0.5 text-xs">{label(n.channel)}</span></td>
@@ -58,7 +62,7 @@ export default function NoticeAdmin() {
               <td className="text-center text-label">{n.createdAt.slice(0, 10)}</td>
               <td className="text-center text-xs">
                 <button onClick={() => edit(n)} className="text-primary">수정</button>{" "}
-                <button onClick={() => noticeActions.remove(n.id)} className="text-red-500">삭제</button>
+                <button onClick={() => del(n)} className="text-red-500">삭제</button>
               </td>
             </tr>
           ))}
