@@ -1,5 +1,9 @@
-import Todo from "@/components/Todo";
+"use client";
+import dynamic from "next/dynamic";
+import DbOnly from "@/components/ui/DbOnly";
+
+const MemberAdmin = dynamic(() => import("./MemberAdmin"), { ssr: false });
 
 export default function Page() {
-  return <Todo spec={["개인정보, 가족구성원, 교적, 교구/구역, 봉사부서(직책)", "헌금명단 노출 순서"]} />;
+  return <DbOnly what="교인명단"><MemberAdmin /></DbOnly>;
 }

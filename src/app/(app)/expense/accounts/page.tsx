@@ -1,5 +1,9 @@
-import Todo from "@/components/Todo";
+"use client";
+import dynamic from "next/dynamic";
+import DbOnly from "@/components/ui/DbOnly";
+
+const AccountAdmin = dynamic(() => import("./AccountAdmin"), { ssr: false });
 
 export default function Page() {
-  return <Todo spec={["재정부 계좌, 개인·업체 송금 계좌 관리(계좌번호 암호화)"]} />;
+  return <DbOnly what="은행계좌관리"><AccountAdmin /></DbOnly>;
 }
