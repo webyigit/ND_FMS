@@ -1,0 +1,401 @@
+<!doctype html>
+<html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>NDFMS2 디자인 미리보기</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@300;400;500;600&family=Noto+Sans+KR:wght@300;400;500;600&display=swap">
+<style>
+/* 레이아웃: 고정 사이드바 270px + 상단바 + 12열 카드 그리드 (Rizz 패턴 재현) */
+:root {
+  --c-primary:#22c55e; --c-secondary:#95a0c5; --c-success:#22c5ad; --c-info:#41cbd8;
+  --c-warning:#ff9f43; --c-danger:#ef4d56; --c-purple:#7367f0; --c-pink:#fd3c97;
+  --c-primary-subtle:rgba(34,197,94,.1); --c-success-subtle:rgba(34,197,173,.1);
+  --c-info-subtle:rgba(65,203,216,.1); --c-warning-subtle:rgba(255,159,67,.1);
+  --c-danger-subtle:rgba(239,77,86,.1); --c-purple-subtle:rgba(115,103,240,.1);
+  --c-bg:#f7f9fb; --c-surface:#ffffff; --c-surface-2:#f4f6f9; --c-text:#2b2d3b;
+  --c-muted:#96a0b5; --c-heading:#061237; --c-label:#717fa7; --c-border:#e2e7f1;
+  --c-menu-link:#061237; --c-menu-icon:#96a0b5; --c-on-primary:#ffffff;
+  --sh-card:0 3px 16px rgba(142,134,171,.05);
+  --font-base:"Be Vietnam Pro","Pretendard","Noto Sans KR",system-ui,-apple-system,sans-serif;
+  --r:.4rem; --r-sm:.25rem; --r-lg:.5rem; --r-menu:10px;
+  --sidebar-w:270px; --topbar-h:72px; --gap:1.5rem;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --c-bg:#0f1411; --c-surface:#202221; --c-surface-2:#25282d; --c-text:#d9e1ec;
+    --c-muted:#8a93a8; --c-heading:#e9eef5; --c-border:#333547;
+    --c-menu-link:#a1a8bd; --c-menu-icon:#4d6089; --sh-card:0 3px 16px rgba(0,0,0,.25);
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"] {
+  --c-bg:#0f1411; --c-surface:#202221; --c-surface-2:#25282d; --c-text:#d9e1ec;
+  --c-muted:#8a93a8; --c-heading:#e9eef5; --c-border:#333547;
+  --c-menu-link:#a1a8bd; --c-menu-icon:#4d6089; --sh-card:0 3px 16px rgba(0,0,0,.25);
+  color-scheme:dark;
+}
+
+* { box-sizing:border-box; }
+body { margin:0; background:var(--c-bg); color:var(--c-text); font-family:var(--font-base); font-size:.812rem; line-height:1.5; }
+a { color:var(--c-primary); text-decoration:none; }
+svg.i { width:18px; height:18px; flex:none; fill:none; stroke:currentColor; stroke-width:1.6; stroke-linecap:round; stroke-linejoin:round; }
+.num { font-variant-numeric:tabular-nums; }
+:focus-visible { outline:2px solid var(--c-primary); outline-offset:2px; }
+
+/* 사이드바 */
+.sidebar { position:fixed; top:0; bottom:0; left:0; width:var(--sidebar-w); background:var(--c-surface); border-right:1px solid var(--c-border); display:flex; flex-direction:column; z-index:20; transition:transform .25s; }
+.brand { height:var(--topbar-h); display:flex; align-items:center; gap:.6rem; padding-inline:1.5rem; flex:none; }
+.brand-mark { width:32px; height:32px; border-radius:var(--r-lg); background:var(--c-primary); color:var(--c-on-primary); display:grid; place-items:center; font-weight:600; font-size:.9rem; }
+.brand b { font-size:1.05rem; color:var(--c-heading); font-weight:600; letter-spacing:.2px; }
+.brand small { display:block; font-size:.6875rem; color:var(--c-muted); line-height:1.1; }
+.menu { overflow-y:auto; padding:0 1rem 1.5rem; }
+.menu-label { text-transform:uppercase; font-size:11px; letter-spacing:1px; color:var(--c-label); padding:14px 8px 8px 12px; }
+.nav-link { display:flex; align-items:center; gap:.75rem; padding:10px 16px; border-radius:var(--r-menu); color:var(--c-menu-link); font-weight:500; margin-bottom:3px; }
+.nav-link svg { color:var(--c-menu-icon); }
+.nav-link:hover, .nav-link.active { color:var(--c-primary); }
+.nav-link:hover svg, .nav-link.active svg { color:var(--c-primary); }
+.nav-link.active { background:var(--c-primary-subtle); }
+.nav-link .count { margin-left:auto; }
+.sub { padding-left:2.6rem; margin:-2px 0 6px; display:grid; gap:2px; }
+.sub a { color:var(--c-label); padding:5px 0; font-size:.78rem; }
+.sub a::before { content:"•"; margin-right:.55rem; color:var(--c-muted); }
+.sub a:hover { color:var(--c-primary); }
+
+/* 상단바 */
+.main { margin-left:var(--sidebar-w); min-height:100vh; display:flex; flex-direction:column; }
+.topbar { position:sticky; top:env(safe-area-inset-top,0px); height:var(--topbar-h); background:var(--c-surface); border-bottom:1px solid var(--c-border); display:flex; align-items:center; gap:.75rem; padding-inline:1.5rem; z-index:10; }
+.icon-btn { width:34px; height:34px; border-radius:var(--r); border:0; background:transparent; color:var(--c-muted); display:grid; place-items:center; cursor:pointer; position:relative; }
+.icon-btn:hover { background:var(--c-surface-2); color:var(--c-heading); }
+.icon-btn .dot { position:absolute; top:6px; right:7px; width:7px; height:7px; border-radius:50%; background:var(--c-danger); }
+.greet { font-size:1rem; font-weight:600; color:var(--c-heading); white-space:nowrap; }
+.greet span { display:block; font-size:.75rem; font-weight:400; color:var(--c-muted); }
+.search { margin-left:auto; display:flex; align-items:center; gap:.5rem; background:var(--c-surface-2); border-radius:var(--r-lg); padding:0 .75rem; height:36px; width:min(260px,30vw); color:var(--c-muted); }
+.search input { border:0; background:transparent; outline:none; font:inherit; color:var(--c-text); width:100%; }
+.user { display:flex; align-items:center; gap:.6rem; padding-left:.5rem; }
+.avatar { width:36px; height:36px; border-radius:50%; background:var(--c-purple-subtle); color:var(--c-purple); display:grid; place-items:center; font-weight:600; }
+.user b { color:var(--c-heading); font-weight:500; display:block; line-height:1.2; }
+.user small { color:var(--c-muted); font-size:.72rem; }
+.hamburger { display:none; }
+
+/* 본문 */
+.content { padding:0 1.5rem 1.5rem; flex:1; }
+.page-title-box { display:flex; align-items:center; justify-content:space-between; gap:1rem; flex-wrap:wrap; padding:1rem 0; }
+.page-title { margin:0; font-size:18px; font-weight:600; color:var(--c-heading); }
+.crumb { color:var(--c-muted); font-size:.78rem; display:flex; gap:.4rem; }
+.crumb b { color:var(--c-text); font-weight:500; }
+.grid { display:grid; grid-template-columns:repeat(12,minmax(0,1fr)); gap:var(--gap); }
+.c3 { grid-column:span 3; } .c4 { grid-column:span 4; } .c5 { grid-column:span 5; } .c7 { grid-column:span 7; } .c8 { grid-column:span 8; } .c12 { grid-column:span 12; }
+
+.card { background:var(--c-surface); border-radius:var(--r-lg); box-shadow:var(--sh-card); min-width:0; display:flex; flex-direction:column; }
+.card-header { display:flex; align-items:center; justify-content:space-between; gap:.75rem; padding:1.15rem 1.25rem 0; }
+.card-title { margin:0; font-size:16px; font-weight:600; color:var(--c-heading); }
+.card-body { padding:1.15rem 1.25rem 1.25rem; }
+
+/* KPI */
+.kpi { display:flex; justify-content:space-between; gap:1rem; }
+.kpi .label { color:var(--c-muted); }
+.kpi .value { font-size:1.5rem; font-weight:600; color:var(--c-heading); margin:.2rem 0 .45rem; letter-spacing:-.2px; }
+.kpi .value small { font-size:.85rem; font-weight:500; color:var(--c-muted); margin-left:2px; }
+.kpi .delta { color:var(--c-muted); font-size:.75rem; display:flex; gap:.4rem; align-items:center; flex-wrap:wrap; }
+.thumb { width:48px; height:48px; border-radius:50%; display:grid; place-items:center; flex:none; }
+.thumb svg { width:22px; height:22px; }
+
+/* 배지, 버튼, 입력 */
+.badge { display:inline-flex; align-items:center; gap:.25rem; padding:.2rem .5rem; border-radius:var(--r-sm); font-size:.72rem; font-weight:500; white-space:nowrap; }
+.s-primary { background:var(--c-primary-subtle); color:var(--c-primary); }
+.s-success { background:var(--c-success-subtle); color:var(--c-success); }
+.s-info { background:var(--c-info-subtle); color:var(--c-info); }
+.s-warning { background:var(--c-warning-subtle); color:var(--c-warning); }
+.s-danger { background:var(--c-danger-subtle); color:var(--c-danger); }
+.s-purple { background:var(--c-purple-subtle); color:var(--c-purple); }
+.btn { display:inline-flex; align-items:center; gap:.4rem; font:inherit; font-weight:500; padding:.517rem .95rem; border-radius:var(--r); border:1px solid transparent; cursor:pointer; line-height:1.2; }
+.btn-primary { background:var(--c-primary); color:var(--c-on-primary); box-shadow:0 1px 2px rgba(34,197,94,.35); }
+.btn-primary:hover { filter:brightness(.95); }
+.btn-outline { border-color:var(--c-primary); color:var(--c-primary); background:transparent; }
+.btn-outline:hover { background:var(--c-primary-subtle); }
+.btn-soft { background:var(--c-primary-subtle); color:var(--c-primary); }
+.btn-danger { background:var(--c-danger); color:#fff; box-shadow:0 1px 2px rgba(239,77,86,.35); }
+.btn-light { background:var(--c-surface-2); color:var(--c-text); }
+.btn-sm { padding:.3rem .6rem; font-size:.75rem; }
+.select { font:inherit; font-size:.75rem; color:var(--c-text); background:var(--c-surface-2); border:1px solid var(--c-border); border-radius:var(--r); padding:.3rem .5rem; }
+.field { display:grid; gap:.35rem; }
+.field label { font-weight:500; color:var(--c-heading); }
+.input { font:inherit; color:var(--c-text); background:var(--c-surface); border:1px solid var(--c-border); border-radius:var(--r); padding:.5rem .75rem; width:100%; }
+.input:focus { outline:none; border-color:var(--c-primary); box-shadow:0 0 0 3px rgba(34,197,94,.15); }
+.row { display:flex; flex-wrap:wrap; gap:.5rem; align-items:center; }
+
+/* 차트 */
+.chart { width:100%; height:auto; display:block; }
+.chart text { fill:var(--c-muted); font-size:11px; font-family:var(--font-base); }
+.chart .grid-line { stroke:var(--c-border); stroke-dasharray:3 3; }
+.legend { display:flex; gap:1rem; flex-wrap:wrap; color:var(--c-muted); font-size:.75rem; }
+.legend i { display:inline-block; width:10px; height:10px; border-radius:3px; margin-right:.35rem; vertical-align:-1px; }
+.donut-wrap { display:grid; grid-template-columns:150px 1fr; gap:1.25rem; align-items:center; }
+.dlist { display:grid; gap:.6rem; margin:0; padding:0; list-style:none; }
+.dlist li { display:flex; align-items:center; gap:.5rem; }
+.dlist li b { margin-left:auto; font-weight:500; color:var(--c-heading); }
+
+/* 표 */
+.table-wrap { overflow-x:auto; }
+table { width:100%; border-collapse:collapse; white-space:nowrap; }
+th { background:var(--c-surface-2); color:var(--c-label); font-weight:500; text-align:left; padding:.6rem .9rem; font-size:.75rem; }
+th:first-child { border-radius:var(--r) 0 0 var(--r); } th:last-child { border-radius:0 var(--r) var(--r) 0; }
+td { padding:.7rem .9rem; border-bottom:1px solid var(--c-border); }
+tbody tr:hover td { background:var(--c-surface-2); }
+.r { text-align:right; }
+.amt-in { color:var(--c-success); font-weight:500; }
+.amt-out { color:var(--c-danger); font-weight:500; }
+
+/* 알림 목록, 진행바 */
+.feed { list-style:none; margin:0; padding:0; display:grid; gap:1rem; }
+.feed li { display:flex; gap:.75rem; }
+.feed .thumb { width:36px; height:36px; }
+.feed .thumb svg { width:18px; height:18px; }
+.feed p { margin:0; color:var(--c-heading); font-weight:500; }
+.feed small { color:var(--c-muted); }
+.prog { height:6px; background:var(--c-surface-2); border-radius:99px; overflow:hidden; }
+.prog > span { display:block; height:100%; border-radius:99px; }
+.budget { display:grid; gap:1rem; }
+.budget .top { display:flex; justify-content:space-between; margin-bottom:.35rem; }
+.budget .top span:last-child { color:var(--c-muted); }
+
+.footer { padding:1rem 1.5rem; color:var(--c-muted); font-size:.75rem; border-top:1px solid var(--c-border); display:flex; justify-content:space-between; flex-wrap:wrap; gap:.5rem; }
+.sample-note { font-size:.72rem; color:var(--c-warning); }
+.scrim { display:none; }
+
+@media (max-width:1279px) { .c3 { grid-column:span 6; } .c4,.c5,.c7,.c8 { grid-column:span 12; } }
+@media (max-width:1023px) {
+  .sidebar { transform:translateX(-100%); }
+  body.nav-open .sidebar { transform:none; }
+  body.nav-open .scrim { display:block; position:fixed; inset:0; background:rgba(15,20,17,.4); z-index:15; }
+  .main { margin-left:0; }
+  .hamburger { display:grid; }
+  .search { display:none; }
+}
+@media (max-width:640px) {
+  .c3 { grid-column:span 12; }
+  .content { padding-inline:1rem; }
+  .topbar { padding-inline:1rem; }
+  .user div { display:none; }
+  .greet span { display:none; }
+  .donut-wrap { grid-template-columns:1fr; justify-items:center; }
+  .dlist { width:100%; }
+}
+@media (prefers-reduced-motion:reduce) { * { transition:none !important; } }
+</style>
+</head><body>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-home" viewBox="0 0 24 24"><path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></symbol>
+  <symbol id="i-in" viewBox="0 0 24 24"><path d="M12 3v12m0 0-4-4m4 4 4-4M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></symbol>
+  <symbol id="i-out" viewBox="0 0 24 24"><path d="M12 15V3m0 0L8 7m4-4 4 4M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></symbol>
+  <symbol id="i-globe" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.7 3.8 5.7 3.8 9s-1.3 6.3-3.8 9c-2.5-2.7-3.8-5.7-3.8-9S9.5 5.7 12 3z"/></symbol>
+  <symbol id="i-receipt" viewBox="0 0 24 24"><path d="M6 3h12v18l-3-2-3 2-3-2-3 2zM9 8h6M9 12h6M9 16h3"/></symbol>
+  <symbol id="i-chart" viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></symbol>
+  <symbol id="i-gear" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></symbol>
+  <symbol id="i-menu" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h10"/></symbol>
+  <symbol id="i-bell" viewBox="0 0 24 24"><path d="M18 16V11a6 6 0 1 0-12 0v5l-2 2h16zM10 21h4"/></symbol>
+  <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></symbol>
+  <symbol id="i-moon" viewBox="0 0 24 24"><path d="M21 13A9 9 0 1 1 11 3a7 7 0 0 0 10 10z"/></symbol>
+  <symbol id="i-wallet" viewBox="0 0 24 24"><path d="M3 7a2 2 0 0 1 2-2h13v4M3 7v11a2 2 0 0 0 2 2h15V9H5a2 2 0 0 1-2-2zM16 14.5h.01"/></symbol>
+  <symbol id="i-alert" viewBox="0 0 24 24"><path d="M12 3 2 20h20zM12 10v4M12 17h.01"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="m8 12 3 3 5-6"/></symbol>
+  <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+  <symbol id="i-file" viewBox="0 0 24 24"><path d="M14 3H6a1 1 0 0 0-1 1v16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8zM14 3v5h5"/></symbol>
+</svg>
+
+<aside class="sidebar" id="sidebar" aria-label="주 메뉴">
+  <div class="brand"><span class="brand-mark">N</span><div><b>NDFMS2</b><small>재정관리시스템</small></div></div>
+  <nav class="menu">
+    <div class="menu-label">메인</div>
+    <a class="nav-link active" href="#"><svg class="i"><use href="#i-home"/></svg>대시보드</a>
+    <div class="menu-label">재정</div>
+    <a class="nav-link" href="#"><svg class="i"><use href="#i-in"/></svg>수입관리</a>
+    <div class="sub"><a href="#">수입 입력</a><a href="#">은행내역 업로드</a><a href="#">금주 수입 리포트</a><a href="#">개인별 헌금현황</a></div>
+    <a class="nav-link" href="#"><svg class="i"><use href="#i-out"/></svg>지출관리<span class="badge s-warning count">3</span></a>
+    <a class="nav-link" href="#"><svg class="i"><use href="#i-globe"/></svg>해외선교</a>
+    <a class="nav-link" href="#"><svg class="i"><use href="#i-receipt"/></svg>기부금영수증</a>
+    <a class="nav-link" href="#"><svg class="i"><use href="#i-chart"/></svg>예산결산</a>
+    <div class="menu-label">관리</div>
+    <a class="nav-link" href="#"><svg class="i"><use href="#i-gear"/></svg>설정</a>
+  </nav>
+</aside>
+<div class="scrim" id="scrim"></div>
+
+<div class="main">
+  <header class="topbar">
+    <button class="icon-btn hamburger" id="navToggle" aria-label="메뉴 열기"><svg class="i"><use href="#i-menu"/></svg></button>
+    <div class="greet">안녕하세요, 재정부님<span>2026년 10월 첫째 주 (10.04 ~ 10.10)</span></div>
+    <label class="search" for="q"><svg class="i"><use href="#i-search"/></svg><input id="q" placeholder="이름, 적요, 금액 검색"></label>
+    <button class="icon-btn" id="themeToggle" aria-label="테마 바꾸기"><svg class="i"><use href="#i-moon"/></svg></button>
+    <button class="icon-btn" aria-label="알림 3건"><svg class="i"><use href="#i-bell"/></svg><span class="dot"></span></button>
+    <div class="user"><span class="avatar">재</span><div><b>재정부</b><small>관리자</small></div></div>
+  </header>
+
+  <main class="content">
+    <div class="page-title-box">
+      <div>
+        <h1 class="page-title">대시보드</h1>
+        <div class="crumb">NDFMS2 <span>/</span> <b>대시보드</b></div>
+      </div>
+      <div class="row">
+        <span class="sample-note">모든 숫자는 디자인 확인용 예시입니다</span>
+        <button class="btn btn-light btn-sm"><svg class="i"><use href="#i-file"/></svg>엑셀 저장</button>
+        <button class="btn btn-primary btn-sm"><svg class="i"><use href="#i-plus"/></svg>수입 입력</button>
+      </div>
+    </div>
+
+    <div class="grid">
+      <div class="card c3"><div class="card-body kpi">
+        <div><div class="label">금주 수입</div><div class="value num">12,480,000<small>원</small></div>
+          <div class="delta"><span class="badge s-success">▲ 8.5%</span>전주 대비</div></div>
+        <span class="thumb s-success"><svg class="i"><use href="#i-in"/></svg></span>
+      </div></div>
+      <div class="card c3"><div class="card-body kpi">
+        <div><div class="label">금주 지출</div><div class="value num">7,215,400<small>원</small></div>
+          <div class="delta"><span class="badge s-danger">▲ 3.2%</span>전주 대비</div></div>
+        <span class="thumb s-danger"><svg class="i"><use href="#i-out"/></svg></span>
+      </div></div>
+      <div class="card c3"><div class="card-body kpi">
+        <div><div class="label">금주 수지</div><div class="value num">5,264,600<small>원</small></div>
+          <div class="delta"><span class="badge s-primary">흑자</span>누적 잔액 84,102,300원</div></div>
+        <span class="thumb s-primary"><svg class="i"><use href="#i-wallet"/></svg></span>
+      </div></div>
+      <div class="card c3"><div class="card-body kpi">
+        <div><div class="label">검증 대기</div><div class="value num">3<small>건</small></div>
+          <div class="delta"><span class="badge s-warning">확인 필요</span>영수증 미첨부 2건</div></div>
+        <span class="thumb s-warning"><svg class="i"><use href="#i-alert"/></svg></span>
+      </div></div>
+
+      <div class="card c8">
+        <div class="card-header"><h2 class="card-title">주간 수입·지출</h2>
+          <select class="select" id="range" aria-label="기간"><option>최근 12주</option><option>올해</option></select></div>
+        <div class="card-body">
+          <div class="legend"><span><i style="background:var(--c-success)"></i>수입</span><span><i style="background:var(--c-danger)"></i>지출</span></div>
+          <svg class="chart" id="areaChart" viewBox="0 0 640 260" role="img" aria-label="주간 수입 지출 영역 차트"></svg>
+        </div>
+      </div>
+
+      <div class="card c4">
+        <div class="card-header"><h2 class="card-title">헌금 구분별</h2><span class="badge s-info">10월</span></div>
+        <div class="card-body donut-wrap">
+          <svg viewBox="0 0 120 120" width="150" height="150" id="donut" role="img" aria-label="헌금 구분별 비율 도넛 차트"></svg>
+          <ul class="dlist" id="donutList"></ul>
+        </div>
+      </div>
+
+      <div class="card c8">
+        <div class="card-header"><h2 class="card-title">최근 거래</h2><a href="#" class="btn btn-soft btn-sm">전체 보기</a></div>
+        <div class="card-body">
+          <div class="table-wrap"><table>
+            <thead><tr><th>날짜</th><th>구분</th><th>항목</th><th>적요</th><th class="r">금액(원)</th><th>상태</th></tr></thead>
+            <tbody class="num">
+              <tr><td>10.06</td><td><span class="badge s-success">수입</span></td><td>주일헌금</td><td>1부 예배</td><td class="r amt-in">+3,420,000</td><td><span class="badge s-primary">확정</span></td></tr>
+              <tr><td>10.06</td><td><span class="badge s-success">수입</span></td><td>십일조</td><td>농협 입금 일괄</td><td class="r amt-in">+6,150,000</td><td><span class="badge s-primary">확정</span></td></tr>
+              <tr><td>10.05</td><td><span class="badge s-danger">지출</span></td><td>관리비</td><td>10월 전기요금</td><td class="r amt-out">-412,300</td><td><span class="badge s-warning">검증 대기</span></td></tr>
+              <tr><td>10.05</td><td><span class="badge s-danger">지출</span></td><td>교육부</td><td>교재 구입</td><td class="r amt-out">-238,000</td><td><span class="badge s-warning">영수증 없음</span></td></tr>
+              <tr><td>10.04</td><td><span class="badge s-info">선교</span></td><td>해외선교</td><td>정기 송금</td><td class="r amt-out">-1,000,000</td><td><span class="badge s-primary">확정</span></td></tr>
+            </tbody>
+          </table></div>
+        </div>
+      </div>
+
+      <div class="card c4">
+        <div class="card-header"><h2 class="card-title">특이사항</h2><span class="badge s-danger">3</span></div>
+        <div class="card-body"><ul class="feed">
+          <li><span class="thumb s-warning"><svg class="i"><use href="#i-alert"/></svg></span><div><p>영수증 미첨부 지출 2건</p><small>교육부 · 관리비</small></div></li>
+          <li><span class="thumb s-danger"><svg class="i"><use href="#i-out"/></svg></span><div><p>선교부 예산 90% 집행</p><small>잔여 1,240,000원</small></div></li>
+          <li><span class="thumb s-success"><svg class="i"><use href="#i-check"/></svg></span><div><p>9월 결산 승인 완료</p><small>10.02 · 재정위원장</small></div></li>
+        </ul></div>
+      </div>
+
+      <div class="card c5">
+        <div class="card-header"><h2 class="card-title">부서별 예산 집행률</h2></div>
+        <div class="card-body budget num">
+          <div><div class="top"><span>선교부</span><span>90%</span></div><div class="prog"><span style="width:90%;background:var(--c-danger)"></span></div></div>
+          <div><div class="top"><span>교육부</span><span>64%</span></div><div class="prog"><span style="width:64%;background:var(--c-primary)"></span></div></div>
+          <div><div class="top"><span>관리부</span><span>72%</span></div><div class="prog"><span style="width:72%;background:var(--c-warning)"></span></div></div>
+          <div><div class="top"><span>봉사부</span><span>41%</span></div><div class="prog"><span style="width:41%;background:var(--c-info)"></span></div></div>
+        </div>
+      </div>
+
+      <div class="card c7">
+        <div class="card-header"><h2 class="card-title">컴포넌트 샘플</h2><span class="badge s-purple">가이드 6장</span></div>
+        <div class="card-body" style="display:grid;gap:1rem">
+          <div class="row"><button class="btn btn-primary">저장</button><button class="btn btn-outline">임시저장</button><button class="btn btn-soft">미리보기</button><button class="btn btn-light">취소</button><button class="btn btn-danger">삭제</button></div>
+          <div class="row"><span class="badge s-primary">확정</span><span class="badge s-success">수입</span><span class="badge s-danger">지출</span><span class="badge s-warning">검증 대기</span><span class="badge s-info">이월</span><span class="badge s-purple">기부금</span></div>
+          <div class="grid" style="gap:1rem">
+            <div class="field c6" style="grid-column:span 6"><label for="f1">헌금자</label><input class="input" id="f1" value="홍길동 (예시)"></div>
+            <div class="field c6" style="grid-column:span 6"><label for="f2">금액</label><input class="input num" id="f2" value="50,000"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+  <footer class="footer"><span>© 2026 NDFMS2</span><span>디자인 참고: Rizz (토큰·패턴 재현)</span></footer>
+</div>
+
+<script>
+(function () {
+  var NS = 'http://www.w3.org/2000/svg';
+  function el(tag, attrs, parent) { var e = document.createElementNS(NS, tag); for (var k in attrs) e.setAttribute(k, attrs[k]); if (parent) parent.appendChild(e); return e; }
+
+  // 예시 데이터 (만원)
+  var weeks = ['7.20','7.27','8.03','8.10','8.17','8.24','8.31','9.07','9.14','9.21','9.28','10.04'];
+  var inc = [980,1120,1040,1210,990,1150,1300,1080,1190,1105,1150,1248];
+  var out = [640,720,810,690,760,705,880,650,700,690,699,722];
+
+  function drawArea() {
+    var svg = document.getElementById('areaChart'); svg.innerHTML = '';
+    var W = 640, H = 260, L = 62, R = 24, T = 12, B = 28, max = 1500;
+    var x = function (i) { return L + i * (W - L - R) / (weeks.length - 1); };
+    var y = function (v) { return T + (1 - v / max) * (H - T - B); };
+    var defs = el('defs', {}, svg);
+    [['gIn','--c-success'],['gOut','--c-danger']].forEach(function (g) {
+      var lg = el('linearGradient', { id: g[0], x1: 0, y1: 0, x2: 0, y2: 1 }, defs);
+      el('stop', { offset: '0%', 'stop-color': 'var(' + g[1] + ')', 'stop-opacity': .3 }, lg);
+      el('stop', { offset: '100%', 'stop-color': 'var(' + g[1] + ')', 'stop-opacity': 0 }, lg);
+    });
+    for (var v = 0; v <= max; v += 500) {
+      el('line', { x1: L, x2: W - R, y1: y(v), y2: y(v), class: 'grid-line' }, svg);
+      el('text', { x: L - 8, y: y(v) + 4, 'text-anchor': 'end' }, svg).textContent = v === 0 ? '0' : v.toLocaleString() + '만';
+    }
+    weeks.forEach(function (w, i) { if (i % 2 === 1 || i === weeks.length - 1) el('text', { x: x(i), y: H - 8, 'text-anchor': 'middle' }, svg).textContent = w; });
+    [[inc,'gIn','--c-success'],[out,'gOut','--c-danger']].forEach(function (s) {
+      var pts = s[0].map(function (v, i) { return x(i) + ',' + y(v); }).join(' L');
+      el('path', { d: 'M' + x(0) + ',' + y(0) + ' L' + pts + ' L' + x(s[0].length - 1) + ',' + y(0) + 'Z', fill: 'url(#' + s[1] + ')' }, svg);
+      el('path', { d: 'M' + pts, fill: 'none', stroke: 'var(' + s[2] + ')', 'stroke-width': 2, 'stroke-linejoin': 'round' }, svg);
+      var li = s[0].length - 1;
+      el('circle', { cx: x(li), cy: y(s[0][li]), r: 4, fill: 'var(--c-surface)', stroke: 'var(' + s[2] + ')', 'stroke-width': 2 }, svg);
+    });
+  }
+
+  function drawDonut() {
+    var data = [['십일조',52,'--c-primary'],['주일헌금',24,'--c-success'],['감사헌금',12,'--c-info'],['선교헌금',8,'--c-warning'],['기타',4,'--c-purple']];
+    var svg = document.getElementById('donut'), list = document.getElementById('donutList');
+    var r = 46, c = 2 * Math.PI * r, off = 0;
+    el('circle', { cx: 60, cy: 60, r: r, fill: 'none', stroke: 'var(--c-surface-2)', 'stroke-width': 14 }, svg);
+    data.forEach(function (d) {
+      var len = c * d[1] / 100;
+      el('circle', { cx: 60, cy: 60, r: r, fill: 'none', stroke: 'var(' + d[2] + ')', 'stroke-width': 14, 'stroke-dasharray': (len - 1.5) + ' ' + (c - len + 1.5), 'stroke-dashoffset': -off, transform: 'rotate(-90 60 60)' }, svg);
+      off += len;
+      var li = document.createElement('li');
+      li.innerHTML = '<i style="width:10px;height:10px;border-radius:3px;background:var(' + d[2] + ')"></i>' + d[0] + '<b class="num">' + d[1] + '%</b>';
+      list.appendChild(li);
+    });
+    var t = el('text', { x: 60, y: 57, 'text-anchor': 'middle', style: 'fill:var(--c-heading);font-size:15px;font-weight:600' }, svg); t.textContent = '4,820';
+    var t2 = el('text', { x: 60, y: 73, 'text-anchor': 'middle', style: 'fill:var(--c-muted);font-size:9px' }, svg); t2.textContent = '만원 (10월)';
+  }
+
+  drawArea(); drawDonut();
+
+  document.getElementById('themeToggle').addEventListener('click', function () {
+    var root = document.documentElement;
+    var dark = root.getAttribute('data-theme') ? root.getAttribute('data-theme') === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches;
+    root.setAttribute('data-theme', dark ? 'light' : 'dark');
+  });
+  document.getElementById('navToggle').addEventListener('click', function () { document.body.classList.toggle('nav-open'); });
+  document.getElementById('scrim').addEventListener('click', function () { document.body.classList.remove('nav-open'); });
+})();
+</script>
+</body></html>
