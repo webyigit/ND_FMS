@@ -1,10 +1,10 @@
 @import "tailwindcss";
 
-/* 디자인 토큰은 'Rizz 디자인 가이드' 확정 후 반영 */
+/* 글꼴 Pretendard 확정(2026-10-07). 색·간격 토큰은 디자인가이드 기준 */
 body {
   background: #f8fafc;
   color: #0f172a;
-  font-family: "Pretendard", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+  font-family: "Pretendard Variable", "Pretendard", -apple-system, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
 }
 
 @media print {
