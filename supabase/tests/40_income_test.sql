@@ -20,7 +20,7 @@ begin
   insert into member (name, household_id, is_household_head) values ('가나다', hh, true) returning id into m1;
   insert into member (name, household_id) values ('라마바', hh) returning id into m2;
   insert into bank_account (bank, account_no_enc, holder, kind, is_primary)
-  values ('농협', public.enc('301-1234-5678-91'), '재정부', '일반', true) returning id into acc;
+  values ('농협', public.enc('301-1234-5678-91'), '재정부', '일반', false) returning id into acc;
   assert (select account_mask from v_bank_account where id = acc) = '***-****-***8-91', '계좌번호는 가려서';
 
   rows := jsonb_build_array(
