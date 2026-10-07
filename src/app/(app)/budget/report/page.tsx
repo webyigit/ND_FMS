@@ -1,5 +1,8 @@
-import Todo from "@/components/Todo";
+"use client";
+import dynamic from "next/dynamic";
+
+const BudgetReport = dynamic(() => import("./BudgetReport"), { ssr: false });
 
 export default function Page() {
-  return <Todo spec={["예결산 리포트"]} />;
+  return <BudgetReport />;
 }

@@ -1,5 +1,8 @@
-import Todo from "@/components/Todo";
+"use client";
+import dynamic from "next/dynamic";
+
+const Mission = dynamic(() => import("./Mission"), { ssr: false });
 
 export default function Page() {
-  return <Todo spec={["매주 수입/지출 입력", "월별 누적, 이월금, 네팔헌금 별도"]} />;
+  return <Mission />;
 }

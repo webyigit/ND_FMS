@@ -2,7 +2,14 @@
 import { Fragment, useMemo, useState } from "react";
 import ExcelJS from "exceljs";
 import PageHeader from "@/components/PageHeader";
+import Notice from "@/components/ui/Notice";
 import { DEMO_BUDGETS, DEMO_EXPENSES, DEMO_MISSION } from "@/lib/demo";
+import { useDbQuery } from "@/lib/db/useDb";
+import { supabaseBrowser } from "@/lib/supabase/client";
+import { loadYearReport } from "@/lib/reports/load";
+import { lastYearSameDay, operating, sum } from "@/lib/reports/common";
+import { missionTxs } from "@/lib/reports/mission";
+import { toBudgetItems, toExpenseTx } from "@/lib/reports/reportData";
 import { missionLedger, rate, spendingStatus } from "@/lib/officersReport";
 import { koreanAmount } from "@/lib/koreanAmount";
 import { localDate } from "@/lib/todo";
@@ -14,10 +21,22 @@ const td = "border border-line px-2 py-1";
 
 export default function OfficersReport() {
   const [tab, setTab] = useState<(typeof TABS)[number]>("지출 현황");
-  const [year] = useState(2026);
   const [asOf, setAsOf] = useState(localDate);
+  const year = Number(asOf.slice(0, 4)) || new Date().getFullYear();
   const [from, setFrom] = useState(`${year}-01-01`);
-  const rows = useMemo(() => spendingStatus(DEMO_BUDGETS, DEMO_EXPENSES, `${year}-01-01`, asOf), [year, asOf]);
+  // DB가 있으면 실제 데이터(예산·지출·수입·해외선교), 없으면 가상 데이터
+  const q = useDbQuery((sb) => loadYearReport(sb, year), [year]);
+  const src = useMemo(() => {
+    if (!q.data) return { demo: true, budgets: DEMO_BUDGETS, expenses: DEMO_EXPENSES, mission: DEMO_MISSION, missionCarry: 5000000, income: null as number | null, prev: null as { income: number; expense: number } | null };
+    const d = q.data, cut = lastYearSameDay(asOf);
+    return {
+      demo: false, budgets: toBudgetItems(d.items, d.budgets), expenses: toExpenseTx(d.detail),
+      mission: missionTxs(d.inc, d.detail.filter((t) => t.fund === "별도")), missionCarry: d.missionCarry,
+      income: sum(d.inc.filter((r) => operating(r) && r.sunday <= asOf), (r) => r.amount),
+      prev: { income: sum(d.prevInc.filter((r) => operating(r) && r.sunday <= cut), (r) => r.amount), expense: sum(d.prevExp.filter((r) => operating(r) && r.sunday <= cut), (r) => r.amount) },
+    };
+  }, [q.data, asOf]);
+  const rows = useMemo(() => spendingStatus(src.budgets, src.expenses, `${year}-01-01`, asOf), [src, year, asOf]);
   const total = rows[0];
 
   const downloadExcel = async () => {
@@ -39,10 +58,12 @@ export default function OfficersReport() {
     a.click();
   };
 
+  // DB 모드에서 불러오는 동안 가상 데이터를 보여주지 않는다
+  if (supabaseBrowser() && !q.data) return <><PageHeader />{q.error ? <Notice kind="error">불러오지 못했어요: {q.error}</Notice> : <div className="text-sm text-muted">불러오는 중…</div>}</>;
   return (
     <>
       <PageHeader actions={<>
-        <span className="rounded bg-warning-subtle px-2 py-1 text-xs text-warning">가상 데이터</span>
+        {src.demo && <span className="rounded bg-warning-subtle px-2 py-1 text-xs text-warning">가상 데이터</span>}
         <button onClick={downloadExcel} className="no-print rounded border px-3 py-1 text-sm">엑셀 저장</button>
         <button onClick={() => window.print()} className="no-print rounded bg-primary px-3 py-1 text-sm text-white">출력·PDF</button>
       </>} />
@@ -55,6 +76,7 @@ export default function OfficersReport() {
         <span className="text-xs text-muted">재직회 때 총계원장(&apos;총&apos;)도 함께 배포</span>
       </div>
 
+      {q.error && <Notice kind="error">불러오지 못했어요: {q.error}</Notice>}
       <div className="rounded-lg bg-surface shadow-card p-6 text-sm print:border-0 print:p-0">
         {tab === "지출 현황" && (
           <>
@@ -83,7 +105,7 @@ export default function OfficersReport() {
         )}
 
         {tab === "부서별 상세" && (() => {
-          const detail = spendingStatus(DEMO_BUDGETS, DEMO_EXPENSES, from, asOf);
+          const detail = spendingStatus(src.budgets, src.expenses, from, asOf);
           return (
             <>
               <h2 className="mb-4 text-center text-lg font-bold">[재정부] {year}년도 지출 상세 ({from} ~ {asOf})</h2>
@@ -97,7 +119,7 @@ export default function OfficersReport() {
                   <tbody>
                     {detail.filter((r) => r.kind === "item" && r.dept === d.dept).map((it) => {
                       if (it.kind !== "item") return null;
-                      const txs = DEMO_EXPENSES.filter((t) => t.dept === d.dept && t.item === it.item && t.date >= from && t.date <= asOf).sort((a, b) => a.date.localeCompare(b.date));
+                      const txs = src.expenses.filter((t) => t.dept === d.dept && t.item === it.item && t.date >= from && t.date <= asOf).sort((a, b) => a.date.localeCompare(b.date));
                       let bal = it.budget;
                       return (
                         <Fragment key={it.item}>
@@ -116,7 +138,7 @@ export default function OfficersReport() {
         })()}
 
         {tab === "요약" && (() => {
-          const income = Math.round(total.budget * 0.68); // [확인 필요] 수입 실적은 DB 연결 후 수입 테이블에서 계산
+          const income = src.income ?? Math.round(total.budget * 0.68); // 데모: 가상 수입 실적
           return (
             <div className="mx-auto max-w-2xl space-y-4 leading-7">
               <h2 className="text-center text-lg font-bold">{year}년도 재정 보고(요약) <span className="text-sm font-normal text-label">작성일 : {asOf}</span></h2>
@@ -125,14 +147,19 @@ export default function OfficersReport() {
                 <p>수입은 {won(income)} ({koreanAmount(income)}) {rate(income, total.budget)} 수입되었습니다.</p>
                 <p>지출은 {won(total.spent)} ({koreanAmount(total.spent)}) {rate(total.spent, total.budget)} 지출되었습니다.</p>
               </section>
-              <section><h3 className="font-semibold">2. {year - 1}년도 대비</h3><p className="text-label">전년도 데이터 이관 후 표시 [확인 필요]</p></section>
+              <section><h3 className="font-semibold">2. {year - 1}년도 대비 (같은 기간)</h3>
+                {src.prev && (src.prev.income || src.prev.expense) ? <>
+                  <p>수입은 {year - 1}년 {won(src.prev.income)} 대비 {won(income - src.prev.income)} {income >= src.prev.income ? "증가" : "감소"}했습니다.</p>
+                  <p>지출은 {year - 1}년 {won(src.prev.expense)} 대비 {won(total.spent - src.prev.expense)} {total.spent >= src.prev.expense ? "증가" : "감소"}했습니다.</p>
+                </> : <p className="text-label">전년도 데이터 이관 후 표시 [확인 필요]</p>}
+              </section>
               <section><h3 className="font-semibold">3. 결론</h3><p>수입 − 지출 = {won(income - total.spent)}원</p></section>
             </div>
           );
         })()}
 
         {tab === "해외선교 현황" && (() => {
-          const { rows: mrows, summary: s } = missionLedger(5000000, DEMO_MISSION.filter((t) => t.date <= asOf), year);
+          const { rows: mrows, summary: s } = missionLedger(src.missionCarry, src.mission.filter((t) => t.date <= asOf && t.date.startsWith(`${year}-`)), year);
           return (
             <>
               <h2 className="text-center text-lg font-bold">{year}년도 해외선교 현황보고</h2>
