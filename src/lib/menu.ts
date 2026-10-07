@@ -23,6 +23,7 @@ export const MENU: MenuGroup[] = [
     label: "지출관리", icon: faWallet,
     items: [
       { href: "/expense/entry", label: "지출입력" },
+      { href: "/expense/upload", label: "지출증빙 올리기" },
       { href: "/expense/department", label: "부서별 지출내역" },
       { href: "/expense/verify", label: "검증시트" },
       { href: "/expense/report", label: "금주 수입/지출 리포트" },

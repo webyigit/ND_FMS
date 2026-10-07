@@ -6,7 +6,7 @@ import { DEPARTMENTS, FIXED_EXPENSES, MEMBERS, currentSunday, weekOfMonth } from
 import { readFirstSheet } from "@/lib/bank/readXlsx";
 import { parseNonghyupRows, type BankTx } from "@/lib/bank/nonghyup";
 
-type Row = { id: string; content: string; amount: number; dept: string; item: string; requester: string; memo: string; source: "직접" | "고정" | "은행" };
+type Row = { id: string; content: string; amount: number; dept: string; item: string; requester: string; memo: string; source: "직접" | "고정" | "은행" | "증빙" | "엑셀" };
 
 const KEY = "ndfms.expense.draft";
 const won = (n: number) => n.toLocaleString("ko-KR");
@@ -77,7 +77,7 @@ export default function ExpenseEntryForm() {
         <label className="cursor-pointer rounded border px-3 py-1.5">은행 엑셀 업로드
           <input type="file" accept=".xlsx" className="hidden" onChange={(e) => e.target.files?.[0] && onBank(e.target.files[0])} />
         </label>
-        <button disabled title="AI 인식 키 설정 후 사용 [확인 필요]" className="rounded border px-3 py-1.5 text-slate-400">영수증 PDF 인식</button>
+        <a href="/expense/upload" className="rounded border px-3 py-1.5">증빙·엑셀 올리기</a>
         <button onClick={() => setRows((xs) => [...xs, blank()])} className="rounded border px-3 py-1.5">행 추가</button>
         <a href="/expense/history" target="_blank" className="rounded border px-3 py-1.5">과거 지출내역</a>
         <button onClick={downloadTransfer} disabled={!rows.length} className="ml-auto rounded bg-blue-600 px-4 py-1.5 text-white disabled:bg-slate-300">송금용 파일 다운로드</button>

@@ -114,3 +114,34 @@ describe("재직회보고서", () => {
     expect(rows.filter((r) => r.kind === "month").map((r) => (r as { month: number }).month)).toEqual([1, 2]);
   });
 });
+
+import { fileKind, parseExpenseSheet, parseCsv } from "../expenseUpload";
+describe("지출증빙 올리기", () => {
+  it("파일 종류", () => {
+    expect(fileKind("영수증.PDF")).toBe("pdf");
+    expect(fileKind("IMG_0001.HEIC")).toBe("image");
+    expect(fileKind("camera.jpg", "image/jpeg")).toBe("image");
+    expect(fileKind("지출.xlsx")).toBe("excel");
+    expect(fileKind("지출.xls")).toBe("unsupported");
+  });
+  it("일반 엑셀: 제목 줄 찾기, 합계·0원 건너뜀", () => {
+    const r = parseExpenseSheet([
+      ["2026년 지출내역"], [],
+      ["순번", "일자", "내 용", "금액", "부서", "항목", "청구자", "비고"],
+      [1, "2026.10.04", "주보 인쇄", "120,000", "관리부", "인쇄비", "홍길동", ""],
+      [2, new Date("2026-10-04T00:00:00Z"), "꽃 구입", 50000, "예배부", "부활절행사", "", "카드"],
+      ["", "", "합계", 170000],
+      [3, "", "취소건", 0],
+    ]);
+    expect(r.format).toBe("일반");
+    expect(r.rows).toHaveLength(2);
+    expect(r.rows[0]).toMatchObject({ date: "2026-10-04", content: "주보 인쇄", amount: 120000, dept: "관리부", item: "인쇄비" });
+    expect(r.rows[1].date).toBe("2026-10-04");
+    expect(r.skipped).toBe(2);
+  });
+  it("인식 불가와 CSV", () => {
+    expect(parseExpenseSheet([["a", "b"], [1, 2]]).format).toBe("인식불가");
+    const rows = parseCsv('내용,금액\r\n"사무용품, 복사지",30000\n');
+    expect(parseExpenseSheet(rows).rows[0]).toMatchObject({ content: "사무용품, 복사지", amount: 30000 });
+  });
+});
