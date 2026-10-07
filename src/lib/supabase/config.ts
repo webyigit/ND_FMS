@@ -3,8 +3,8 @@ export const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "";
 export const SUPABASE_KEY = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ?? "";
 export const isDbConfigured = Boolean(SUPABASE_URL && SUPABASE_KEY);
 
-/** 로그인 없이 열리는 주소: 로그인·가입, 성도 공지, 공개 신청, 부서장 모바일(다음 단계에서 보호) */
-export const PUBLIC_PATHS = ["/login", "/auth", "/pending", "/notice", "/donation-request", "/request", "/m"];
+/** 로그인 없이 열리는 주소: 로그인·가입, 성도 공지, 공개 신청, 부서장 안내(/m/login). /m·/request 는 로그인 필수 */
+export const PUBLIC_PATHS = ["/login", "/auth", "/pending", "/notice", "/donation-request", "/m/login"];
 export const isPublicPath = (path: string) => PUBLIC_PATHS.some((p) => path === p || path.startsWith(p + "/"));
 
 /** 재정 화면을 쓸 수 있는 권한 */

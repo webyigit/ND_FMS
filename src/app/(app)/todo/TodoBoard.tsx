@@ -3,11 +3,13 @@ import { useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faTrashCan } from "@fortawesome/free-solid-svg-icons";
 import PageHeader from "@/components/PageHeader";
-import { localDate as today, sortTodos, todoActions, useTodos } from "@/lib/todo";
-
+import Notice from "@/components/ui/Notice";
+import { isDbConfigured } from "@/lib/supabase/config";
+import { localDate as today, sortTodos, todoActions, useTodoState } from "@/lib/todo";
 
 export default function TodoBoard() {
-  const todos = sortTodos(useTodos());
+  const st = useTodoState();
+  const todos = sortTodos(st.items);
   const [date, setDate] = useState(today);
   const [text, setText] = useState("");
   const [showDone, setShowDone] = useState(true);
@@ -22,7 +24,8 @@ export default function TodoBoard() {
 
   return (
     <>
-      <PageHeader actions={<span className="rounded bg-warning-subtle px-2 py-1 text-xs text-warning">DB 연결 전 브라우저에만 저장</span>} />
+      <PageHeader actions={!isDbConfigured && <span className="rounded bg-warning-subtle px-2 py-1 text-xs text-warning">데모: 이 브라우저에만 저장</span>} />
+      {st.error && <Notice kind="error">{st.error}</Notice>}
       <div className="mb-4 flex flex-wrap gap-2 rounded-lg bg-surface shadow-card p-4">
         <input type="date" value={date} onChange={(e) => setDate(e.target.value)} className="rounded border px-2 py-1.5 text-sm" />
         <input value={text} onChange={(e) => setText(e.target.value)} onKeyDown={(e) => e.key === "Enter" && !e.nativeEvent.isComposing && add()}
@@ -34,7 +37,7 @@ export default function TodoBoard() {
         <label className="flex items-center gap-1"><input type="checkbox" checked={showDone} onChange={(e) => setShowDone(e.target.checked)} /> 완료 항목 보기</label>
       </div>
       <ul className="divide-y rounded-lg bg-surface shadow-card text-sm">
-        {list.length === 0 && <li className="px-4 py-6 text-center text-muted">할 일이 없어요</li>}
+        {list.length === 0 && <li className="px-4 py-6 text-center text-muted">{st.loaded ? "할 일이 없어요" : "불러오는 중…"}</li>}
         {list.map((t) => (
           <li key={t.id} className="flex items-center gap-3 px-4 py-2.5">
             <input type="checkbox" checked={t.done} onChange={() => todoActions.toggle(t.id)} className="h-4 w-4" />
