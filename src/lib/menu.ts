@@ -1,11 +1,14 @@
-// 요구사항정의 메뉴 구조
+import type { IconDefinition } from "@fortawesome/fontawesome-svg-core";
+import { faGaugeHigh, faHandHoldingDollar, faWallet, faEarthAsia, faFileInvoice, faCalculator, faGear } from "@fortawesome/free-solid-svg-icons";
+
+// 요구사항정의 메뉴 구조 (아이콘: Font Awesome)
 export type MenuItem = { href: string; label: string };
-export type MenuGroup = { label: string; icon: string; items: MenuItem[] };
+export type MenuGroup = { label: string; icon: IconDefinition; items: MenuItem[] };
 
 export const MENU: MenuGroup[] = [
-  { label: "대시보드", icon: "LayoutDashboard", items: [{ href: "/dashboard", label: "대시보드" }] },
+  { label: "대시보드", icon: faGaugeHigh, items: [{ href: "/dashboard", label: "대시보드" }] },
   {
-    label: "수입관리", icon: "HandCoins",
+    label: "수입관리", icon: faHandHoldingDollar,
     items: [
       { href: "/income/entry", label: "수입입력" },
       { href: "/income/bank", label: "은행거래내역" },
@@ -15,7 +18,7 @@ export const MENU: MenuGroup[] = [
     ],
   },
   {
-    label: "지출관리", icon: "Wallet",
+    label: "지출관리", icon: faWallet,
     items: [
       { href: "/expense/entry", label: "지출입력" },
       { href: "/expense/department", label: "부서별 지출내역" },
@@ -26,9 +29,9 @@ export const MENU: MenuGroup[] = [
       { href: "/expense/history", label: "과거 지출내역" },
     ],
   },
-  { label: "해외선교", icon: "Globe", items: [{ href: "/mission", label: "해외선교" }] },
+  { label: "해외선교", icon: faEarthAsia, items: [{ href: "/mission", label: "해외선교" }] },
   {
-    label: "기부금영수증", icon: "FileBadge",
+    label: "기부금영수증", icon: faFileInvoice,
     items: [
       { href: "/receipt/issue", label: "영수증 발행" },
       { href: "/receipt/status", label: "발행현황" },
@@ -38,7 +41,7 @@ export const MENU: MenuGroup[] = [
     ],
   },
   {
-    label: "예산결산", icon: "Calculator",
+    label: "예산결산", icon: faCalculator,
     items: [
       { href: "/budget/settlement", label: "당해 결산" },
       { href: "/budget/plan", label: "내년도 예산" },
@@ -46,7 +49,7 @@ export const MENU: MenuGroup[] = [
     ],
   },
   {
-    label: "설정", icon: "Settings",
+    label: "설정", icon: faGear,
     items: [
       { href: "/settings/users", label: "회원설정" },
       { href: "/settings/officers", label: "재직명단" },
