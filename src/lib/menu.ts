@@ -1,5 +1,5 @@
 import type { IconDefinition } from "@fortawesome/fontawesome-svg-core";
-import { faGaugeHigh, faHandHoldingDollar, faWallet, faEarthAsia, faFileInvoice, faCalculator, faGear, faInbox, faListCheck, faBullhorn } from "@fortawesome/free-solid-svg-icons";
+import { faGaugeHigh, faHandHoldingDollar, faWallet, faEarthAsia, faFileInvoice, faCalculator, faGear, faInbox, faListCheck, faBullhorn, faFileLines } from "@fortawesome/free-solid-svg-icons";
 
 // 요구사항정의 메뉴 구조 (아이콘: Font Awesome)
 export type MenuItem = { href: string; label: string };
@@ -58,6 +58,10 @@ export const MENU: MenuGroup[] = [
       { href: "/budget/plan", label: "내년도 예산" },
       { href: "/budget/report", label: "예결산 리포트" },
     ],
+  },
+  {
+    label: "보고서", icon: faFileLines,
+    items: [{ href: "/reports/officers-meeting", label: "재직회보고서" }],
   },
   {
     label: "설정", icon: faGear,

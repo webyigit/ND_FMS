@@ -77,3 +77,40 @@ describe("명단 순서", () => {
     expect(s.map((x) => x.name)).toEqual(["원로", "담임", "가나", "하나"]);
   });
 });
+
+import { koreanAmount } from "../koreanAmount";
+describe("한글 금액", () => {
+  it("변환", () => {
+    expect(koreanAmount(160500000)).toBe("일억육천오십만원");
+    expect(koreanAmount(370000000)).toBe("삼억칠천만원");
+    expect(koreanAmount(1001)).toBe("일천일원");
+    expect(koreanAmount(0)).toBe("영원");
+  });
+});
+
+import { spendingStatus, rate, missionLedger } from "../officersReport";
+describe("재직회보고서", () => {
+  const budgets = [{ dept: "A부", item: "x", budget: 100 }, { dept: "A부", item: "y", budget: 50 }, { dept: "B부", item: "z", budget: 200 }];
+  const txs = [
+    { date: "2026-01-04", dept: "A부", item: "x", content: "", amount: 30 },
+    { date: "2026-02-01", dept: "B부", item: "z", content: "", amount: 50 },
+    { date: "2026-12-27", dept: "A부", item: "y", content: "", amount: 10 }, // 기준일 이후 제외
+  ];
+  it("합계·소계 순서와 기준일", () => {
+    const r = spendingStatus(budgets, txs, "2026-01-01", "2026-10-05");
+    expect(r.map((x) => x.kind)).toEqual(["total", "subtotal", "item", "item", "subtotal", "item"]);
+    expect(r[0]).toMatchObject({ budget: 350, spent: 80 });
+    expect(r[1]).toMatchObject({ dept: "A부", budget: 150, spent: 30 });
+    expect(rate(30, 150)).toBe("20.00%");
+    expect(rate(5, 0)).toBe("-");
+  });
+  it("해외선교 원장", () => {
+    const { rows, summary } = missionLedger(100, [
+      { date: "2026-01-04", content: "헌금수입", income: 20, expense: 0 },
+      { date: "2026-01-25", content: "송금", income: 0, expense: 30 },
+      { date: "2026-02-01", content: "헌금수입", income: 10, expense: 0 },
+    ], 2026);
+    expect(summary).toEqual({ carry: 100, income: 30, sum: 130, expense: 30, balance: 100 });
+    expect(rows.filter((r) => r.kind === "month").map((r) => (r as { month: number }).month)).toEqual([1, 2]);
+  });
+});

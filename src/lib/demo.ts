@@ -88,3 +88,20 @@ export const CLERGY_PAY: ClergyPay[] = (() => {
     }
   return out;
 })();
+
+// 재직회보고서용 가상 예산·지출·해외선교(실금액 아님)
+import type { BudgetItem, ExpenseTx, MissionTx } from "./officersReport";
+const seeded = (i: number) => ((i * 9301 + 49297) % 233280) / 233280;
+export const DEMO_BUDGETS: BudgetItem[] = Object.entries(DEPARTMENTS).flatMap(([dept, items], d) =>
+  items.map((item, i) => ({ dept, item, budget: Math.round((1 + seeded(d * 31 + i) * 9)) * 1000000 })));
+export const DEMO_EXPENSES: ExpenseTx[] = DEMO_BUDGETS.flatMap((b, i) => {
+  const n = Math.floor(seeded(i + 7) * 6);
+  return Array.from({ length: n }, (_, k) => {
+    const m = 1 + Math.floor(seeded(i * 13 + k) * 11);
+    return { date: `2026-${String(m).padStart(2, "0")}-${String(1 + (k * 7) % 27).padStart(2, "0")}`, dept: b.dept, item: b.item, content: `${b.item} 지출 ${k + 1}`, amount: Math.round(b.budget * (0.05 + seeded(i + k * 3) * 0.15) / 1000) * 1000, memo: k % 3 === 0 ? "가상 지급처" : "" };
+  });
+});
+export const DEMO_MISSION: MissionTx[] = Array.from({ length: 9 }, (_, m) => m + 1).flatMap((m) => [
+  ...[1, 2, 3, 4].map((w) => ({ date: `2026-${String(m).padStart(2, "0")}-${String(w * 7 - 3).padStart(2, "0")}`, content: "헌금수입", income: 300000 + w * 10000, expense: 0 })),
+  ...["가 선교사", "나 선교사", "다 선교회", "라 노회"].map((to) => ({ date: `2026-${String(m).padStart(2, "0")}-26`, content: to, income: 0, expense: 300000 })),
+]);
