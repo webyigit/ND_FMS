@@ -1,0 +1,14 @@
+@import "tailwindcss";
+
+/* 디자인 토큰은 'Rizz 디자인 가이드' 확정 후 반영 */
+body {
+  background: #f8fafc;
+  color: #0f172a;
+  font-family: "Pretendard", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+}
+
+@media print {
+  aside, header, .no-print { display: none !important; }
+  main { padding: 0 !important; }
+  @page { size: A4; margin: 12mm; }
+}
