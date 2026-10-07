@@ -1,5 +1,8 @@
-import Todo from "@/components/Todo";
+"use client";
+import dynamic from "next/dynamic";
+
+const BudgetPlan = dynamic(() => import("./BudgetPlan"), { ssr: false });
 
 export default function Page() {
-  return <Todo spec={["내년도 예산(헌금구분 설정), 이월금"]} />;
+  return <BudgetPlan />;
 }

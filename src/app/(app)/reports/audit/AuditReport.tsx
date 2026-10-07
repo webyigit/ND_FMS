@@ -3,14 +3,20 @@ import { useMemo, useState } from "react";
 import ExcelJS from "exceljs";
 import PageHeader from "@/components/PageHeader";
 import MonthlyFlowChart from "@/components/charts/MonthlyFlowChart";
+import Notice from "@/components/ui/Notice";
 import { DEMO_BUDGETS, DEMO_EXPENSES, DEMO_INCOME, DEMO_INCOME_BUDGETS, DEMO_MISSION } from "@/lib/demo";
+import { useDbQuery } from "@/lib/db/useDb";
+import { supabaseBrowser } from "@/lib/supabase/client";
+import { loadYearReport } from "@/lib/reports/load";
+import { missionTxs } from "@/lib/reports/mission";
+import { toBudgetItems, toExpenseTx, toIncomeBudgets, toIncomeTx } from "@/lib/reports/reportData";
 import { auditPeriods, expenseTable, incomeTable, missionSummary, monthly, pct, type Half } from "@/lib/auditReport";
 import { localDate } from "@/lib/todo";
 
 const won = (n: number) => (n ? n.toLocaleString("ko-KR") : "-");
 const th = "border border-line bg-surface-2 px-2 py-1.5 text-center font-semibold";
 const td = "border border-line px-2 py-1";
-const MISSION_CARRY = 5000000; // 전년 이월(가상)
+const DEMO_CARRY = 5000000; // 전년 이월(가상)
 const H1_MONTHS = [1, 2, 3, 4, 5, 6], ALL_MONTHS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
 
 export default function AuditReport() {
@@ -18,14 +24,24 @@ export default function AuditReport() {
   const [year, setYear] = useState(Number(today.slice(0, 4)));
   const [half, setHalf] = useState<Half>(Number(today.slice(5, 7)) >= 7 ? "H2" : "H1");
   const periods = useMemo(() => auditPeriods(year, half, today), [year, half, today]);
-  const inc = useMemo(() => incomeTable(DEMO_INCOME_BUDGETS, DEMO_INCOME, periods), [periods]);
-  const exp = useMemo(() => expenseTable(DEMO_BUDGETS, DEMO_EXPENSES, periods), [periods]);
-  const flow = useMemo(() => monthly(year, DEMO_INCOME.filter((t) => t.date <= today), DEMO_EXPENSES.filter((t) => t.date <= today)), [year, today]);
+  // DB가 있으면 실제 데이터(v_income·v_expense·budget·carryover), 없으면 가상 데이터
+  const q = useDbQuery((sb) => loadYearReport(sb, year), [year]);
+  const src = useMemo(() => {
+    const d = q.data;
+    if (!d) return { demo: true, incomeBudgets: DEMO_INCOME_BUDGETS, income: DEMO_INCOME, budgets: DEMO_BUDGETS, expenses: DEMO_EXPENSES, mission: DEMO_MISSION, carry: DEMO_CARRY };
+    return {
+      demo: false, incomeBudgets: toIncomeBudgets(d.types, d.budgets), income: toIncomeTx(d.inc), budgets: toBudgetItems(d.items, d.budgets),
+      expenses: toExpenseTx(d.detail), mission: missionTxs(d.inc, d.detail.filter((t) => t.fund === "별도")), carry: d.missionCarry,
+    };
+  }, [q.data]);
+  const inc = useMemo(() => incomeTable(src.incomeBudgets, src.income, periods), [src, periods]);
+  const exp = useMemo(() => expenseTable(src.budgets, src.expenses, periods), [src, periods]);
+  const flow = useMemo(() => monthly(year, src.income.filter((t) => t.date <= today), src.expenses.filter((t) => t.date <= today)), [src, year, today]);
   // 올해는 이번 달까지만 그린다
   const lastMonth = year === Number(today.slice(0, 4)) ? Number(today.slice(5, 7)) : 12;
   const chartMonths = useMemo(() => (half === "H1" ? H1_MONTHS : ALL_MONTHS).filter((m) => m <= lastMonth), [half, lastMonth]);
   const h2Range = useMemo<[number, number]>(() => [7, Math.max(7, lastMonth)], [lastMonth]);
-  const mission = periods.map((p) => missionSummary(MISSION_CARRY, DEMO_MISSION, p));
+  const mission = periods.map((p) => missionSummary(src.carry, src.mission, p));
   const title = `${year}년 ${half === "H1" ? "상반기" : "하반기"} 재정감사보고서`;
   const partial = auditPeriods(year, half).some((p) => p.to > today); // 기간이 끝나기 전이면 오늘까지만 집계
 
@@ -67,10 +83,12 @@ export default function AuditReport() {
   };
 
   const net = periods.map((_, i) => inc.general.amounts[i] - exp.total.amounts[i]);
+  // DB 모드에서 불러오는 동안 가상 데이터를 보여주지 않는다
+  if (supabaseBrowser() && !q.data) return <><PageHeader />{q.error ? <Notice kind="error">불러오지 못했어요: {q.error}</Notice> : <div className="text-sm text-muted">불러오는 중…</div>}</>;
   return (
     <>
       <PageHeader actions={<>
-        <span className="rounded bg-warning-subtle px-2 py-1 text-xs text-warning">가상 데이터</span>
+        {src.demo && <span className="rounded bg-warning-subtle px-2 py-1 text-xs text-warning">가상 데이터</span>}
         <button onClick={downloadExcel} className="no-print rounded border px-3 py-1 text-sm">엑셀 저장</button>
         <button onClick={() => window.print()} className="no-print rounded bg-primary px-3 py-1 text-sm text-white">출력·PDF</button>
       </>} />
@@ -84,6 +102,7 @@ export default function AuditReport() {
         {partial && <span className="text-xs text-amber-700">기간이 끝나지 않아 오늘({today})까지 집계했어요</span>}
       </div>
 
+      {q.error && <Notice kind="error">불러오지 못했어요: {q.error}</Notice>}
       <div className="space-y-6 rounded-lg bg-surface shadow-card p-6 text-sm print:border-0 print:p-0">
         <div>
           <h2 className="text-center text-lg font-bold">{title}</h2>

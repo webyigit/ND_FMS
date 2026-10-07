@@ -1,5 +1,8 @@
-import Todo from "@/components/Todo";
+"use client";
+import dynamic from "next/dynamic";
+
+const Settlement = dynamic(() => import("./Settlement"), { ssr: false });
 
 export default function Page() {
-  return <Todo spec={["당해 결산"]} />;
+  return <Settlement />;
 }
