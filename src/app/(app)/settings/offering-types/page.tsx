@@ -1,5 +1,9 @@
-import Todo from "@/components/Todo";
+"use client";
+import dynamic from "next/dynamic";
+import DbOnly from "@/components/ui/DbOnly";
+
+const OfferingTypeAdmin = dynamic(() => import("./OfferingTypeAdmin"), { ssr: false });
 
 export default function Page() {
-  return <Todo spec={["헌금구분 추가/수정/삭제, 입력 단위(천/만), 총액만 입력 여부"]} />;
+  return <DbOnly what="헌금구분"><OfferingTypeAdmin /></DbOnly>;
 }
