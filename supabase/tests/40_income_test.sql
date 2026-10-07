@@ -21,7 +21,7 @@ begin
   insert into member (name, household_id) values ('라마바', hh) returning id into m2;
   insert into bank_account (bank, account_no_enc, holder, kind, is_primary)
   values ('농협', public.enc('301-1234-5678-91'), '재정부', '일반', true) returning id into acc;
-  assert (select account_masked from v_bank_account where id = acc) = '***-****-***8-91', '계좌번호는 가려서';
+  assert (select account_mask from v_bank_account where id = acc) = '***-****-***8-91', '계좌번호는 가려서';
 
   rows := jsonb_build_array(
     jsonb_build_object('tx_at', '2026-10-14T10:00:00+09:00', 'deposit', 100000, 'balance', 1100000, 'tx_type', '인터넷당행', 'description', '가나다십일조', 'suggested_offering_type_id', tithe, 'suggested_member_id', m1),

@@ -15,7 +15,7 @@ import { addDays, isSunday, kstDate, kstDateTime, sundayOf } from "@/lib/income/
 import { fetchAll } from "@/lib/income/db";
 import { supabaseBrowser } from "@/lib/supabase/client";
 
-type Account = { id: number; bank: string | null; holder: string | null; kind: string | null; is_primary: boolean | null; account_masked: string | null };
+type Account = { id: number; bank: string | null; holder: string | null; kind: string | null; is_primary: boolean | null; account_mask: string | null };
 type Tx = {
   id: number; bank_account_id: number | null; tx_at: string; tx_date: string; withdraw: number; deposit: number; balance: number | null;
   tx_type: string | null; description: string | null; transfer_memo: string | null; tx_memo: string | null;
@@ -25,7 +25,7 @@ type Tx = {
 type View = "open" | "deposit" | "linked" | "withdraw" | "all";
 const VIEWS: [View, string][] = [["open", "입금 · 미반영"], ["deposit", "입금 전체"], ["linked", "반영됨"], ["withdraw", "출금"], ["all", "전체"]];
 const today = () => kstDate(new Date().toISOString());
-const accLabel = (a: Account) => [a.bank, a.kind, a.account_masked, a.holder].filter(Boolean).join(" ");
+const accLabel = (a: Account) => [a.bank, a.kind, a.account_mask, a.holder].filter(Boolean).join(" ");
 const th = "px-2 py-2 text-left font-medium";
 
 export default function BankDb() {
@@ -43,7 +43,7 @@ export default function BankDb() {
   const [busy, setBusy] = useState(false);
   const [note, setNote] = useState<{ kind: "ok" | "error" | "warn"; text: string } | null>(null);
 
-  const accounts = useDbQuery(async (c) => must(await c.from("v_bank_account").select("*").order("id")) as Account[], []);
+  const accounts = useDbQuery(async (c) => must(await c.from("v_bank_account").select("*").eq("active", true).order("id")) as Account[], []);
   // 교인 별칭 + 과거 반영 이력(같은 적요 → 같은 분류)
   const learn = useDbQuery(async (c) => {
     const [alias, hist] = await Promise.all([

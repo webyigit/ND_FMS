@@ -116,10 +116,7 @@ revoke execute on function public.link_bank_tx_to_income(jsonb) from public, ano
 revoke execute on function public.unlink_bank_tx(bigint[]) from public, anon;
 
 -- ===== 5. 조회용 뷰 (호출자 권한 = RLS 적용) =====
--- 계좌: 계좌번호는 가려서만
-create or replace view public.v_bank_account with (security_invoker = true) as
-select id, bank, holder, kind, is_primary, public.mask(account_no_enc, 'account') as account_masked
-from bank_account;
+-- 계좌 목록은 0012의 v_bank_account(account_mask) 를 쓴다
 
 -- 은행거래 + 반영된 수입
 create or replace view public.v_bank_tx with (security_invoker = true) as
