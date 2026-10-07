@@ -155,3 +155,13 @@ describe("드라이브 증빙 이름 규칙", () => {
     expect(receiptFileName({ date: "2026-10-04", ext: "pdf", id: "ffff0000" })).toBe("261004_미지정_증빙_ffff.pdf");
   });
 });
+
+import { listPosts } from "../board";
+describe("재정부게시판", () => {
+  it("고정 먼저, 최신순, 검색", () => {
+    const p = (id: string, createdAt: string, pinned = false, title = id) => ({ id, title, body: "", author: "재정부", pinned, createdAt });
+    const xs = [p("a", "2026-10-01"), p("b", "2026-10-03"), p("c", "2026-09-01", true, "인수인계")];
+    expect(listPosts(xs).map((x) => x.id)).toEqual(["c", "b", "a"]);
+    expect(listPosts(xs, "인수").map((x) => x.id)).toEqual(["c"]);
+  });
+});
