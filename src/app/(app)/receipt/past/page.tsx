@@ -1,5 +1,8 @@
-import Todo from "@/components/Todo";
+"use client";
+import dynamic from "next/dynamic";
+
+const ReceiptList = dynamic(() => import("../_parts/ReceiptList"), { ssr: false });
 
 export default function Page() {
-  return <Todo spec={["과거 연도 발행 내역 검색"]} />;
+  return <ReceiptList mode="past" />;
 }
