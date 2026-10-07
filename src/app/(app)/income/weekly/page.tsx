@@ -1,5 +1,9 @@
-import Todo from "@/components/Todo";
+"use client";
+import dynamic from "next/dynamic";
+import DbOnly from "@/components/ui/DbOnly";
+
+const WeeklyIncome = dynamic(() => import("./WeeklyIncome"), { ssr: false });
 
 export default function Page() {
-  return <Todo spec={["금주 입력된 수입 내역 확인", "샘플 양식(주일헌금 현황) 기준 장표", "A4 출력, PDF·엑셀 저장"]} />;
+  return <DbOnly what="금주 수입내역"><WeeklyIncome /></DbOnly>;
 }
