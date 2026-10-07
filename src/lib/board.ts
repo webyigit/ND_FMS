@@ -42,3 +42,61 @@ export const boardActions = {
     return store.run((sb) => sb.from("board_post").delete().eq("id", Number(id)));
   },
 };
+
+// ===== 댓글 =====
+// DB 연결 시 board_comment 표(작성자는 DB가 로그인한 회원으로 채움). 수정은 본인만, 삭제는 본인·관리자(DB 권한).
+export type Comment = { id: string; postId: string; body: string; author: string; authorId?: string; createdAt: string; updatedAt?: string };
+
+type CommentRow = { id: number; post_id: number; body: string; author_id: string | null; author_name: string | null; created_at: string; updated_at: string | null };
+export const fromCommentRow = (r: CommentRow): Comment => ({
+  id: String(r.id), postId: String(r.post_id), body: r.body, author: r.author_name ?? "", createdAt: r.created_at,
+  ...(r.author_id ? { authorId: r.author_id } : {}),
+  ...(r.updated_at ? { updatedAt: r.updated_at } : {}),
+});
+
+const comments = listStore<Comment>("ndfms.board.comments", async (sb) =>
+  (await rows<CommentRow>(sb.from("board_comment").select("id, post_id, body, author_id, author_name, created_at, updated_at")
+    .order("created_at", { ascending: true }))).map(fromCommentRow));
+
+export const useCommentState = () => useListStore(comments);
+
+/** 글 하나의 댓글, 오래된 순 */
+export const commentsOf = (xs: Comment[], postId: string) =>
+  xs.filter((c) => c.postId === postId).sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+
+/** 글별 댓글 수 */
+export function commentCounts(xs: Comment[]) {
+  const m = new Map<string, number>();
+  for (const c of xs) m.set(c.postId, (m.get(c.postId) ?? 0) + 1);
+  return m;
+}
+
+export const commentActions = {
+  add: async (postId: string, body: string, author = "") => {
+    const text = body.trim();
+    if (!text) return false;
+    if (!comments.db) {
+      comments.write([...comments.read(), { id: crypto.randomUUID(), postId, body: text, author, createdAt: new Date().toISOString() }]);
+      return true;
+    }
+    return comments.run((sb) => sb.from("board_comment").insert({ post_id: Number(postId), body: text }));
+  },
+  edit: async (id: string, body: string) => {
+    const text = body.trim();
+    if (!text) return false;
+    if (!comments.db) {
+      comments.write(comments.read().map((c) => (c.id === id ? { ...c, body: text, updatedAt: new Date().toISOString() } : c)));
+      return true;
+    }
+    return comments.run((sb) => sb.from("board_comment").update({ body: text }).eq("id", Number(id)));
+  },
+  remove: async (id: string) => {
+    if (!comments.db) { comments.write(comments.read().filter((c) => c.id !== id)); return true; }
+    return comments.run((sb) => sb.from("board_comment").delete().eq("id", Number(id)));
+  },
+  /** 데모 모드에서 글을 지우면 댓글도 지운다(DB는 on delete cascade) */
+  removeOfPost: (postId: string) => {
+    if (!comments.db) comments.write(comments.read().filter((c) => c.postId !== postId));
+    else void comments.refresh();
+  },
+};

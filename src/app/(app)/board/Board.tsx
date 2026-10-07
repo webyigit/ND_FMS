@@ -4,7 +4,8 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faMagnifyingGlass, faPen, faThumbtack } from "@fortawesome/free-solid-svg-icons";
 import PageHeader from "@/components/PageHeader";
 import Notice from "@/components/ui/Notice";
-import { authorAuto, boardActions, listPosts, usePostState, type Post } from "@/lib/board";
+import { authorAuto, boardActions, commentActions, commentCounts, listPosts, useCommentState, usePostState, type Post } from "@/lib/board";
+import Comments from "./Comments";
 
 const AUTHOR = "ndfms.board.author"; // 데모 모드에서 작성자 이름을 기억
 const blank = () => ({ title: "", body: "", author: (() => { try { return localStorage.getItem(AUTHOR) ?? ""; } catch { return ""; } })(), pinned: false });
@@ -16,6 +17,7 @@ export default function Board() {
   const [q, setQ] = useState("");
   const [open, setOpen] = useState<string | null>(null);
   const [form, setForm] = useState<(ReturnType<typeof blank> & { id?: string }) | null>(null);
+  const counts = commentCounts(useCommentState().items);
   const list = listPosts(posts, q);
   const cur = posts.find((p) => p.id === open);
 
@@ -25,7 +27,7 @@ export default function Board() {
     if ((await boardActions.save(form)) !== false) setForm(null);
   };
   const edit = (p: Post) => setForm({ id: p.id, title: p.title, body: p.body, author: p.author, pinned: p.pinned });
-  const del = (p: Post) => { if (confirm(`'${p.title}' 글을 삭제할까요?`)) { boardActions.remove(p.id); setOpen(null); } };
+  const del = (p: Post) => { if (confirm(`'${p.title}' 글을 삭제할까요?`)) { void boardActions.remove(p.id).then(() => commentActions.removeOfPost(p.id)); setOpen(null); } };
 
   const input = "w-full rounded border px-3 py-2 text-sm";
   return (
@@ -61,6 +63,7 @@ export default function Board() {
             <button onClick={() => edit(cur)} className="rounded border px-3 py-1 text-primary">수정</button>
             <button onClick={() => del(cur)} className="rounded border px-3 py-1 text-red-500">삭제</button>
           </div>
+          <Comments postId={cur.id} />
         </article>
       )}
 
@@ -76,7 +79,7 @@ export default function Board() {
             {list.map((p) => (
               <tr key={p.id} onClick={() => { setOpen(p.id); setForm(null); }} className={`cursor-pointer border-t hover:bg-surface-2 ${open === p.id ? "bg-primary-subtle" : ""}`}>
                 <td className="py-2 text-center text-muted">{p.pinned ? <FontAwesomeIcon icon={faThumbtack} className="text-red-500" /> : posts.length - posts.findIndex((x) => x.id === p.id)}</td>
-                <td>{p.title}</td>
+                <td>{p.title}{counts.get(p.id) ? <span className="ml-1 text-xs text-primary">[{counts.get(p.id)}]</span> : null}</td>
                 <td className="hidden text-center text-label sm:table-cell">{p.author}</td>
                 <td className="text-center text-label">{day(p.createdAt).slice(2)}</td>
               </tr>
