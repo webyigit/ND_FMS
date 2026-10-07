@@ -1,0 +1,50 @@
+erDiagram
+  member |o--o{ donation_receipt : "발행 당사자"
+  receipt_form ||--o{ donation_receipt : "양식"
+  church_info ||--o{ donation_receipt : "발행자"
+  offering_type |o--o{ budget : "수입 예산"
+  expense_item |o--o{ budget : "지출 예산"
+  fund ||--o{ carryover : "이월금"
+  app_user ||--o{ audit_log : "사용이력"
+  donation_receipt { bigint id PK
+    int year
+    text serial_no UK "2026-PN001-1007"
+    text donor_kind "PN/CP"
+    bigint member_id FK
+    bytea donor_rrn_enc
+    bigint total_amount
+    jsonb detail "구분별 금액"
+    date issued_at
+    bool canceled }
+  receipt_form { int id PK
+    text name
+    text version
+    text template_path }
+  church_info { int id PK
+    text name
+    text reg_no "고유번호"
+    text seal_path "직인"
+    text stamp_path "간인" }
+  budget { int year
+    int offering_type_id FK
+    int expense_item_id FK
+    bigint amount }
+  carryover { int year PK
+    int fund_id PK
+    bigint amount }
+  audit_log { bigint id PK
+    uuid user_id FK
+    text action
+    text target_table
+    jsonb before
+    jsonb after }
+  member { bigint id PK
+    text name }
+  offering_type { int id PK
+    text name }
+  expense_item { int id PK
+    text name }
+  fund { int id PK
+    text name }
+  app_user { uuid id PK
+    text name }
