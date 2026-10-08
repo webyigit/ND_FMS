@@ -107,6 +107,16 @@ describe("교역자급여·고정지출·주일", () => {
     expect(p.map((x) => x.name)).toEqual(["나담임", "다부목"]);
     expect(p[0].byMonth[1] + p[0].byMonth[2]).toBe(25);
   });
+  it("교역자급여: 등록 순서대로, 지급 없는 교역자도 0으로, 같은 이름 여러 항목은 합침", () => {
+    const p = clergyByPerson([
+      { year: 2026, month: 3, name: "가부목", title: "부목사", item: "사례비", amount: 10, paidAt: "", order: 3 },
+      { year: 2026, month: 3, name: "가부목", title: "부목사", item: "연금", amount: 2, paidAt: "", order: 7 },
+      { year: 2026, month: 3, name: "중고등부 전도사", title: "전도사", item: "사례비", amount: 5, paidAt: "", order: 5 },
+    ], ["원로목사", "담임목사", "부목사", "전도사"], [{ name: "나원로", title: "원로목사", order: 1 }, { name: "가부목", title: "부목사", order: 3 }]);
+    expect(p.map((x) => x.name)).toEqual(["나원로", "가부목", "중고등부 전도사"]);
+    expect(p[0].byMonth.reduce((a, b) => a + b, 0)).toBe(0);
+    expect(p[1].byMonth[3]).toBe(12);
+  });
   it("고정지출 확인·정렬·DB 행", () => {
     expect(fixedProblems(emptyFixed())).toEqual(["내용", "금액", "부서·항목"]);
     expect(fixedProblems({ ...emptyFixed(), weekOfMonth: 6, content: "x", amount: 1, expenseItemId: 1 })).toEqual(["N째 주(1~5)"]);
