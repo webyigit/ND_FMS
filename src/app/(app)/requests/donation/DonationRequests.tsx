@@ -12,6 +12,7 @@ import { won } from "@/lib/format";
 import { aggregateIncome } from "@/lib/receipt/calc";
 import { familyOf, loadFamilyIncome, searchDonors, type DonorHit } from "@/lib/receipt/api";
 import { supabaseBrowser } from "@/lib/supabase/client";
+import { notifyRequestsChanged } from "@/lib/requests/pending";
 
 type Req = {
   id: number; request_no: string; year: number; name: string; rrn_masked: string | null; has_rrn: boolean; phone: string | null;
@@ -100,7 +101,7 @@ function Detail({ r, onChanged }: { r: Req; onChanged: () => void }) {
     try {
       const rows = must(await sb.from("donation_request").update(p).eq("id", r.id).select("id"));
       if (!(rows as unknown[]).length) throw new Error("권한이 없어요");
-      setMsg({ ok: true, text: ok }); onChanged();
+      setMsg({ ok: true, text: ok }); onChanged(); notifyRequestsChanged();
     } catch (e) { setMsg({ ok: false, text: dbError(e) }); }
   };
   const findMember = async () => {

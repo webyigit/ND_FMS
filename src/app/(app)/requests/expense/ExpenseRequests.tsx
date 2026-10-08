@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faPaperclip } from "@fortawesome/free-solid-svg-icons";
 import PageHeader from "@/components/PageHeader";
@@ -14,6 +14,10 @@ import { fileName, won } from "@/lib/format";
 import { supabaseBrowser } from "@/lib/supabase/client";
 import { useDeptItems } from "@/lib/work/me";
 import { STATUS, type RequestStatus } from "@/lib/work/requests";
+import { notifyRequestsChanged } from "@/lib/requests/pending";
+
+/** 주소창 ?open=ID (상단 팝업에서 바로 온 신청) */
+const openParam = () => { const v = Number(new URLSearchParams(window.location.search).get("open")); return v > 0 ? v : null; };
 
 type Row = {
   id: number; status: RequestStatus; department_id: number | null; department: string | null; item: string | null;
@@ -34,7 +38,8 @@ function Inner() {
   const sb = supabaseBrowser()!;
   const [tab, setTab] = useState<RequestStatus | "">("requested");
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
-  const [open, setOpen] = useState<number | null>(null);
+  const [open, setOpen] = useState<number | null>(openParam);
+  const focusRef = useRef<HTMLTableRowElement>(null);
   const q = useDbQuery(async (s) => {
     let r = s.from("v_expense_request").select("*").order("requested_at", { ascending: false }).limit(500);
     if (tab) r = r.eq("status", tab);
@@ -42,6 +47,10 @@ function Inner() {
   }, [tab]);
   const rows = q.data ?? [];
   const total = rows.reduce((s, r) => s + Number(r.amount), 0);
+  // 팝업에서 온 신청이 목록에 보이면 그 줄로 스크롤. 이미 처리된 신청이면 안내
+  const missing = open !== null && !!q.data && !q.data.some((r) => r.id === open) && openParam() === open;
+  useEffect(() => { if (q.data && open !== null) focusRef.current?.scrollIntoView({ block: "center" }); }, [q.data, open]);
+  const finish = (text: string) => { setMsg({ ok: true, text }); setOpen(null); q.reload(); notifyRequestsChanged(); if (window.location.search) window.history.replaceState(null, "", "/requests/expense"); };
 
   const excel = () => downloadXlsx(fileName("지출신청", "xlsx"), [{
     name: "지출신청", widths: [11, 10, 12, 16, 28, 12, 11, 24, 8, 11, 20],
@@ -54,6 +63,7 @@ function Inner() {
     <>
       <PageHeader actions={<ExcelButton onClick={excel} disabled={!rows.length} />} />
       {msg && <Notice kind={msg.ok ? "ok" : "error"}>{msg.text}</Notice>}
+      {missing && <Notice kind="warn">그 신청은 이미 처리됐거나 검토 중 목록에 없어요.</Notice>}
       {q.error && <Notice kind="error">{q.error}</Notice>}
       <div className="mb-3 flex flex-wrap items-center gap-2 text-sm">
         {TABS.map((t) => (
@@ -70,8 +80,8 @@ function Inner() {
           <tbody>
             {!rows.length && <tr><td colSpan={10} className="py-8 text-center text-muted">{q.loading ? "불러오는 중…" : "신청이 없어요"}</td></tr>}
             {rows.map((r) => (
-              <Line key={r.id} r={r} open={open === r.id} toggle={() => setOpen(open === r.id ? null : r.id)}
-                done={(text) => { setMsg({ ok: true, text }); setOpen(null); q.reload(); }} fail={(text) => setMsg({ ok: false, text })} sb={sb} />
+              <Line key={r.id} r={r} open={open === r.id} toggle={() => setOpen(open === r.id ? null : r.id)} rowRef={open === r.id ? focusRef : undefined}
+                done={finish} fail={(text) => setMsg({ ok: false, text })} sb={sb} />
             ))}
           </tbody>
         </table>
@@ -81,8 +91,9 @@ function Inner() {
   );
 }
 
-function Line({ r, open, toggle, done, fail, sb }: {
+function Line({ r, open, toggle, done, fail, sb, rowRef }: {
   r: Row; open: boolean; toggle: () => void; done: (t: string) => void; fail: (t: string) => void; sb: NonNullable<ReturnType<typeof supabaseBrowser>>;
+  rowRef?: React.RefObject<HTMLTableRowElement | null>;
 }) {
   const [account, setAccount] = useState<string | null>(null);
   const showAccount = async () => {
@@ -91,7 +102,7 @@ function Line({ r, open, toggle, done, fail, sb }: {
   };
   return (
     <>
-      <tr className={`border-t border-line ${open ? "bg-primary-subtle" : ""}`}>
+      <tr ref={rowRef} className={`border-t border-line ${open ? "bg-primary-subtle" : ""}`}>
         <td className="px-3 py-2 text-label">{r.requested_at.slice(0, 10)}</td>
         <td className="text-heading">{r.requester_name ?? "-"}</td>
         <td className="text-label">{r.department ?? <span className="text-muted">미지정</span>}{r.item && ` / ${r.item}`}</td>
