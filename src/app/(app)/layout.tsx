@@ -1,5 +1,6 @@
 import Sidebar from "@/components/Sidebar";
 import PendingTodos from "@/components/PendingTodos";
+import PendingRequests from "@/components/PendingRequests";
 import MobileNav from "@/components/MobileNav";
 import UserMenu from "@/components/UserMenu";
 import AccessLogger from "@/components/AccessLogger";
@@ -15,6 +16,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           <MobileNav />
           <span className="flex items-center gap-3"><SyncStatus /><UserMenu /></span>
         </header>
+        <PendingRequests />
         <PendingTodos />
         <main className="flex-1 p-4 lg:p-6">{children}</main>
       </div>

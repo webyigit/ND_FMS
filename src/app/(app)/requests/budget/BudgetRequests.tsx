@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import PageHeader from "@/components/PageHeader";
 import Notice from "@/components/ui/Notice";
 import DbOnly from "@/components/ui/DbOnly";
@@ -11,6 +11,10 @@ import { downloadXlsx } from "@/lib/excel";
 import { fileName, thisYear, won } from "@/lib/format";
 import { supabaseBrowser } from "@/lib/supabase/client";
 import { STATUS, type RequestStatus } from "@/lib/work/requests";
+import { notifyRequestsChanged } from "@/lib/requests/pending";
+
+/** 주소창 ?open=ID&year= (상단 팝업에서 바로 온 신청) */
+const params = () => { const p = new URLSearchParams(window.location.search); const n = (k: string) => (Number(p.get(k)) > 0 ? Number(p.get(k)) : null); return { open: n("open"), year: n("year") }; };
 
 type Row = {
   id: number; year: number; amount: number; reason: string | null; status: RequestStatus; requester_name: string | null;
@@ -24,8 +28,11 @@ export default function BudgetRequests() {
 // 신청관리 > 예산신청: 부서장이 낸 예산 신청을 승인/반려. 승인 건은 내년도 예산 화면에서 참고한다.
 function Inner() {
   const sb = supabaseBrowser()!;
-  const [year, setYear] = useState(thisYear() + 1);
+  const [init] = useState(params);
+  const [year, setYear] = useState(init.year ?? thisYear() + 1);
   const [tab, setTab] = useState<RequestStatus | "">("");
+  const [focus, setFocus] = useState<number | null>(init.open);
+  const focusRef = useRef<HTMLTableRowElement>(null);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const q = useDbQuery(async (s) => {
     let r = s.from("budget_request").select("id, year, amount, reason, status, requester_name, requested_at, review_note, department(name, sort_order), expense_item(name)")
@@ -34,6 +41,8 @@ function Inner() {
     return must(await r) as unknown as Row[];
   }, [year, tab]);
   const rows = [...(q.data ?? [])].sort((a, b) => (a.department?.sort_order ?? 0) - (b.department?.sort_order ?? 0));
+  const missing = focus !== null && !!q.data && !q.data.some((r) => r.id === focus);
+  useEffect(() => { if (q.data && focus !== null) focusRef.current?.scrollIntoView({ block: "center" }); }, [q.data, focus]);
   const sum = (s?: RequestStatus) => rows.filter((r) => !s || r.status === s).reduce((a, r) => a + Number(r.amount), 0);
 
   const review = async (r: Row, approve: boolean) => {
@@ -45,7 +54,8 @@ function Inner() {
     const { error } = await sb.rpc("review_budget_request", { p_id: r.id, p_approve: approve, p_note: note });
     if (error) return setMsg({ ok: false, text: dbError(error) });
     setMsg({ ok: true, text: `${r.department?.name ?? ""} ${won(Number(r.amount))}원을 ${approve ? "승인" : "반려"}했어요.` });
-    q.reload();
+    setFocus(null); q.reload(); notifyRequestsChanged();
+    if (window.location.search) window.history.replaceState(null, "", "/requests/budget");
   };
 
   const excel = () => downloadXlsx(fileName(`예산신청_${year}`, "xlsx"), [{
@@ -58,6 +68,7 @@ function Inner() {
     <>
       <PageHeader actions={<ExcelButton onClick={excel} disabled={!rows.length} />} />
       {msg && <Notice kind={msg.ok ? "ok" : "error"}>{msg.text}</Notice>}
+      {missing && <Notice kind="warn">그 신청은 이미 처리됐거나 이 해 목록에 없어요.</Notice>}
       {q.error && <Notice kind="error">{q.error}</Notice>}
       <div className="mb-3 flex flex-wrap items-center gap-2 text-sm">
         <YearSelect value={year} onChange={setYear} to={thisYear() + 1} />
@@ -76,7 +87,7 @@ function Inner() {
           <tbody>
             {!rows.length && <tr><td colSpan={8} className="py-8 text-center text-muted">{q.loading ? "불러오는 중…" : `${year}년 예산 신청이 없어요`}</td></tr>}
             {rows.map((r) => (
-              <tr key={r.id} className="border-t border-line">
+              <tr key={r.id} ref={focus === r.id ? focusRef : undefined} className={`border-t border-line ${focus === r.id ? "bg-primary-subtle" : ""}`}>
                 <td className="px-3 py-2 text-heading">{r.department?.name}</td>
                 <td className="text-label">{r.expense_item?.name ?? <span className="text-muted">부서 전체</span>}</td>
                 <td className="text-right font-medium text-heading">{won(Number(r.amount))}</td>

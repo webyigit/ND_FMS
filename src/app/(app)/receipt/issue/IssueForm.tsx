@@ -1,6 +1,7 @@
 "use client";
 // 영수증 발행: 기부 연도 → 기부자(교인 검색·지난 발행·직접 입력) → 가족 합산 헌금 → 발행금액·조정·부부 분할 → 발행(번호는 DB가 부여)
 // 주소창: ?member=&year=&request= (신청에서 이동), ?edit=ID (수정), ?reissue=ID (재발행)
+// 신청(request)에서 오면: 신청자 이름·휴대폰·가족명단으로 교인을 자동으로 찾아 초안을 만들고, '승인·발행'을 눌러야 저장·번호 부여
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import PageHeader from "@/components/PageHeader";
@@ -12,10 +13,13 @@ import { must, useDbQuery } from "@/lib/db/useDb";
 import { dbError } from "@/lib/db/weekly";
 import { thisYear, toAmount, won } from "@/lib/format";
 import { aggregateIncome, allocate, fromDetail, labelOf, ratiosOk, splitAggregate, toDetail, type Aggregate } from "@/lib/receipt/calc";
-import { familyOf, issueReceipts, loadFamilyIncome, RECEIPT_COLS, searchDonors, searchLabels, updateReceipt, type DonorHit, type IssueRow, type ReceiptView } from "@/lib/receipt/api";
+import { familyOf, issueReceipts, loadChurch, loadFamilyIncome, RECEIPT_COLS, searchDonors, searchLabels, updateReceipt, type Church, type DonorHit, type IssueRow, type ReceiptView } from "@/lib/receipt/api";
+import { rankCandidates } from "@/lib/receipt/match";
+import { loadPending, notifyRequestsChanged } from "@/lib/requests/pending";
 import { brnChecksumOk, normalizeBrn, normalizeRrn } from "@/lib/receipt/validate";
 import { supabaseBrowser } from "@/lib/supabase/client";
 import ReceiptPreview from "../_parts/ReceiptPreview";
+import ReceiptPaper from "../_parts/ReceiptPaper";
 import PastPopup from "./PastPopup";
 
 type Kind = "PN" | "CP";
@@ -65,11 +69,24 @@ function Issue() {
   const [past, setPast] = useState(false);
   const [loadingInit, setLoadingInit] = useState(Boolean(target || params.request || params.member));
   const [blocked, setBlocked] = useState(false); // 이미 처리된 영수증·신청
+  const [candidates, setCandidates] = useState<DonorHit[] | null>(null); // 신청자와 같은 이름의 교인이 여럿일 때
+  const [matchNote, setMatchNote] = useState<string | null>(null);        // 자동 매칭 결과 안내
+  const [church, setChurch] = useState<Church | null>(null);              // 초안 미리보기용
 
   const pickMember = async (h: DonorHit, keep?: Partial<Donor>) => {
     setDonor({ ...EMPTY_DONOR, member_id: h.member_id, name: h.name, address: h.address ?? "", rrnHint: h.rrn_masked, ...keep });
     setExtraLabels([]); setExcluded([]);
     try { setFamily(await familyOf(sb, h.member_id)); } catch { setFamily([]); }
+  };
+  /** 신청에서 고른 교인을 신청에도 적어 둔다(목록의 '교인' 칸). 실패해도 발행은 막지 않는다 */
+  const linkRequestTo = async (reqId: number, memberId: number) => {
+    try { await sb.from("donation_request").update({ member_id: memberId }).eq("id", reqId).eq("status", "requested"); } catch { /* 안내만 */ }
+  };
+  const chooseCandidate = async (h: DonorHit) => {
+    setCandidates(null);
+    setMatchNote(`교인 ${h.name}님으로 연결했어요.`);
+    await pickMember(h, { name: donor.name || h.name, address: donor.address || h.address || "", rrnHint: donor.rrnHint ?? h.rrn_masked });
+    if (requestId) void linkRequestTo(requestId, h.member_id);
   };
   const memberHit = async (id: number) => {
     const m = must(await sb.from("member").select("name, name_suffix").eq("id", id).maybeSingle()) as { name: string; name_suffix: string | null } | null;
@@ -92,14 +109,36 @@ function Issue() {
           if (r.member_id) setFamily(await familyOf(sb, r.member_id));
           if (r.status !== "issued") { setBlocked(true); setMsg({ ok: false, text: "발행 상태가 아닌 영수증이에요. 수정·재발행할 수 없어요." }); }
         } else if (params.request) {
-          const q = must(await sb.from("v_donation_request").select("id, year, name, rrn_masked, address, member_id, status").eq("id", params.request).maybeSingle()) as
-            { id: number; year: number; name: string; rrn_masked: string | null; address: string | null; member_id: number | null; status: string } | null;
+          const q = must(await sb.from("v_donation_request").select("id, year, name, rrn_masked, address, phone, family_names, member_id, status").eq("id", params.request).maybeSingle()) as
+            { id: number; year: number; name: string; rrn_masked: string | null; address: string | null; phone: string | null; family_names: string[] | null; member_id: number | null; status: string } | null;
           if (!q) throw new Error("신청을 찾을 수 없어요");
-          setYear(params.year ?? q.year);
-          const h = q.member_id ? await memberHit(q.member_id) : null;
-          const keep = { name: q.name, address: q.address ?? h?.address ?? "", rrnHint: q.rrn_masked ?? h?.rrn_masked ?? null };
-          if (h) await pickMember(h, keep); else setDonor({ ...EMPTY_DONOR, ...keep });
-          if (q.status !== "requested") setMsg({ ok: false, text: "이미 처리된 신청이에요." });
+          const y = params.year ?? q.year;
+          setYear(y);
+          loadChurch(sb).then(setChurch).catch(() => undefined);
+          let h = q.member_id ? await memberHit(q.member_id) : null;
+          const keep = () => ({ name: q.name, address: q.address ?? h?.address ?? "", rrnHint: q.rrn_masked ?? h?.rrn_masked ?? null });
+          if (h) setMatchNote(`신청할 때 성명+휴대폰이 맞아 교인 ${h.name}님으로 연결돼 있어요.`);
+          else {
+            // 신청자 이름으로 교인을 찾아 휴대폰·가족명단으로 좁힌다
+            const m = rankCandidates(await searchDonors(sb, q.name), { name: q.name, phone: q.phone, family_names: q.family_names });
+            if (m.auto) {
+              h = m.auto;
+              setMatchNote({ name_phone: `휴대폰번호가 맞는 교인 ${h.name}님을 찾아 연결했어요.`, name_family: `가족명단이 맞는 교인 ${h.name}님을 찾아 연결했어요.`,
+                name_only: `같은 이름의 교인 ${h.name}님 한 분을 찾아 연결했어요. 다른 분이면 '교인 찾기'로 바꾸세요.` }[m.reason ?? "name_only"]);
+              void linkRequestTo(q.id, h.member_id);
+            } else if (m.candidates.length) {
+              setCandidates(m.candidates);
+              setMatchNote(`같은 이름의 교인이 ${m.candidates.length}명이에요. 신청자가 누구인지 골라 주세요.`);
+            } else {
+              // 교인이 아니면 헌금 표기에서 같은 이름을 찾아 넣어 둔다
+              const labels = await searchLabels(sb, y, q.name).catch(() => []);
+              const same = labels.filter((l) => l.label.replace(/\s+/g, "") === q.name.replace(/\s+/g, ""));
+              if (same.length) { setExtraLabels(same.map((l) => l.label)); setMatchNote(`교인정보에는 없지만 헌금 표기 '${same[0].label}'을(를) 찾아 넣었어요.`); }
+              else setMatchNote("같은 이름의 교인·헌금 표기를 찾지 못했어요. '교인 찾기'나 아래 표기 찾기로 넣어 주세요.");
+            }
+          }
+          if (h) await pickMember(h, keep()); else setDonor({ ...EMPTY_DONOR, ...keep() });
+          if (q.status !== "requested") { setBlocked(true); setMsg({ ok: false, text: "이미 처리된 신청이에요." }); }
         } else if (params.member) {
           const h = await memberHit(params.member);
           if (h) await pickMember(h);
@@ -129,6 +168,7 @@ function Issue() {
   const reset = () => {
     setDonor(EMPTY_DONOR); setFamily([]); setExtraLabels([]); setExcluded([]); setAdj("0"); setAdjReason(""); setMemo("");
     setSplit(false); setPartner({ member_id: null, name: "", rrn: "", address: "" }); setRequestId(null); setIssued(null); setMsg(null);
+    setCandidates(null); setMatchNote(null); setBlocked(false);
     if (window.location.search) window.history.replaceState(null, "", "/receipt/issue");
   };
 
@@ -185,7 +225,8 @@ function Issue() {
       } else {
         const out = await issueReceipts(sb, rows);
         setIssued(out.map((r) => r.id));
-        setMsg({ ok: true, text: `발행했어요: ${out.map((r) => r.serial_no).join(", ")}` });
+        setMsg({ ok: true, text: `${requestId ? "승인해서 " : ""}발행했어요: ${out.map((r) => r.serial_no).join(", ")}` });
+        if (requestId) notifyRequestsChanged();
       }
     } catch (e) { setMsg({ ok: false, text: `발행하지 못했어요: ${dbError(e)}` }); }
     finally { setBusy(false); }
@@ -198,6 +239,7 @@ function Issue() {
       <div className="no-print">
         <PageHeader actions={<><Link href="/receipt/status" className={btn}>발행현황</Link><button onClick={reset} className={btnPrimary}>새 영수증</button></>} />
         {msg && <Notice kind={msg.ok ? "ok" : "error"}>{msg.text}</Notice>}
+        {requestId && <NextRequest />}
       </div>
       <ReceiptPreview ids={issued} />
     </>
@@ -211,6 +253,7 @@ function Issue() {
         {mode === "new" && (donor.name || requestId) && <button onClick={reset} className={btn}>처음부터</button>}
       </>} />
       {msg && <Notice kind={msg.ok ? "ok" : "error"}>{msg.text}</Notice>}
+      {matchNote && <Notice kind={candidates ? "warn" : donor.member_id || extraLabels.length ? "ok" : "warn"}>{matchNote}</Notice>}
       {loadingInit && <div className="mb-3 text-sm text-muted">불러오는 중…</div>}
 
       <div className="grid gap-4 xl:grid-cols-[1fr_380px]">
@@ -267,6 +310,22 @@ function Issue() {
               </table>
             </div>
           </section>
+
+          {mode === "new" && requestId && (
+            <section className={`${card} p-4`}>
+              <h2 className="mb-1 text-sm font-semibold">영수증 초안 <span className="font-normal text-muted">· 승인 전이라 저장되지 않았고 번호도 없어요</span></h2>
+              <p className="mb-3 text-xs text-muted">내용을 확인한 뒤 오른쪽 &lsquo;승인·발행&rsquo;을 누르면 저장하고 발행번호를 붙여요. 주민번호는 발행 후 출력 화면에서 전체 표시할 수 있어요.</p>
+              <div className="overflow-x-auto rounded border bg-surface-2 p-3">
+                <div className="origin-top-left" style={{ zoom: 0.72 }}>
+                  <ReceiptPaper church={church} r={{
+                    serial_no: "(승인 시 부여)", donor_kind: donor.kind, donor_name: donor.name || null, donor_rrn: donor.kind === "CP" ? null : donor.rrn.trim() ? "입력한 번호" : donor.rrnHint,
+                    donor_brn: donor.brn || null, donor_address: donor.address || null, donation_year: year, year,
+                    issued_amount: split ? splitAmounts[0] : issuedAmount, issued_at: new Date().toISOString(), detail: toDetail(split ? splitAggregate(agg, ratios)[0] : agg),
+                  }} />
+                </div>
+              </div>
+            </section>
+          )}
         </div>
 
         <aside className="space-y-4">
@@ -310,12 +369,13 @@ function Issue() {
             )}
             <textarea value={memo} onChange={(e) => setMemo(e.target.value)} placeholder="메모(재정부만 봄)" rows={2} className={`${input} w-full`} />
             <button onClick={submit} disabled={busy || loadingInit || blocked} className={`${btnPrimary} w-full py-2`}>
-              {busy ? "처리 중…" : mode === "edit" ? "수정 저장" : mode === "reissue" ? "재발행(새 번호)" : split ? "2건 발행" : "발행"}
+              {busy ? "처리 중…" : mode === "edit" ? "수정 저장" : mode === "reissue" ? "재발행(새 번호)" : requestId ? (split ? "승인·2건 발행" : "승인·발행") : split ? "2건 발행" : "발행"}
             </button>
             <p className="text-xs text-muted">발행번호 {"{연도}-{PN|CP}{일련3}-{MMDD}"}는 저장할 때 DB가 겹치지 않게 붙여요. 연도는 기부 연도예요 [확인 필요].</p>
           </section>
         </aside>
       </div>
+      {candidates && <CandidatePopup name={donor.name} hits={candidates} onPick={chooseCandidate} onClose={() => { setCandidates(null); setMatchNote("교인을 고르지 않았어요. '교인 찾기'로 직접 고르거나 교인 없이 발행할 수 있어요."); }} />}
       {past && <PastPopup name={donor.name} memberId={donor.member_id} onClose={() => setPast(false)}
         onUse={(r) => { setDonor({ ...donor, name: r.donor_name ?? donor.name, kind: (r.donor_kind as Kind) ?? "PN", address: r.donor_address ?? "",
           brn: r.donor_brn ?? "", rep: r.donor_rep_name ?? "", rrn: "", rrnHint: r.donor_rrn_masked, rrnFromReceipt: r.has_rrn ? r.id : null }); setPast(false); }} />}
@@ -427,6 +487,44 @@ function LabelPicker({ year, onAdd }: { year: number; onAdd: (label: string) => 
           ))}
         </div>
       )}
+    </div>
+  );
+}
+
+/** 신청자와 같은 이름의 교인이 여럿일 때 고르는 창 */
+function CandidatePopup({ name, hits, onPick, onClose }: { name: string; hits: DonorHit[]; onPick: (h: DonorHit) => void; onClose: () => void }) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/40 p-4 pt-20" onClick={onClose} role="dialog" aria-modal="true" aria-label="신청자 교인 고르기">
+      <div className="w-full max-w-lg rounded-lg bg-surface p-4 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+        <h3 className="text-base font-semibold text-heading">&lsquo;{name}&rsquo; 신청자가 누구인가요?</h3>
+        <p className="mb-3 text-xs text-muted">같은 이름의 교인이 여럿이에요. 휴대폰·가족으로 가려내지 못해 직접 골라 주세요.</p>
+        <ul className="divide-y rounded border">
+          {hits.map((h) => (
+            <li key={h.member_id}>
+              <button onClick={() => onPick(h)} className="flex w-full items-center justify-between px-3 py-2 text-left text-sm hover:bg-surface-2">
+                <span>
+                  <span className="font-medium text-heading">{h.name}</span> {h.title && <span className="text-muted">{h.title}</span>} {h.is_household_head && <span className="text-xs text-primary">가장</span>}
+                  <span className="block text-xs text-muted">{h.phone ?? "휴대폰 없음"} · {h.rrn_masked ?? "주민번호 없음"} · {h.family.length ? `가족 ${h.family.join(", ")}` : "가족 없음"}</span>
+                </span>
+                <span className="text-xs text-primary">이 분</span>
+              </button>
+            </li>
+          ))}
+        </ul>
+        <div className="mt-3 text-right"><button onClick={onClose} className={btn}>나중에 고르기</button></div>
+      </div>
+    </div>
+  );
+}
+
+/** 발행 뒤: 아직 남은 기부금영수증 신청이 있으면 바로 이어간다 */
+function NextRequest() {
+  const q = useDbQuery(async (s) => (await loadPending(s)).filter((i) => i.kind === "donation"), []);
+  const next = q.data?.[0];
+  if (!q.data) return null;
+  return (
+    <div className="mb-3 rounded bg-primary-subtle px-3 py-2 text-sm text-heading">
+      {next ? <>남은 기부금영수증 신청 {q.data.length}건 · <a href={next.href} className="font-semibold text-primary">다음 신청({next.title}) 처리 →</a></> : "기부금영수증 신청을 모두 처리했어요."}
     </div>
   );
 }
