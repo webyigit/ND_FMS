@@ -27,14 +27,18 @@ export type TypeRef = { id: number; name: string; fund: Fund; totalOnly?: boolea
 export const displayName = (r: Pick<IncomeViewRow, "payer_label" | "member_name">) => r.payer_label?.trim() || r.member_name || "무명";
 
 export type Entry = { name: string; amount: number; memo: string; channel: "cash" | "online"; displayRank?: number | null };
-export type WeeklyType = Money & { id: number; name: string; fund: Fund; totalOnly: boolean; count: number; entries: Entry[] };
-export type WeeklyReport = { types: WeeklyType[]; byFund: Record<Fund, Money>; generalSpecial: Money; grand: Money; count: number };
+export type WeeklyType = Money & { id: number; name: string; fund: Fund; totalOnly: boolean; count: number; entries: Entry[]; prev: number; ytd: number };
+/** prev: 올해 1/1~전주 누계, ytd: prev + 금주 합계 */
+export type Ytd = { prev: number; ytd: number };
+export type WeeklyReport = { types: WeeklyType[]; byFund: Record<Fund, Money & Ytd>; generalSpecial: Money & Ytd; grand: Money & Ytd; count: number };
+/** v_income_week 한 행 (올해 1/1 ~ 전주, 헌금구분별 합계) */
+export type PriorRow = Pick<IncomeViewRow, "offering_type_id" | "offering_type" | "type_order" | "fund_kind" | "amount">;
 
-/** 헌금구분별 소계·현금/이체·기금 합계. 별도 기금은 일반·특별 합계에서 뺀다. 이름은 노출순서 규칙대로 */
-export function weeklyReport(rows: IncomeViewRow[], types: TypeRef[], rankOf: (memberId: number) => number | null | undefined = () => null): WeeklyReport {
+/** 헌금구분별 소계·현금/이체·기금 합계와 올해 누계(전주까지 + 금주). 별도 기금은 일반·특별 합계에서 뺀다. 이름은 노출순서 규칙대로 */
+export function weeklyReport(rows: IncomeViewRow[], types: TypeRef[], rankOf: (memberId: number) => number | null | undefined = () => null, prior: PriorRow[] = []): WeeklyReport {
   const list: TypeRef[] = [...types];
-  // 목록에 없는(비활성 등) 헌금구분도 빠뜨리지 않는다
-  [...rows].sort((a, b) => (a.type_order ?? 999) - (b.type_order ?? 999)).forEach((r) => {
+  // 목록에 없는(비활성 등) 헌금구분도 빠뜨리지 않는다 (누계에만 있는 것 포함)
+  [...rows, ...prior].sort((a, b) => (a.type_order ?? 999) - (b.type_order ?? 999)).forEach((r) => {
     if (!list.some((t) => t.id === r.offering_type_id)) list.push({ id: r.offering_type_id, name: r.offering_type, fund: fundOf(r.fund_kind) });
   });
   const out = list.map((t): WeeklyType => {
@@ -45,11 +49,13 @@ export function weeklyReport(rows: IncomeViewRow[], types: TypeRef[], rankOf: (m
       name: displayName(r), amount: Number(r.amount), memo: r.memo ?? "", channel: r.channel,
       displayRank: r.member_id != null ? rankOf(r.member_id) : null,
     })));
-    return { ...m, id: t.id, name: t.name, fund: t.fund, totalOnly: !!t.totalOnly, count: mine.length, entries };
+    const prev = prior.filter((r) => r.offering_type_id === t.id).reduce((s, r) => s + Number(r.amount), 0);
+    return { ...m, id: t.id, name: t.name, fund: t.fund, totalOnly: !!t.totalOnly, count: mine.length, entries, prev, ytd: prev + m.total };
   });
-  const byFund = Object.fromEntries(FUNDS.map((f) => [f, out.filter((t) => t.fund === f).reduce((s, t) => plus(s, t), zero())])) as Record<Fund, Money>;
-  const generalSpecial = plus(byFund.일반, byFund.특별);
-  return { types: out, byFund, generalSpecial, grand: plus(generalSpecial, byFund.별도), count: rows.length };
+  const sumUp = (ts: (Money & Ytd)[]) => ts.reduce((s, t) => ({ ...plus(s, t), prev: s.prev + t.prev, ytd: s.ytd + t.ytd }), { ...zero(), prev: 0, ytd: 0 });
+  const byFund = Object.fromEntries(FUNDS.map((f) => [f, sumUp(out.filter((t) => t.fund === f))])) as Record<Fund, Money & Ytd>;
+  const generalSpecial = sumUp([byFund.일반, byFund.특별]);
+  return { types: out, byFund, generalSpecial, grand: sumUp([generalSpecial, byFund.별도]), count: rows.length };
 }
 
 /** (성명, 금액) × cols 그리드로 나눈다. 마지막 줄은 null로 채움 */
@@ -66,13 +72,15 @@ export function toGrid<T>(xs: T[], cols = 4): (T | null)[][] {
 export const entryLabel = (e: Entry) => (e.memo ? `${e.name}(${e.memo})` : e.name);
 
 export function weeklySheets(rep: WeeklyReport, sunday: string): Sheet[] {
-  const summary: Sheet["rows"] = [[`${sunday} 주일 헌금 현황`], [], ["기금", "헌금구분", "현금", "이체", "합계", "건수"]];
+  const summary: Sheet["rows"] = [[`${sunday} 주일 헌금 현황`], [], ["기금", "헌금구분", "현금", "이체", "금주 합계", "건수", "전주까지 누계", "올해 누계"]];
   FUNDS.forEach((f) => {
-    rep.types.filter((t) => t.fund === f).forEach((t) => summary.push([f, t.name, t.cash, t.online, t.total, t.count]));
-    summary.push([`${f} 소계`, "", rep.byFund[f].cash, rep.byFund[f].online, rep.byFund[f].total, null]);
+    rep.types.filter((t) => t.fund === f).forEach((t) => summary.push([f, t.name, t.cash, t.online, t.total, t.count, t.prev, t.ytd]));
+    const b = rep.byFund[f];
+    summary.push([`${f} 소계`, "", b.cash, b.online, b.total, null, b.prev, b.ytd]);
   });
-  summary.push(["일반·특별 합계", "", rep.generalSpecial.cash, rep.generalSpecial.online, rep.generalSpecial.total, null]);
-  summary.push(["총계(별도 포함)", "", rep.grand.cash, rep.grand.online, rep.grand.total, rep.count]);
+  const g = rep.generalSpecial, a = rep.grand;
+  summary.push(["일반·특별 합계", "", g.cash, g.online, g.total, null, g.prev, g.ytd]);
+  summary.push(["총계(별도 포함)", "", a.cash, a.online, a.total, rep.count, a.prev, a.ytd]);
 
   const grid: Sheet["rows"] = [[`${sunday} 헌금 명단`]];
   rep.types.filter((t) => !t.totalOnly && t.entries.length).forEach((t) => {

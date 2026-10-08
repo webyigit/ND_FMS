@@ -11,10 +11,21 @@ import { fetchAll } from "@/lib/income/db";
 import {
   MONTHS, filterByName, householdTotals, personKey, personSheet, personTotals, sumSelected, typeMonthMatrix, type PersonAggRow, type PersonTotal,
 } from "@/lib/income/report";
+import type { FamilyMember } from "@/lib/income/family";
 import { amt, td, tdNum, th } from "../_ui/sheet";
+import { FamilyTab, PersonTab } from "./FamilyTabs";
 
-// 개인별 헌금현황: 연도·헌금구분·이름으로 찾고, 여러 명(가족) 합계로 기부금영수증 발행 조건을 확인한다
+const TABS = [
+  { id: "all", label: "전체" },
+  { id: "person", label: "개인별 (1명 기준)" },
+  { id: "family", label: "가족단위" },
+] as const;
+type Tab = (typeof TABS)[number]["id"];
+
+// 개인별 헌금현황: 전체 / 개인별(1명) / 가족단위(이름 포함 명단 → 가족으로 합치기) 탭
 export default function PersonOfferings() {
+  const [tab, setTab] = useState<Tab>("all");
+  const [base, setBase] = useState<string | null>(null);
   const [year, setYear] = useState(thisYear);
   const [typeId, setTypeId] = useState(0);
   const [q, setQ] = useState("");
@@ -24,6 +35,8 @@ export default function PersonOfferings() {
 
   const data = useDbQuery((sb) => fetchAll<PersonAggRow>((a, b) => sb.from("v_income_person").select("*").eq("year", year)
     .order("member_id", { nullsFirst: false }).order("payer_label").order("offering_type_id").order("month").range(a, b)), [year]);
+  const members = useDbQuery((sb) => fetchAll<FamilyMember>((a, b) => sb.from("v_member")
+    .select("id, full_name, title, household_id, household_label, is_household_head").eq("active", true).order("id").range(a, b)), []);
 
   const allTypes = useMemo(() => {
     const m = new Map<number, { id: number; name: string; order: number }>();
@@ -36,6 +49,9 @@ export default function PersonOfferings() {
     const ps = personTotals(rows);
     return filterByName(family ? householdTotals(ps) : ps, q);
   }, [rows, family, q]);
+  const persons = useMemo(() => personTotals(data.data ?? []), [data.data]);
+  const basePerson = persons.find((p) => p.key === base) ?? null;
+  const reloadAll = () => { data.reload(); members.reload(); };
   const sel = sumSelected(list, selected);
   const grand = list.reduce((s, p) => s + p.total, 0);
 
@@ -56,6 +72,7 @@ export default function PersonOfferings() {
       <PageHeader actions={<><ExcelButton disabled={!list.length} onClick={excel} /><PrintButton /></>} />
       <div className={`${card} no-print mb-4 flex flex-wrap items-end gap-3 p-3 text-sm`}>
         <label className="text-xs text-label">연도<div className="mt-1"><YearSelect value={year} onChange={(y) => { setYear(y); setSelected(new Set()); setDetail(null); }} /></div></label>
+{tab === "all" && <>
         <label className="text-xs text-label">헌금구분
           <select value={typeId} onChange={(e) => setTypeId(Number(e.target.value))} className={`${input} mt-1 block`}>
             <option value={0}>전체</option>
@@ -66,9 +83,22 @@ export default function PersonOfferings() {
           <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="이름 검색" className={`${input} mt-1 block w-36`} />
         </label>
         <label className="flex items-center gap-1 pb-1.5"><input type="checkbox" checked={family} onChange={(e) => { setFamily(e.target.checked); setSelected(new Set()); setDetail(null); }} /> 가족 단위 합산</label>
+        </>}
         <span className="ml-auto pb-1.5 text-xs text-muted">주일헌금(총액 입력)은 개인별에 들어가지 않아요.</span>
       </div>
-      {data.error && <Notice kind="error">불러오지 못했어요: {data.error}</Notice>}
+      {(data.error || members.error) && <Notice kind="error">불러오지 못했어요: {data.error ?? members.error}</Notice>}
+      <div role="tablist" className="no-print mb-4 flex gap-1 border-b text-sm">
+        {TABS.map((t) => (
+          <button key={t.id} type="button" role="tab" aria-selected={tab === t.id} onClick={() => setTab(t.id)}
+            className={`-mb-px border-b-2 px-3 py-2 font-medium ${tab === t.id ? "border-primary text-primary" : "border-transparent text-label hover:text-heading"}`}>{t.label}</button>
+        ))}
+      </div>
+
+      {tab === "person" && <PersonTab year={year} base={basePerson} persons={persons} rows={data.data ?? []} onPick={(p) => setBase(p.key)} onFamily={() => setTab("family")} />}
+      {tab === "family" && <FamilyTab key={`${year}-${base}`} year={year} base={basePerson} persons={persons} members={members.data ?? []} types={allTypes}
+        onPick={(p) => setBase(p.key)} onChanged={reloadAll} />}
+
+      {tab === "all" && <>
 
       {selected.size > 0 && (
         <div className="no-print sticky top-2 z-10 mb-3 flex flex-wrap items-center gap-3 rounded-lg bg-primary-subtle px-4 py-2 text-sm">
@@ -141,6 +171,7 @@ export default function PersonOfferings() {
           </table>
         </div>
       )}
+      </>}
     </>
   );
 }
