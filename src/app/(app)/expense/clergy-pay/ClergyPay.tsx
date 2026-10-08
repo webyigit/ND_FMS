@@ -3,34 +3,49 @@ import { useMemo, useState } from "react";
 import PageHeader from "@/components/PageHeader";
 import Notice from "@/components/ui/Notice";
 import YearSelect from "@/components/ui/YearSelect";
-import { ExcelButton, PrintButton } from "@/components/ui/Buttons";
+import { ExcelButton, PrintButton, btn } from "@/components/ui/Buttons";
 import { CLERGY_PAY, CLERGY_TITLES } from "@/lib/demo";
-import { useDbQuery } from "@/lib/db/useDb";
+import { must, useDbQuery } from "@/lib/db/useDb";
 import { supabaseBrowser } from "@/lib/supabase/client";
 import { fileName, thisYear, won } from "@/lib/format";
 import { downloadXlsx } from "@/lib/excel";
 import { fetchAll } from "@/lib/expense/db";
 import { clergyByPerson, type ClergyRow } from "@/lib/expense/clergy";
+import ClergyEditor, { type Clergy, type Item } from "./ClergyEditor";
 
 const DEMO_YEARS = [...new Set(CLERGY_PAY.map((p) => p.year))].sort((a, b) => b - a);
-type Db = { sunday: string; year: number; month: number; name: string; title: string; item: string; amount: number };
+type Db = { sunday: string; year: number; month: number; name: string; title: string; sort_order: number; item: string; amount: number };
+type ItemDb = { id: number; name: string; department: { name: string; sort_order: number | null } | null };
 
-// 교역자급여내역: DB가 있으면 지출(지급처 → 교인 직분이 원로목사·담임목사·부목사·전도사)에서, 없으면 가상 데이터
+// 교역자급여내역: DB가 있으면 교역자 목록(이름·직분·지출 항목·내용 말)에 맞는 지출에서, 없으면 가상 데이터
 export default function ClergyPay() {
   const demo = !supabaseBrowser();
   const [year, setYear] = useState(demo ? DEMO_YEARS[0] : thisYear());
   const [month, setMonth] = useState(0); // 0 = 전체
   const [name, setName] = useState("");
   const [view, setView] = useState<"month" | "detail">("month");
+  const [editing, setEditing] = useState(false);
 
   const q = useDbQuery(async (sb) => {
-    const rows = await fetchAll<Db>((a, b) => sb.from("v_clergy_pay").select("sunday, year, month, name, title, item, amount").eq("year", year).order("sunday").order("id").range(a, b));
-    return rows.map((r): ClergyRow => ({ year: r.year, month: r.month, name: r.name, title: r.title, item: r.item, amount: Number(r.amount), paidAt: r.sunday }));
+    const rows = await fetchAll<Db>((a, b) => sb.from("v_clergy_salary").select("sunday, year, month, name, title, sort_order, item, amount").eq("year", year).order("sunday").order("id").range(a, b));
+    return rows.map((r): ClergyRow => ({ year: r.year, month: r.month, name: r.name, title: r.title, item: r.item, amount: Number(r.amount), paidAt: r.sunday, order: r.sort_order }));
   }, [year]);
+  // 등록된 교역자와 지출 항목(추가하기용)
+  const ref = useDbQuery(async (sb) => {
+    const [clergy, items] = await Promise.all([
+      sb.from("clergy").select("id, name, title, expense_item_id, keyword, sort_order").order("sort_order").order("id"),
+      sb.from("expense_item").select("id, name, sort_order, department(name, sort_order)").order("sort_order"),
+    ]);
+    const its = (must(items) as unknown as ItemDb[])
+      .sort((a, b) => (a.department?.sort_order ?? 99) - (b.department?.sort_order ?? 99))
+      .map((i): Item => ({ id: i.id, name: i.name, dept: i.department?.name ?? "" }));
+    return { clergy: must(clergy) as Clergy[], items: its };
+  }, []);
+  const roster = useMemo(() => (ref.data?.clergy ?? []).map((c) => ({ name: c.name, title: c.title, order: c.sort_order })), [ref.data]);
   const source: ClergyRow[] = useMemo(() => (demo ? CLERGY_PAY.filter((p) => p.year === year) : q.data ?? []), [demo, year, q.data]);
 
   const rows = useMemo(() => source.filter((p) => (!month || p.month === month) && (!name || p.name.includes(name.trim()))), [source, month, name]);
-  const people = useMemo(() => clergyByPerson(rows, CLERGY_TITLES), [rows]);
+  const people = useMemo(() => clergyByPerson(rows, CLERGY_TITLES, roster.filter((c) => !name || c.name.includes(name.trim()))), [rows, roster, name]);
   const months = month ? [month] : Array.from({ length: 12 }, (_, i) => i + 1);
   const colTotal = (mo: number) => people.reduce((s, p) => s + p.byMonth[mo], 0);
   const total = rows.reduce((s, r) => s + r.amount, 0);
@@ -45,6 +60,7 @@ export default function ClergyPay() {
     <>
       <PageHeader actions={<>
         {demo && <span className="rounded bg-warning-subtle px-2 py-1 text-xs text-warning">가상 데이터</span>}
+        {!demo && <button onClick={() => setEditing((v) => !v)} className={`no-print ${btn}`}>교역자 추가하기</button>}
         <ExcelButton onClick={excel} disabled={!rows.length} />
         <PrintButton />
       </>} />
@@ -62,7 +78,10 @@ export default function ClergyPay() {
           ))}
         </div>
       </div>
-      {!demo && q.error && <Notice kind="error">불러오지 못했어요: {q.error}</Notice>}
+      {!demo && editing && supabaseBrowser() && ref.data && (
+        <ClergyEditor sb={supabaseBrowser()!} clergy={ref.data.clergy} items={ref.data.items} onChange={() => { ref.reload(); q.reload(); }} onClose={() => setEditing(false)} />
+      )}
+      {!demo && (q.error || ref.error) && <Notice kind="error">불러오지 못했어요: {q.error || ref.error}</Notice>}
       <div className="mb-2 text-sm text-slate-600">{year}년 {month ? `${month}월` : "전체"} · {people.length}명 · 합계 <b>{won(total)}원</b></div>
 
       <div className="overflow-x-auto rounded-lg bg-surface shadow-card">
@@ -102,7 +121,7 @@ export default function ClergyPay() {
           </table>
         )}
       </div>
-      {!demo && <p className="mt-3 text-xs text-muted">지출의 송금처(지급처)가 교인으로 연결되어 있고, 그 교인의 직분이 원로목사·담임목사·부목사·전도사인 지출만 모아요. 지급일은 그 지출이 들어간 주일이에요.</p>}
+      {!demo && <p className="mt-3 text-xs text-muted">‘교역자 추가하기’에 등록한 교역자마다, 정한 지출 항목의 지출(내용에 들어간 말을 정했으면 그 말이 든 것만)을 모아요. 지급일은 그 지출이 들어간 주일이에요.</p>}
     </>
   );
 }
