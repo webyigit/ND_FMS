@@ -6,6 +6,8 @@ import { sortForList } from "@/lib/offeringOrder";
 import { useRefData, type RefData } from "@/lib/db/refData";
 import { dbError, incomeSig, loadIncome, saveIncome, type IncomeEntry as Entry } from "@/lib/db/weekly";
 import { supabaseBrowser } from "@/lib/supabase/client";
+import { enqueue, getWeekCache, setWeekCache, syncNow } from "@/lib/offline/sync";
+import { isNetworkError } from "@/lib/offline/logic";
 
 const KEY_TYPE = "ndfms.income.type"; // 헌금구분은 바꾸기 전까지 유지
 const KEY_DRAFT = "ndfms.income.draft"; // 완료 전까지 계속 입력(임시저장)
@@ -53,11 +55,23 @@ function Form({ ref_ }: { ref_: RefData }) {
   useEffect(() => { try { localStorage.setItem(KEY_DRAFT, JSON.stringify(entries)); } catch {} }, [entries]);
   useEffect(() => { try { localStorage.setItem(KEY_META, JSON.stringify({ sunday, savedSig })); } catch {} }, [sunday, savedSig]);
 
-  // DB에 저장된 그 주일 입력을 불러온다
-  const pull = useCallback((day: string) => sb && loadIncome(sb, day).then(
-    (xs) => { setEntries(xs); setSavedSig(incomeSig(xs)); },
-    (e) => setNote({ ok: false, text: `불러오지 못했어요: ${dbError(e)}` }),
-  ).finally(() => setBusy(false)), [sb]);
+  // DB에 저장된 그 주일 입력을 불러온다. 오프라인이면 기기에 저장된(마지막으로 받았거나 올리기 대기 중인) 것을 보여준다
+  const pull = useCallback((day: string) => {
+    if (!sb) return;
+    const onLoaded = (xs: Entry[]) => {
+      setEntries(xs); setSavedSig(incomeSig(xs));
+      void setWeekCache("income", day, { rows: xs, serverSig: incomeSig(xs) });
+    };
+    const onFailed = async (e: unknown) => {
+      if (!isNetworkError(e)) return setNote({ ok: false, text: `불러오지 못했어요: ${dbError(e)}` });
+      const hit = await getWeekCache("income", day);
+      const xs = (hit?.rows as Entry[] | undefined) ?? [];
+      setEntries(xs); setSavedSig(incomeSig(xs));
+      setNote({ ok: true, text: hit ? "오프라인이에요. 기기에 저장된 이 주일 입력을 보여드려요." : "오프라인이에요. 이 주일은 기기에 저장된 입력이 없어 새로 입력해요. 저장하면 연결될 때 올립니다." });
+    };
+    // 올리기 대기 중인 입력이 있으면 먼저 올리고 읽는다
+    return syncNow().then(() => loadIncome(sb, day)).then(onLoaded, onFailed).finally(() => setBusy(false));
+  }, [sb]);
   const fetchWeek = (day: string) => { setBusy(true); setNote(null); pull(day); };
 
   useEffect(() => {
@@ -72,16 +86,25 @@ function Form({ ref_ }: { ref_: RefData }) {
     if (!demo) fetchWeek(day);
   };
 
+  // 오프라인(또는 전송 실패)이면 기기 대기열에 넣는다. 기준 서명은 마지막으로 서버에서 받은 내용
+  const queue = async () => {
+    await enqueue("income", sunday, entries, (await getWeekCache("income", sunday))?.serverSig ?? null);
+    setSavedSig(incomeSig(entries));
+    setNote({ ok: true, text: `오프라인이어서 ${sunday} 주일 수입 ${entries.length}건을 이 기기에 저장했어요. 연결되면 자동으로 올립니다.` });
+  };
   const save = async () => {
     if (!sb) return;
     setBusy(true); setNote(null);
     try {
+      if (!navigator.onLine) return await queue();
       const n = await saveIncome(sb, sunday, entries);
       setSavedSig(incomeSig(entries));
       setNote({ ok: true, text: `${sunday} 주일 수입 ${n}건을 저장했어요.` });
       pull(sunday); // 새 행의 DB id를 받아 다음 저장 때 같은 행을 고치게
-    } catch (e) { setNote({ ok: false, text: `저장하지 못했어요: ${dbError(e)}` }); }
-    finally { setBusy(false); }
+    } catch (e) {
+      if (isNetworkError(e)) await queue();
+      else setNote({ ok: false, text: `저장하지 못했어요: ${dbError(e)}` });
+    } finally { setBusy(false); }
   };
 
   const type = OFFERING_TYPES.find((t) => t.id === typeId) ?? OFFERING_TYPES[0];
