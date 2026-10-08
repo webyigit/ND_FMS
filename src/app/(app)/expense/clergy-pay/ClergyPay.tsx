@@ -51,7 +51,7 @@ export default function ClergyPay() {
   const total = rows.reduce((s, r) => s + r.amount, 0);
 
   const excel = () => downloadXlsx(fileName(`교역자급여내역_${year}`, "xlsx"), [
-    { name: "월별합계", rows: [["직분", "이름", ...months.map((m) => `${m}월`), "합계"], ...people.map((p) => [p.title, p.name, ...months.map((m) => p.byMonth[m]), p.byMonth.reduce((a, b) => a + b, 0)]), ["합계", "", ...months.map(colTotal), total]] },
+    { name: "월별합계", rows: [["직분", "이름", "합계", ...months.map((m) => `${m}월`)], ...people.map((p) => [p.title, p.name, p.byMonth.reduce((a, b) => a + b, 0), ...months.map((m) => p.byMonth[m])]), ["합계", "", total, ...months.map(colTotal)]] },
     { name: "지급상세", rows: [["지급일(주일)", "직분", "이름", "항목", "금액"], ...rows.map((r) => [r.paidAt, r.title, r.name, r.item, r.amount])], widths: [14, 10, 10, 24, 12] },
   ]);
 
@@ -88,21 +88,21 @@ export default function ClergyPay() {
         {view === "month" ? (
           <table className="w-full whitespace-nowrap text-sm">
             <thead className="bg-surface-2 text-xs text-label">
-              <tr><th className="px-3 py-2 text-left">직분</th><th className="px-3 text-left">이름</th>{months.map((m) => <th key={m} className="px-3 text-right">{m}월</th>)}<th className="px-3 text-right">합계</th></tr>
+              <tr><th className="px-3 py-2 text-left">직분</th><th className="px-3 text-left">이름</th><th className="px-3 text-right">합계</th>{months.map((m) => <th key={m} className="px-3 text-right">{m}월</th>)}</tr>
             </thead>
             <tbody>
               {!demo && q.loading && <tr><td colSpan={months.length + 3} className="py-6 text-center text-muted">불러오는 중…</td></tr>}
               {people.map((p) => (
                 <tr key={p.name} className="border-t">
                   <td className="px-3 py-1.5 text-label">{p.title}</td><td className="px-3">{p.name}</td>
-                  {months.map((m) => <td key={m} className="px-3 text-right">{p.byMonth[m] ? won(p.byMonth[m]) : "-"}</td>)}
                   <td className="px-3 text-right font-semibold">{won(p.byMonth.reduce((a, b) => a + b, 0))}</td>
+                  {months.map((m) => <td key={m} className="px-3 text-right">{p.byMonth[m] ? won(p.byMonth[m]) : "-"}</td>)}
                 </tr>
               ))}
               <tr className="border-t bg-surface-2 font-semibold">
                 <td className="px-3 py-1.5" colSpan={2}>합계</td>
-                {months.map((m) => <td key={m} className="px-3 text-right">{won(colTotal(m))}</td>)}
                 <td className="px-3 text-right">{won(total)}</td>
+                {months.map((m) => <td key={m} className="px-3 text-right">{won(colTotal(m))}</td>)}
               </tr>
             </tbody>
           </table>

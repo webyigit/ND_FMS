@@ -113,7 +113,7 @@ function Form({ ref_ }: { ref_: RefData }) {
     const w = weekOfMonth(sunday);
     const add = FIXED_EXPENSES.filter((f) => f.weekOfMonth === w).map((f) => ({ ...blank(), ...f, source: "고정" as const }));
     setRows((xs) => [...xs, ...add]);
-    setMsg(`${w}째 주 고정지출 ${add.length}건을 불러왔어요.`);
+    setMsg(`${w}주 고정지출 ${add.length}건을 불러왔어요.`);
   };
 
   const onBank = async (f: File) => {
