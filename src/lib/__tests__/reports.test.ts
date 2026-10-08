@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { addMonths, change, fundOf, lastYearSameDay, sundayOf, type ExpWeek, type IncWeek } from "../reports/common";
-import { insights, monthlyOf, payeeAlerts, quarterlyOf, reportSunday, weekReport, weekReportText, weeklySeries, yearElapsed, ytdCompare, type PayeeActivity } from "../reports/dashboard";
+import { insights, monthlyOf, payeeAlerts, quarterlyOf, reportSunday, weekReport, weekReportText, weeklySeries, yearElapsed, ytdCompare, ytdReport, ytdReportText, type PayeeActivity } from "../reports/dashboard";
 import { isNepal, missionMonths, missionTxs, missionWeeks } from "../reports/mission";
 import { copyPrevBudget, fundNext, planGroups, planLines, settleExpense, settleIncome, toBudgetPayload, type ItemRef, type OtRef } from "../reports/budget";
 import { toBudgetItems, toExpenseTx, toIncomeBudgets, toIncomeTx } from "../reports/reportData";
@@ -52,6 +52,16 @@ describe("대시보드", () => {
     expect(text[0]).toContain("+100.0%");
     expect(text.at(-1)).toContain("해외선교");
     expect(reportSunday([], [], "2026-10-07")).toBe("2026-10-04");
+  });
+  it("누적 리포트: 올해 1/1~기준 주일 누계, 작년 같은 기간 비교, 별도 기금은 따로", () => {
+    const r = ytdReport(inc, exp, "2026-10-04", 10000);
+    expect(r).toMatchObject({ from: "2026-01-01", weeks: 2, income: 3000, expense: 1500, prevIncome: 1000, prevExpense: 300, missionIncome: 400, missionExpense: 250 });
+    expect(r.balance).toBe(weekReport(inc, exp, "2026-10-04", 10000).balance);
+    const text = ytdReportText(r);
+    expect(text[0]).toContain("수입 누계 3,000원");
+    expect(text[0]).toContain("+200.0%");
+    expect(text.at(-1)).toContain("해외선교");
+    expect(ytdReport(inc, exp, "2026-09-27", 0)).toMatchObject({ income: 1000, expense: 800, prevIncome: 0 });
   });
   it("주간·월·분기 추이", () => {
     const ws = weeklySeries(inc, exp, "2026-10-04", 3);
