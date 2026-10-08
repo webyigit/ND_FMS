@@ -1,4 +1,4 @@
-// 대시보드 계산: 금주 리포트, 주간·월·분기 추이, 작년 대비, 송금 계좌 알림, 수지 인사이트(규칙 기반)
+// 대시보드 계산: 금주·누적 리포트, 주간·월·분기 추이, 작년 대비, 송금 계좌 알림, 수지 인사이트(규칙 기반)
 // 수입·지출은 일반·특별 기금만(교회 운영). 별도 기금(해외선교·네팔)은 금주 리포트에 따로 적는다.
 import { addDays, addMonths, change, lastYearSameDay, monthOf, operating, quarterOf, sum, sundayOf, yearOf, type ExpWeek, type IncWeek } from "./common";
 
@@ -37,6 +37,35 @@ export function weekReportText(w: WeekReport): string[] {
     `수지 ${w.income - w.expense >= 0 ? "+" : "−"}${won(Math.abs(w.income - w.expense))}원 · 잔액(이월 포함) ${won(w.balance)}원`,
   ];
   if (w.missionIncome || w.missionExpense) lines.push(`해외선교(별도) 수입 ${won(w.missionIncome)}원 · 지출 ${won(w.missionExpense)}원`);
+  return lines;
+}
+
+/** 누적 리포트: 올해 1/1 ~ 기준 주일 수입·지출 누계와 작년 같은 기간 비교. 잔액은 금주 리포트와 같다 */
+export function ytdReport(inc: IncWeek[], exp: ExpWeek[], sunday: string, carry: number) {
+  // 작년 같은 기간 = 52주 전 주일까지 (주일 단위라 같은 주 수끼리 비교)
+  const y = yearOf(sunday), cut = addDays(sunday, -364);
+  const range = <T extends { sunday: string; amount: number; fund: IncWeek["fund"] }>(xs: T[], yr: number, to: string, op = true) =>
+    sum(xs.filter((r) => operating(r) === op && yearOf(r.sunday) === yr && r.sunday <= to), (r) => r.amount);
+  const income = range(inc, y, sunday), expense = range(exp, y, sunday);
+  return {
+    sunday, from: `${y}-01-01`, weeks: new Set([...inc, ...exp].filter((r) => yearOf(r.sunday) === y && r.sunday <= sunday).map((r) => r.sunday)).size,
+    income, expense, prevIncome: range(inc, y - 1, cut), prevExpense: range(exp, y - 1, cut),
+    balance: carry + income - expense,
+    missionIncome: range(inc, y, sunday, false), missionExpense: range(exp, y, sunday, false),
+  };
+}
+export type YtdReport = ReturnType<typeof ytdReport>;
+
+/** 누적 리포트 문장 */
+export function ytdReportText(r: YtdReport): string[] {
+  const diff = (cur: number, prev: number) => (prev || cur ? ` (작년 같은 기간 대비 ${cur - prev >= 0 ? "+" : "−"}${won(Math.abs(cur - prev))}원, ${change(cur, prev)})` : "");
+  const net = r.income - r.expense;
+  const lines = [
+    `수입 누계 ${won(r.income)}원${diff(r.income, r.prevIncome)}`,
+    `지출 누계 ${won(r.expense)}원${diff(r.expense, r.prevExpense)}`,
+    `수지 누계 ${net >= 0 ? "+" : "−"}${won(Math.abs(net))}원 · 잔액(이월 포함) ${won(r.balance)}원`,
+  ];
+  if (r.missionIncome || r.missionExpense) lines.push(`해외선교(별도) 수입 누계 ${won(r.missionIncome)}원 · 지출 누계 ${won(r.missionExpense)}원`);
   return lines;
 }
 

@@ -1,7 +1,7 @@
 "use client";
 import { useMemo, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faBell, faLightbulb, faFileLines } from "@fortawesome/free-solid-svg-icons";
+import { faBell, faLightbulb, faFileLines, faChartLine } from "@fortawesome/free-solid-svg-icons";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import PageHeader from "@/components/PageHeader";
 import Notice from "@/components/ui/Notice";
@@ -10,7 +10,7 @@ import EChart, { C, compareHOption, compareOption, flowOption, man, wonTip } fro
 import { useDbQuery } from "@/lib/db/useDb";
 import { localDate, won } from "@/lib/format";
 import { change, sum, yearOf, type ExpWeek, type IncWeek } from "@/lib/reports/common";
-import { insights, monthlyOf, payeeAlerts, quarterlyOf, reportSunday, weekReport, weekReportText, weeklySeries, ytdCompare, type PayeeActivity } from "@/lib/reports/dashboard";
+import { insights, monthlyOf, payeeAlerts, quarterlyOf, reportSunday, weekReport, weekReportText, weeklySeries, ytdCompare, ytdReport, ytdReportText, type PayeeActivity } from "@/lib/reports/dashboard";
 import { loadBudgets, loadCarry, loadExpWeeks, loadFunds, loadIncWeeks, loadPayees, operatingCarry } from "@/lib/reports/load";
 import { demoBudgetTotals, demoExpWeeks, demoIncWeeks } from "@/lib/reports/demoData";
 
@@ -50,6 +50,7 @@ function View({ d, today }: { d: Data; today: string }) {
   const [months, setMonths] = useState(3);
   const sunday = useMemo(() => reportSunday(d.inc, d.exp, today), [d, today]);
   const wr = useMemo(() => weekReport(d.inc, d.exp, sunday, d.carry), [d, sunday]);
+  const yr = useMemo(() => ytdReport(d.inc, d.exp, sunday, d.carry), [d, sunday]);
   const alerts = useMemo(() => payeeAlerts(d.payees, sunday, months), [d.payees, sunday, months]);
   const tips = useMemo(() => insights(d.inc, d.exp, today, d.budget), [d, today]);
 
@@ -85,11 +86,11 @@ function View({ d, today }: { d: Data; today: string }) {
     ];
   }, [d, today]);
 
-  const tile = (label: string, v: number, prev: number | null, tone: string) => (
+  const tile = (label: string, v: number, prev: number | null, tone: string, prevLabel = "전주") => (
     <div className="rounded-lg bg-surface-2 p-3">
       <div className="text-xs text-label">{label}</div>
       <div className={`text-lg font-bold ${tone}`}>{won(v)}</div>
-      {prev != null && <div className="text-xs text-muted">전주 {won(prev)} · {change(v, prev)}</div>}
+      {prev != null && <div className="text-xs text-muted">{prevLabel} {won(prev)} · {change(v, prev)}</div>}
     </div>
   );
 
@@ -101,7 +102,8 @@ function View({ d, today }: { d: Data; today: string }) {
       </>} />
 
       <div className="grid gap-4 lg:grid-cols-3">
-        <section className={`${card} p-4 lg:col-span-2`}>
+        <div className="space-y-4 lg:col-span-2">
+        <section className={`${card} p-4`}>
           <h3 className={h3}><FontAwesomeIcon icon={faFileLines} className="text-primary" />금주 리포트 <span className="font-normal text-muted">({sunday} 주일, 일반·특별)</span></h3>
           <div className="mb-3 grid grid-cols-3 gap-2">
             {tile("수입", wr.income, wr.prevIncome, "text-chart-in")}
@@ -111,6 +113,17 @@ function View({ d, today }: { d: Data; today: string }) {
           <ul className="list-disc space-y-1 pl-5 text-sm">{weekReportText(wr).map((l) => <li key={l}>{l}</li>)}</ul>
           <p className="mt-2 text-xs text-muted">잔액 = 올해 이월금(일반·특별) + 올해 수입 누계 − 지출 누계 [확인 필요: 검증시트 장부잔액과 기준 맞추기]</p>
         </section>
+
+        <section className={`${card} p-4`}>
+          <h3 className={h3}><FontAwesomeIcon icon={faChartLine} className="text-primary" />누적 리포트 <span className="font-normal text-muted">({yr.from} ~ {sunday}, {yr.weeks}주, 일반·특별)</span></h3>
+          <div className="mb-3 grid grid-cols-3 gap-2">
+            {tile("수입 누계", yr.income, yr.prevIncome, "text-chart-in", "작년 같은 기간")}
+            {tile("지출 누계", yr.expense, yr.prevExpense, "text-chart-out", "작년 같은 기간")}
+            {tile("잔액(이월 포함)", yr.balance, null, yr.balance < 0 ? "text-danger" : "text-heading")}
+          </div>
+          <ul className="list-disc space-y-1 pl-5 text-sm">{ytdReportText(yr).map((l) => <li key={l}>{l}</li>)}</ul>
+        </section>
+        </div>
 
         <section className={`${card} p-4`}>
           <h3 className={h3}><FontAwesomeIcon icon={faBell} className="text-warning" />특이사항 알람</h3>
