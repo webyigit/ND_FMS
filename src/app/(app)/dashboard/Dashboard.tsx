@@ -125,7 +125,9 @@ function View({ d, today }: { d: Data; today: string }) {
         </section>
         </div>
 
-        <section className={`${card} p-4`}>
+        {/* 오른쪽 열: 왼쪽 열 높이에 맞춰 특이사항 알람·수지 인사이트가 반씩 차지 (lg 이상) */}
+        <div className="grid gap-4 lg:grid-rows-2 lg:[contain:size]">
+        <section className={`${card} p-4 lg:overflow-y-auto`}>
           <h3 className={h3}><FontAwesomeIcon icon={faBell} className="text-warning" />특이사항 알람</h3>
           {d.demo ? <p className="text-sm text-muted">DB를 연결하면 송금 계좌 이체 이력으로 알려 드려요.</p> : (
             <div className="space-y-3 text-sm">
@@ -147,13 +149,14 @@ function View({ d, today }: { d: Data; today: string }) {
             </div>
           )}
         </section>
-      </div>
 
-      <section className={`${card} mt-4 p-4`}>
-        <h3 className={h3}><FontAwesomeIcon icon={faLightbulb} className="text-primary" />수지 인사이트</h3>
-        {tips.length ? <ul className="list-disc space-y-1 pl-5 text-sm">{tips.map((t) => <li key={t}>{t}</li>)}</ul> : <p className="text-sm text-muted">아직 데이터가 부족해요.</p>}
-        <p className="mt-1 text-xs text-muted">정해진 규칙으로 만든 문장이에요(일반·특별 기준, 작년 같은 기간과 비교).</p>
-      </section>
+        <section className={`${card} p-4 lg:overflow-y-auto`}>
+          <h3 className={h3}><FontAwesomeIcon icon={faLightbulb} className="text-primary" />수지 인사이트</h3>
+          {tips.length ? <ul className="list-disc space-y-1 pl-5 text-sm">{tips.map((t) => <li key={t}>{t}</li>)}</ul> : <p className="text-sm text-muted">아직 데이터가 부족해요.</p>}
+          <p className="mt-1 text-xs text-muted">정해진 규칙으로 만든 문장이에요(일반·특별 기준, 작년 같은 기간과 비교).</p>
+        </section>
+        </div>
+      </div>
 
       <section className={`${card} mt-4 p-4`}>
         <h3 className={h3}>주간 수지 추이 <span className="font-normal text-muted">(최근 12주)</span></h3>
