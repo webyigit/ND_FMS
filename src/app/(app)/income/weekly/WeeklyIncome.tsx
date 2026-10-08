@@ -10,7 +10,7 @@ import { downloadXlsx } from "@/lib/excel";
 import { fileName, won } from "@/lib/format";
 import { isSunday } from "@/lib/income/dates";
 import { fetchAll } from "@/lib/income/db";
-import { FUNDS, entryLabel, toGrid, weeklyReport, weeklySheets, type IncomeViewRow } from "@/lib/income/report";
+import { FUNDS, entryLabel, toGrid, weeklyReport, weeklySheets, type IncomeViewRow, type PriorRow } from "@/lib/income/report";
 import { amt, longDate, td, tdNum, th } from "../_ui/sheet";
 
 type Week = { sunday: string; closed: boolean };
@@ -29,14 +29,18 @@ export default function WeeklyIncome() {
   const rows = useDbQuery((sb) => fetchAll<IncomeViewRow>((a, b) => sb.from("v_income")
     .select("id, sunday, offering_type_id, offering_type, type_order, fund_kind, member_id, member_name, payer_label, channel, amount, memo, bank_tx_id")
     .eq("sunday", sunday).order("id").range(a, b)), [sunday]);
+  // 올해 1/1 ~ 전주 헌금구분별 합계 (누계용)
+  const prior = useDbQuery((sb) => fetchAll<PriorRow>((a, b) => sb.from("v_income_week")
+    .select("offering_type_id, offering_type, type_order, fund_kind, amount")
+    .gte("sunday", `${sunday.slice(0, 4)}-01-01`).lt("sunday", sunday).order("sunday").order("offering_type_id").range(a, b)), [sunday]);
 
   const rep = useMemo(() => {
-    if (!ref || !rows.data) return null;
+    if (!ref || !rows.data || !prior.data) return null;
     const rank = new Map(ref.members.map((m) => [m.id, m.displayRank]));
-    return weeklyReport(rows.data, ref.offeringTypes, (id) => rank.get(id));
-  }, [ref, rows.data]);
+    return weeklyReport(rows.data, ref.offeringTypes, (id) => rank.get(id), prior.data);
+  }, [ref, rows.data, prior.data]);
   const week = weeks.data?.find((w) => w.sunday === sunday);
-  const err = refErr ?? weeks.error ?? rows.error;
+  const err = refErr ?? weeks.error ?? rows.error ?? prior.error;
 
   return (
     <>
@@ -78,7 +82,7 @@ export default function WeeklyIncome() {
           {rep.count === 0 && <Notice kind="warn">이 주일에 입력된 수입이 없어요.</Notice>}
 
           <table className="mb-6 w-full border-collapse">
-            <thead><tr><th className={th}>기금</th><th className={th}>헌금구분</th><th className={th}>현금</th><th className={th}>이체</th><th className={th}>합계</th><th className={th}>건수</th></tr></thead>
+            <thead><tr><th className={th}>기금</th><th className={th}>헌금구분</th><th className={th}>현금</th><th className={th}>이체</th><th className={th}>금주 합계</th><th className={th}>건수</th><th className={th}>전주까지 누계</th><th className={th}>올해 누계</th></tr></thead>
             <tbody>
               {FUNDS.map((f) => {
                 const ts = rep.types.filter((t) => t.fund === f);
@@ -90,12 +94,14 @@ export default function WeeklyIncome() {
                         <td className={td}>{t.name}{t.totalOnly && <span className="text-xs text-muted"> (총액)</span>}</td>
                         <td className={tdNum}>{amt(t.cash)}</td><td className={tdNum}>{amt(t.online)}</td><td className={`${tdNum} font-medium`}>{amt(t.total)}</td>
                         <td className={`${td} text-center`}>{t.count || ""}</td>
+                        <td className={tdNum}>{amt(t.prev)}</td><td className={`${tdNum} font-medium`}>{amt(t.ytd)}</td>
                       </tr>
                     ))}
                     <tr className="bg-surface-2 font-semibold">
                       {ts.length === 0 && <td className={`${td} text-center`}>{f}</td>}
                       <td className={td}>{f} 소계</td>
                       <td className={tdNum}>{amt(rep.byFund[f].cash)}</td><td className={tdNum}>{amt(rep.byFund[f].online)}</td><td className={tdNum}>{amt(rep.byFund[f].total)}</td><td className={td} />
+                      <td className={tdNum}>{amt(rep.byFund[f].prev)}</td><td className={tdNum}>{amt(rep.byFund[f].ytd)}</td>
                     </tr>
                   </Fragment>
                 );
@@ -103,11 +109,13 @@ export default function WeeklyIncome() {
               <tr className="bg-primary-subtle font-bold">
                 <td className={td} colSpan={2}>일반·특별 합계</td>
                 <td className={tdNum}>{amt(rep.generalSpecial.cash)}</td><td className={tdNum}>{amt(rep.generalSpecial.online)}</td><td className={tdNum}>{amt(rep.generalSpecial.total)}</td><td className={td} />
+                <td className={tdNum}>{amt(rep.generalSpecial.prev)}</td><td className={tdNum}>{amt(rep.generalSpecial.ytd)}</td>
               </tr>
               <tr className="font-semibold">
                 <td className={td} colSpan={2}>총계 (별도 포함)</td>
                 <td className={tdNum}>{amt(rep.grand.cash)}</td><td className={tdNum}>{amt(rep.grand.online)}</td><td className={tdNum}>{amt(rep.grand.total)}</td>
                 <td className={`${td} text-center`}>{rep.count}</td>
+                <td className={tdNum}>{amt(rep.grand.prev)}</td><td className={tdNum}>{amt(rep.grand.ytd)}</td>
               </tr>
             </tbody>
           </table>
@@ -137,7 +145,7 @@ export default function WeeklyIncome() {
               </table>
             </section>
           ))}
-          <p className="text-xs text-muted">● 이체(온라인) 입금. 별도 기금(해외선교·네팔)은 일반·특별 합계에 넣지 않아요.</p>
+          <p className="text-xs text-muted">● 이체(온라인) 입금. 별도 기금(해외선교·네팔)은 일반·특별 합계에 넣지 않아요. 올해 누계 = 1월 1일부터 전주까지 누계 + 금주 합계.</p>
         </div>
       )}
     </>

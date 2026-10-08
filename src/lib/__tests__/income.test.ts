@@ -88,16 +88,31 @@ describe("금주 수입내역", () => {
     expect(tithe.entries.map((e) => e.name)).toEqual(["하원로", "가나다", "라마바"]); // 지정 순위 먼저, 나머지 가나다
     expect(rep.byFund.일반.total).toBe(581000);
     expect(rep.byFund.특별.total).toBe(20000);
-    expect(rep.byFund.별도).toEqual({ cash: 0, online: 70000, total: 70000 });
+    expect(rep.byFund.별도).toEqual({ cash: 0, online: 70000, total: 70000, prev: 0, ytd: 70000 });
     expect(rep.generalSpecial.total).toBe(601000);
-    expect(rep.grand).toEqual({ cash: 551000, online: 120000, total: 671000 });
+    expect(rep.grand).toEqual({ cash: 551000, online: 120000, total: 671000, prev: 0, ytd: 671000 });
     expect(rep.types.map((t) => t.id)).toEqual([1, 2, 12, 15, 99]); // 목록 밖 헌금구분도 포함
+  });
+  it("올해 누계 = 전주까지 누계 + 금주 (누계에만 있는 헌금구분 포함)", () => {
+    const prior = [
+      { offering_type_id: 1, offering_type: "십일조", type_order: 1, fund_kind: "general", amount: 1000000 },
+      { offering_type_id: 1, offering_type: "십일조", type_order: 1, fund_kind: "general", amount: 500000 },
+      { offering_type_id: 15, offering_type: "해외선교", type_order: 15, fund_kind: "separate", amount: 30000 },
+      { offering_type_id: 77, offering_type: "지난구분", type_order: 60, fund_kind: "special", amount: 9000 },
+    ];
+    const r = weeklyReport(rows, types, () => null, prior);
+    expect(r.types.find((t) => t.id === 1)).toMatchObject({ total: 180000, prev: 1500000, ytd: 1680000 });
+    expect(r.types.find((t) => t.id === 77)).toMatchObject({ total: 0, prev: 9000, ytd: 9000, fund: "특별" });
+    expect(r.generalSpecial).toMatchObject({ total: 601000, prev: 1509000, ytd: 2110000 });
+    expect(r.grand).toMatchObject({ prev: 1539000, ytd: 2210000 });
+    expect(weeklySheets(r, "2026-10-11")[0].rows.at(-1)).toEqual(["총계(별도 포함)", "", 551000, 120000, 671000, 7, 1539000, 2210000]);
+    expect(rep.grand).toMatchObject({ prev: 0, ytd: 671000 }); // 누계 자료 없으면 금주만
   });
   it("그리드 4칸·엑셀", () => {
     expect(toGrid([1, 2, 3, 4, 5])).toEqual([[1, 2, 3, 4], [5, null, null, null]]);
     const [summary, grid] = weeklySheets(rep, "2026-10-11");
-    expect(summary.rows.at(-1)).toEqual(["총계(별도 포함)", "", 551000, 120000, 671000, 7]);
-    expect(summary.rows).toContainEqual(["일반·특별 합계", "", 551000, 50000, 601000, null]);
+    expect(summary.rows.at(-1)).toEqual(["총계(별도 포함)", "", 551000, 120000, 671000, 7, 0, 671000]);
+    expect(summary.rows).toContainEqual(["일반·특별 합계", "", 551000, 50000, 601000, null, 0, 601000]);
     expect(grid.rows.flat()).toContain("가나다,라마바(가상)");
     expect(grid.rows.flat()).not.toContain("(총액)"); // 주일헌금은 명단 없이 총액만
   });
