@@ -3,6 +3,8 @@
 import { useEffect, useState } from "react";
 import { DEPARTMENTS, FIXED_EXPENSES, MEMBERS, OFFERING_TYPES, type FixedExpense, type Member, type OfferingType } from "../demo";
 import { supabaseBrowser } from "../supabase/client";
+import { cacheGet, cacheSet } from "../offline/cache";
+import { isNetworkError } from "../offline/logic";
 
 export type RefData = {
   demo: boolean;
@@ -66,13 +68,26 @@ async function loadRef(): Promise<RefData> {
   };
 }
 
+/** 온라인이면 서버에서 읽고 기기에 남긴다. 오프라인이면 마지막으로 받은 기준정보를 쓴다 */
+async function loadRefOrCached(): Promise<RefData> {
+  try {
+    const ref = await loadRef();
+    void cacheSet("ref", ref);
+    return ref;
+  } catch (e) {
+    const hit = isNetworkError(e) ? await cacheGet<RefData>("ref") : null;
+    if (hit) return hit.data;
+    throw isNetworkError(e) ? new Error("오프라인이에요. 기준정보를 한 번은 온라인에서 받아야 해요.") : e;
+  }
+}
+
 let cache: Promise<RefData> | null = null;
 /** 기준정보 한 번만 불러와 화면 간 공유. 실패하면 error */
 export function useRefData(): { ref: RefData | null; error: string | null } {
   const [state, setState] = useState<{ ref: RefData | null; error: string | null }>({ ref: supabaseBrowser() ? null : DEMO_REF, error: null });
   useEffect(() => {
     if (!supabaseBrowser()) return;
-    cache ??= loadRef();
+    cache ??= loadRefOrCached();
     cache.then((ref) => setState({ ref, error: null }), (e) => { cache = null; setState({ ref: null, error: e?.message ?? "기준정보를 불러오지 못했어요" }); });
   }, []);
   return state;

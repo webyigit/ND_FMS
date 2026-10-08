@@ -8,6 +8,8 @@ import { currentSunday, weekOfMonth } from "@/lib/demo";
 import { useRefData, type RefData } from "@/lib/db/refData";
 import { dbError, expenseProblems, expenseSig, loadExpense, saveExpense, type ExpenseRow as Row } from "@/lib/db/weekly";
 import { supabaseBrowser } from "@/lib/supabase/client";
+import { enqueue, getWeekCache, setWeekCache, syncNow } from "@/lib/offline/sync";
+import { isNetworkError } from "@/lib/offline/logic";
 import { readFirstSheet } from "@/lib/bank/readXlsx";
 import { parseNonghyupRows, type BankTx } from "@/lib/bank/nonghyup";
 
@@ -45,10 +47,23 @@ function Form({ ref_ }: { ref_: RefData }) {
   useEffect(() => { try { localStorage.setItem(KEY, JSON.stringify(rows)); } catch {} }, [rows]);
   useEffect(() => { try { localStorage.setItem(KEY_META, JSON.stringify({ sunday, savedSig })); } catch {} }, [sunday, savedSig]);
 
-  const pull = useCallback((day: string) => sb && loadExpense(sb, day).then(
-    (xs) => { setRows(xs); setSavedSig(expenseSig(xs)); },
-    (e) => setErr(`불러오지 못했어요: ${dbError(e)}`),
-  ).finally(() => setBusy(false)), [sb]);
+  // 오프라인이면 기기에 저장된(마지막으로 받았거나 올리기 대기 중인) 것을 보여준다
+  const pull = useCallback((day: string) => {
+    if (!sb) return;
+    const onLoaded = (xs: Row[]) => {
+      setRows(xs); setSavedSig(expenseSig(xs));
+      void setWeekCache("expense", day, { rows: xs, serverSig: expenseSig(xs) });
+    };
+    const onFailed = async (e: unknown) => {
+      if (!isNetworkError(e)) return setErr(`불러오지 못했어요: ${dbError(e)}`);
+      const hit = await getWeekCache("expense", day);
+      const xs = (hit?.rows as Row[] | undefined) ?? [];
+      setRows(xs); setSavedSig(expenseSig(xs));
+      setMsg(hit ? "오프라인이에요. 기기에 저장된 이 주일 지출을 보여드려요." : "오프라인이에요. 이 주일은 기기에 저장된 지출이 없어 새로 입력해요. 저장하면 연결될 때 올립니다.");
+    };
+    // 올리기 대기 중인 입력이 있으면 먼저 올리고 읽는다
+    return syncNow().then(() => loadExpense(sb, day)).then(onLoaded, onFailed).finally(() => setBusy(false));
+  }, [sb]);
   const fetchWeek = (day: string) => { setBusy(true); setErr(""); setMsg(""); pull(day); };
 
   useEffect(() => {
@@ -68,13 +83,22 @@ function Form({ ref_ }: { ref_: RefData }) {
     const problems = expenseProblems(rows);
     if (problems.length) return setErr(`저장 전에 채워 주세요. ${problems.join(", ")}`);
     setBusy(true); setErr(""); setMsg("");
+    // 오프라인(또는 전송 실패)이면 기기 대기열에 넣는다. 기준 서명은 마지막으로 서버에서 받은 내용
+    const queue = async () => {
+      await enqueue("expense", sunday, rows, (await getWeekCache("expense", sunday))?.serverSig ?? null);
+      setSavedSig(expenseSig(rows));
+      setMsg(`오프라인이어서 ${sunday} 주일 지출 ${rows.length}건을 이 기기에 저장했어요. 연결되면 자동으로 올립니다.`);
+    };
     try {
+      if (!navigator.onLine) return await queue();
       const n = await saveExpense(sb, sunday, rows);
       setSavedSig(expenseSig(rows));
       setMsg(`${sunday} 주일 지출 ${n}건을 저장했어요.`);
       pull(sunday); // 새 행의 DB id를 받아 다음 저장 때 같은 행을 고치게
-    } catch (e) { setErr(`저장하지 못했어요: ${dbError(e)}`); }
-    finally { setBusy(false); }
+    } catch (e) {
+      if (isNetworkError(e)) await queue();
+      else setErr(`저장하지 못했어요: ${dbError(e)}`);
+    } finally { setBusy(false); }
   };
 
   const set = (id: string, patch: Partial<Row>) => setRows((xs) => xs.map((x) => (x.id === id ? { ...x, ...patch } : x)));
