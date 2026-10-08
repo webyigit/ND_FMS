@@ -1,5 +1,5 @@
 "use client";
-// 양식관리: 영수증 양식 목록(이름·버전·사용 여부·메모). 파일 대신 메모만 [확인 필요: 정부 양식 파일]
+// 양식관리: 영수증 양식 목록(이름·버전·사용 여부·메모). 출력 서식은 별지 제45호의2서식(개정 2021. 3. 16.) HTML 재현본
 import { useState } from "react";
 import PageHeader from "@/components/PageHeader";
 import DbOnly from "@/components/ui/DbOnly";
@@ -67,7 +67,7 @@ function Admin() {
   return (
     <>
       <PageHeader actions={<button onClick={() => setPreview(true)} className={btnPrimary}>기본 서식 미리보기</button>} />
-      <Notice kind="warn">정부 양식 파일이 아직 없어요. 화면 HTML 서식(별지 제45호의2 항목 구성)을 기본으로 쓰고, 양식 파일 대신 메모만 남겨요. [확인 필요: 정부 양식 파일]</Notice>
+      <Notice kind="ok">출력 서식은 소득세법 시행규칙 [별지 제45호의2서식] &lt;개정 2021. 3. 16.&gt; 앞쪽을 그대로 재현한 화면 서식이에요. 서식이 개정되면 여기 메모로 남겨 주세요.</Notice>
       {msg && <Notice kind={msg.ok ? "ok" : "error"}>{msg.text}</Notice>}
       {q.error && <Notice kind="error">불러오지 못했어요: {q.error}</Notice>}
       <div className={`${card} mb-4 overflow-x-auto`}>
