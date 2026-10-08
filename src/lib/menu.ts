@@ -52,6 +52,7 @@ export const MENU: MenuGroup[] = [
       { href: "/receipt/status", label: "발행현황" },
       { href: "/receipt/past", label: "지난 발행내역" },
       { href: "/receipt/form", label: "양식관리" },
+      { href: "/receipt/attachments", label: "첨부양식 관리" },
       { href: "/receipt/church", label: "발행자(교회) 정보" },
     ],
   },
