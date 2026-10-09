@@ -21,17 +21,19 @@ export async function loadFundBalances(sb: SupabaseClient, sunday: string) {
   return fromFundRows((data ?? []) as FundBalanceRow[]);
 }
 
-/** 결재란 직함 (app_setting 'approval_titles') */
+/** 결재란 직함 (app_setting 'approval_titles' = 지출 보고, 'income_approval_titles' = 주일 헌금 현황) */
 export const DEFAULT_TITLES = ["담당", "기장회계", "출납회계", "재정부장"];
-export async function loadTitles(sb: SupabaseClient): Promise<string[]> {
-  const { data, error } = await sb.from("app_setting").select("value").eq("key", "approval_titles").maybeSingle();
+/** 원본 'MM-DD_주일헌금현황' 결재란 */
+export const INCOME_TITLES = ["기장회계", "재정부장", "당회장"];
+export async function loadTitles(sb: SupabaseClient, key = "approval_titles", fallback = DEFAULT_TITLES): Promise<string[]> {
+  const { data, error } = await sb.from("app_setting").select("value").eq("key", key).maybeSingle();
   if (error) throw error;
   const v = data?.value;
-  return Array.isArray(v) && v.every((x) => typeof x === "string") ? v : DEFAULT_TITLES;
+  return Array.isArray(v) && v.length && v.every((x) => typeof x === "string") ? v : fallback;
 }
-export async function saveTitles(sb: SupabaseClient, titles: string[]) {
+export async function saveTitles(sb: SupabaseClient, titles: string[], key = "approval_titles") {
   const { error } = await sb.from("app_setting")
-    .upsert({ key: "approval_titles", value: titles, updated_at: new Date().toISOString() }, { onConflict: "key" });
+    .upsert({ key, value: titles, updated_at: new Date().toISOString() }, { onConflict: "key" });
   if (error) throw error;
 }
 

@@ -6,7 +6,7 @@ import { linkProblems, suggest, toImportRows, toLinkPayload } from "../income/ba
 import { fetchAll, safeTerm } from "../income/db";
 import {
   filterByName, householdTotals, matrixSheet, personSheet, personTotals, sumSelected, toGrid, typeMonthMatrix,
-  weeklyReport, weeklySheets, type IncomeViewRow, type PersonAggRow,
+  weeklyReport, weeklySheets, listedTypes, NO_NAME, type IncomeViewRow, type PersonAggRow,
 } from "../income/report";
 
 // 테스트 데이터는 모두 가상(실명·실금액 아님)
@@ -115,6 +115,17 @@ describe("금주 수입내역", () => {
     expect(summary.rows).toContainEqual(["일반·특별 합계", "", 551000, 50000, 601000, null, 0, 601000]);
     expect(grid.rows.flat()).toContain("가나다,라마바(가상)");
     expect(grid.rows.flat()).not.toContain("(총액)"); // 주일헌금은 명단 없이 총액만
+  });
+  it("이름 없는 합계 행은 명단 대신 '개인내역 없음' 한 줄", () => {
+    const r = weeklyReport([...rows, row({ amount: 90000, memo: "주간 합계(개인내역 없음)" })], types);
+    const tithe = r.types.find((t) => t.id === 1)!;
+    expect(tithe).toMatchObject({ total: 270000, noName: 90000, count: 4 });
+    expect(tithe.entries).toHaveLength(3);
+    expect(r.noName).toBe(90000);
+    expect(listedTypes(r).map((t) => t.id)).toEqual([1, 2, 12, 15, 99]);
+    const grid = weeklySheets(r, "2026-10-11")[1].rows;
+    expect(grid).toContainEqual([NO_NAME, 90000]);
+    expect(grid).toContainEqual(["주일헌금 (1건, 400,000원)"]);
   });
 });
 

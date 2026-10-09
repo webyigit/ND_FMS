@@ -3,9 +3,9 @@ import { useMemo, useState } from "react";
 import PageHeader from "@/components/PageHeader";
 import DbOnly from "@/components/ui/DbOnly";
 import Notice from "@/components/ui/Notice";
-import { ExcelButton, PrintButton, btn, btnPrimary, card, input } from "@/components/ui/Buttons";
+import TitleEditor from "@/components/ui/TitleEditor";
+import { ExcelButton, PrintButton, card, input } from "@/components/ui/Buttons";
 import { must, useDbQuery } from "@/lib/db/useDb";
-import { dbError } from "@/lib/db/weekly";
 import { supabaseBrowser } from "@/lib/supabase/client";
 import { currentSunday } from "@/lib/demo";
 import { fileName, won } from "@/lib/format";
@@ -57,40 +57,12 @@ function Screen() {
         <label className="text-xs text-label">주일
           <input type="date" value={sunday} onChange={(e) => pick(e.target.value)} className={`${input} mt-1 block`} />
         </label>
-        {d && <TitleEditor key={d.titles.join("|")} titles={d.titles} onSaved={q.reload} />}
+        {d && <TitleEditor key={d.titles.join("|")} titles={d.titles} onSave={(xs) => saveTitles(supabaseBrowser()!, xs)} onSaved={q.reload} />}
       </div>
       {q.error && <Notice kind="error">불러오지 못했어요: {q.error}</Notice>}
       {!d && !q.error && <div className="text-sm text-muted">불러오는 중…</div>}
       {d && <Report d={d} />}
     </>
-  );
-}
-
-// 결재란 직함: 화면에서 바꾸고 app_setting 에 저장
-function TitleEditor({ titles, onSaved }: { titles: string[]; onSaved: () => void }) {
-  const [xs, setXs] = useState(titles);
-  const [open, setOpen] = useState(false);
-  const [err, setErr] = useState("");
-  const changed = xs.join("|") !== titles.join("|");
-  const save = async () => {
-    const clean = xs.map((x) => x.trim()).filter(Boolean);
-    if (!clean.length) return setErr("직함을 하나 이상 넣어 주세요.");
-    try { await saveTitles(supabaseBrowser()!, clean); setErr(""); setOpen(false); onSaved(); } catch (e) { setErr(dbError(e)); }
-  };
-  if (!open) return <button className={`${btn} ml-auto`} onClick={() => setOpen(true)}>결재란 직함 바꾸기</button>;
-  return (
-    <div className="ml-auto flex flex-wrap items-center gap-1">
-      {xs.map((x, i) => (
-        <span key={i} className="flex items-center">
-          <input className={`${input} w-24`} value={x} onChange={(e) => setXs(xs.map((y, j) => (j === i ? e.target.value : y)))} />
-          <button className="px-1 text-xs text-danger" title="빼기" onClick={() => setXs(xs.filter((_, j) => j !== i))}>×</button>
-        </span>
-      ))}
-      {xs.length < 6 && <button className={btn} onClick={() => setXs([...xs, ""])}>칸 추가</button>}
-      <button className={btnPrimary} disabled={!changed} onClick={save}>저장</button>
-      <button className={btn} onClick={() => { setXs(titles); setOpen(false); setErr(""); }}>취소</button>
-      {err && <span className="text-xs text-danger">{err}</span>}
-    </div>
   );
 }
 

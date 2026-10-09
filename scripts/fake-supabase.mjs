@@ -38,7 +38,31 @@ const db = {
   ],
   v_donation_receipt: [],
   todo: [],
+  // 금주 수입내역(/income/weekly) 확인용: 2026-10-04 주일
+  offering_type: [
+    [3, "십일조", "general", false], [1, "주일헌금", "general", true], [6, "범사감사", "general", false], [5, "기타감사", "general", false],
+    [9, "일천번제", "general", false], [11, "기관헌금", "general", false], [13, "이웃사랑", "special", false], [14, "꽃꽂이", "special", false], [15, "해외선교", "separate", false],
+  ].map(([id, name, kind, total_only], i) => ({ id, name, total_only, amount_unit: 1000, has_memo: id === 5, sort_order: i + 1, active: true, fund: { kind } })),
+  fixed_expense: [],
+  week: [{ sunday: "2026-10-04", closed: false }, { sunday: "2026-09-27", closed: true }],
+  app_setting: [],
+  v_income_week: [3, 1, 6, 5, 9, 11, 13, 14, 15].map((t, i) => ({ sunday: "2026-09-27", offering_type_id: t, offering_type: "", type_order: i + 1, fund_kind: t >= 15 ? "separate" : t >= 13 ? "special" : "general", amount: 1000000 * (10 - i) })),
 };
+{
+  const types = Object.fromEntries(db.offering_type.map((t) => [t.id, t]));
+  const fam = ["가나다", "라마바", "사아자", "차카타", "파하가", "나다라", "마바사", "아자차", "카타파", "하가나"];
+  let id = 1000;
+  const add = (t, label, amount, extra = {}) => db.v_income.push({ id: ++id, year: 2026, month: 10, sunday: "2026-10-04", offering_type_id: t, offering_type: types[t].name, type_order: types[t].sort_order, fund_kind: types[t].fund.kind, member_id: label ? id : null, member_name: label, payer_label: label, channel: "cash", amount, memo: null, bank_tx_id: null, ...extra });
+  for (let i = 0; i < 38; i++) add(3, i % 3 ? fam[i % 10] + "," + fam[(i + 3) % 10] : fam[i % 10] + (i > 9 ? String(i) : ""), (i % 7 + 1) * 50000, i % 5 === 0 ? { channel: "online" } : {});
+  add(1, "(총액)", 695000);
+  for (let i = 0; i < 9; i++) add(6, fam[i], (i + 1) * 10000);
+  add(5, fam[2], 50000, { memo: "가상 감사 내용" }); add(5, fam[4] + "," + fam[5], 100000, { memo: "병원심방감사" });
+  add(9, null, 171000, { memo: "주간 합계(개인내역 없음)" });
+  ["유치부", "아동부", "중고등부"].forEach((d, i) => add(11, d, (i + 1) * 7000));
+  for (let i = 0; i < 6; i++) add(13, fam[i], 10000);
+  add(14, fam[1], 100000, { memo: "가상" });
+  for (let i = 0; i < 10; i++) add(15, fam[i], 10000 * (1 + (i % 3)));
+}
 let nextReceipt = 900;
 
 // 이름합치기(개인별 헌금현황 > 이름합치기) 가상 데이터: 홍길동 ↔ 홍길둥·홍길똥 오기입, 김가나 ↔ 김가니(다른 사람)
