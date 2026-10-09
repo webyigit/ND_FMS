@@ -65,6 +65,27 @@ const db = {
 }
 let nextReceipt = 900;
 
+// 이름합치기(개인별 헌금현황 > 이름합치기) 가상 데이터: 홍길동 ↔ 홍길둥·홍길똥 오기입, 김가나 ↔ 김가니(다른 사람)
+const nmMembers = [
+  { id: 11, full_name: "홍길동", title: "장로", n: 40, total: 4000000, first_sunday: "2024-01-07", last_sunday: "2025-12-28", household_id: 50, household_label: "홍길동 가정" },
+  { id: 12, full_name: "홍길둥", title: null, n: 2, total: 200000, first_sunday: "2025-03-02", last_sunday: "2025-03-09", household_id: null, household_label: null },
+  { id: 13, full_name: "홍길똥", title: null, n: 1, total: 100000, first_sunday: "2025-04-06", last_sunday: "2025-04-06", household_id: null, household_label: null },
+  { id: 14, full_name: "김가나", title: "집사", n: 30, total: 900000, first_sunday: "2024-01-07", last_sunday: "2025-12-28", household_id: null, household_label: null },
+  { id: 15, full_name: "김가니", title: "권사", n: 25, total: 750000, first_sunday: "2024-02-04", last_sunday: "2025-12-21", household_id: null, household_label: null },
+].map((m) => ({ ...m, name: m.full_name, name_suffix: null, is_group: false, is_anonymous: false, active: true, merged_into: null, merged_into_name: null }));
+db.v_member = nmMembers;
+db.v_member_income_stat = nmMembers.map(({ id, n, total, first_sunday, last_sunday }) => ({ member_id: id, n, total, first_sunday, last_sunday }));
+db.v_name_merge = [];
+db.member_not_same = [];
+db.v_income_person = nmMembers.map((m) => ({ year: 2026, month: 3, member_id: m.id, member_name: m.full_name, household_id: m.household_id, household_label: m.household_label, payer_label: null, offering_type_id: 1, offering_type: "십일조", type_order: 1, fund_kind: "general", amount: m.total, n: m.n }));
+let nextMerge = 1;
+const resolvePerson = () => db.v_income_person.forEach((r) => {
+  r.raw_id ??= r.member_id;
+  const src = nmMembers.find((m) => m.id === r.raw_id);
+  const into = src.merged_into ? nmMembers.find((m) => m.id === src.merged_into) : src;
+  r.member_id = into.id; r.member_name = into.full_name;
+});
+
 function parseFilters(sp) {
   const f = [];
   for (const [k, v] of sp) {
@@ -101,6 +122,31 @@ const rpc = {
   reject_expense_request: ({ p_id, p_note }) => { const r = db.v_expense_request.find((x) => x.id === p_id); r.status = "rejected"; r.review_note = p_note; return null; },
   review_budget_request: ({ p_id, p_approve }) => { const r = db.budget_request.find((x) => x.id === p_id); r.status = p_approve ? "approved" : "rejected"; return null; },
   expense_request_account: () => "000-0000-0000",
+  merge_members: ({ p_into, p_ids }) => {
+    const t = nmMembers.find((m) => m.id === p_into);
+    let n = 0;
+    for (const id of p_ids) {
+      if (id === p_into) continue;
+      const m = nmMembers.find((x) => x.id === id);
+      m.merged_into = p_into; m.merged_into_name = t.full_name; m.active = false; n++;
+      db.v_name_merge.unshift({ id: nextMerge++, member_id: id, member_name: m.full_name, member_title: m.title, into_id: p_into, into_name: t.full_name, merged_at: "2026-10-09T05:30:00Z", merged_by_name: "관리자" });
+    }
+    resolvePerson();
+    return n;
+  },
+  unmerge_member: ({ p_member }) => {
+    const m = nmMembers.find((x) => x.id === p_member);
+    m.merged_into = null; m.merged_into_name = null; m.active = true;
+    db.v_name_merge = db.v_name_merge.filter((r) => r.member_id !== p_member);
+    resolvePerson();
+    return null;
+  },
+  mark_not_same: ({ p_a, p_b, p_on }) => {
+    const a = Math.min(p_a, p_b), b = Math.max(p_a, p_b);
+    db.member_not_same = db.member_not_same.filter((r) => !(r.a === a && r.b === b));
+    if (p_on) db.member_not_same.push({ a, b });
+    return null;
+  },
 };
 
 const server = http.createServer(async (req, res) => {

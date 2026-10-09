@@ -90,7 +90,7 @@ export default function MemberAdmin() {
                       {m.is_group && <span className="mr-1 rounded bg-surface-2 px-1">단체</span>}
                       {m.is_anonymous && <span className="mr-1 rounded bg-surface-2 px-1">무명</span>}
                       {m.exclude_from_receipt && <span className="mr-1 rounded bg-warning-subtle px-1 text-warning">영수증 제외</span>}
-                      {!m.active && <span className="rounded bg-danger-subtle px-1 text-danger">비활성</span>}
+                      {m.merged_into ? <span className="rounded bg-surface-2 px-1">→ {m.merged_into_name}에 합쳐짐</span> : !m.active && <span className="rounded bg-danger-subtle px-1 text-danger">비활성</span>}
                     </td>
                   </tr>
                 ))}
