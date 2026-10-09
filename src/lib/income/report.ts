@@ -27,10 +27,13 @@ export type TypeRef = { id: number; name: string; fund: Fund; totalOnly?: boolea
 export const displayName = (r: Pick<IncomeViewRow, "payer_label" | "member_name">) => r.payer_label?.trim() || r.member_name || "무명";
 
 export type Entry = { name: string; amount: number; memo: string; channel: "cash" | "online"; displayRank?: number | null };
-export type WeeklyType = Money & { id: number; name: string; fund: Fund; totalOnly: boolean; count: number; entries: Entry[]; prev: number; ytd: number };
+/** noName: 이름 없이 합계로만 들어온 금액(과거 이관분 '개인내역 없음/미기재'). entries 에는 넣지 않는다 */
+export type WeeklyType = Money & { id: number; name: string; fund: Fund; totalOnly: boolean; count: number; entries: Entry[]; noName: number; prev: number; ytd: number };
 /** prev: 올해 1/1~전주 누계, ytd: prev + 금주 합계 */
 export type Ytd = { prev: number; ytd: number };
-export type WeeklyReport = { types: WeeklyType[]; byFund: Record<Fund, Money & Ytd>; generalSpecial: Money & Ytd; grand: Money & Ytd; count: number };
+export type WeeklyReport = { types: WeeklyType[]; byFund: Record<Fund, Money & Ytd>; generalSpecial: Money & Ytd; grand: Money & Ytd; count: number; noName: number };
+/** 이름(교인 연결·원문 표기) 없는 행 */
+export const isNoName = (r: Pick<IncomeViewRow, "member_id" | "payer_label">) => r.member_id == null && !r.payer_label?.trim();
 /** v_income_week 한 행 (올해 1/1 ~ 전주, 헌금구분별 합계) */
 export type PriorRow = Pick<IncomeViewRow, "offering_type_id" | "offering_type" | "type_order" | "fund_kind" | "amount">;
 
@@ -45,17 +48,19 @@ export function weeklyReport(rows: IncomeViewRow[], types: TypeRef[], rankOf: (m
     const mine = rows.filter((r) => r.offering_type_id === t.id);
     const m = zero();
     mine.forEach((r) => add(m, r.channel, Number(r.amount)));
-    const entries = sortForList(mine.map((r) => ({
+    const named = mine.filter((r) => !isNoName(r));
+    const noName = mine.filter(isNoName).reduce((s, r) => s + Number(r.amount), 0);
+    const entries = sortForList(named.map((r) => ({
       name: displayName(r), amount: Number(r.amount), memo: r.memo ?? "", channel: r.channel,
       displayRank: r.member_id != null ? rankOf(r.member_id) : null,
     })));
     const prev = prior.filter((r) => r.offering_type_id === t.id).reduce((s, r) => s + Number(r.amount), 0);
-    return { ...m, id: t.id, name: t.name, fund: t.fund, totalOnly: !!t.totalOnly, count: mine.length, entries, prev, ytd: prev + m.total };
+    return { ...m, id: t.id, name: t.name, fund: t.fund, totalOnly: !!t.totalOnly, count: mine.length, entries, noName, prev, ytd: prev + m.total };
   });
   const sumUp = (ts: (Money & Ytd)[]) => ts.reduce((s, t) => ({ ...plus(s, t), prev: s.prev + t.prev, ytd: s.ytd + t.ytd }), { ...zero(), prev: 0, ytd: 0 });
   const byFund = Object.fromEntries(FUNDS.map((f) => [f, sumUp(out.filter((t) => t.fund === f))])) as Record<Fund, Money & Ytd>;
   const generalSpecial = sumUp([byFund.일반, byFund.특별]);
-  return { types: out, byFund, generalSpecial, grand: sumUp([generalSpecial, byFund.별도]), count: rows.length };
+  return { types: out, byFund, generalSpecial, grand: sumUp([generalSpecial, byFund.별도]), count: rows.length, noName: out.reduce((s, t) => s + t.noName, 0) };
 }
 
 /** (성명, 금액) × cols 그리드로 나눈다. 마지막 줄은 null로 채움 */
@@ -68,6 +73,10 @@ export function toGrid<T>(xs: T[], cols = 4): (T | null)[][] {
   }
   return out;
 }
+
+export const NO_NAME = "개인내역 없음(합계만)";
+/** 명단에 올릴 헌금구분: 이번 주 금액이 있는 것 전부(총액만 받는 구분은 합계 한 줄) */
+export const listedTypes = (rep: WeeklyReport) => rep.types.filter((t) => t.total !== 0);
 
 export const entryLabel = (e: Entry) => (e.memo ? `${e.name}(${e.memo})` : e.name);
 
@@ -83,9 +92,14 @@ export function weeklySheets(rep: WeeklyReport, sunday: string): Sheet[] {
   summary.push(["총계(별도 포함)", "", a.cash, a.online, a.total, rep.count, a.prev, a.ytd]);
 
   const grid: Sheet["rows"] = [[`${sunday} 헌금 명단`]];
-  rep.types.filter((t) => !t.totalOnly && t.entries.length).forEach((t) => {
-    grid.push([], [`${t.name} (${t.count}건, ${t.total.toLocaleString("ko-KR")}원)`], ["성명", "금액", "성명", "금액", "성명", "금액", "성명", "금액"]);
-    toGrid(t.entries).forEach((row) => grid.push(row.flatMap((e) => (e ? [entryLabel(e), e.amount] : ["", null]))));
+  listedTypes(rep).forEach((t) => {
+    grid.push([], [`${t.name} (${t.count}건, ${t.total.toLocaleString("ko-KR")}원)`]);
+    if (t.totalOnly) return;
+    if (t.entries.length) {
+      grid.push(["성명", "금액", "성명", "금액", "성명", "금액", "성명", "금액"]);
+      toGrid(t.entries).forEach((row) => grid.push(row.flatMap((e) => (e ? [entryLabel(e), e.amount] : ["", null]))));
+    }
+    if (t.noName) grid.push([NO_NAME, t.noName]);
   });
   return [
     { name: "요약", rows: summary, widths: [16, 14, 14, 14, 14, 8], header: 3 },

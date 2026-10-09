@@ -27,4 +27,9 @@
   body { background: #fff; }
   .shadow-card { box-shadow: none !important; }
   @page { size: A4; margin: 12mm; }
+  /* A4 장표(주일 헌금 현황 등): 글자·칸을 줄여 한 장에 더 담고, 머리글은 쪽마다 반복 */
+  .print-sheet { font-size: 9pt; }
+  .print-sheet th, .print-sheet td { padding: 1px 4px; }
+  .print-sheet thead { display: table-header-group; }
+  .print-sheet tr { break-inside: avoid; }
 }
