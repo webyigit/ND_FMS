@@ -8,6 +8,8 @@ export type MemberRow = {
   is_group: boolean; is_anonymous: boolean; exclude_from_receipt: boolean; active: boolean;
   household_id: number | null; household_label: string | null; is_household_head: boolean;
   has_rrn: boolean; rrn_mask: string | null;
+  /** 이름합치기로 합쳐진 대표 교인 */
+  merged_into?: number | null; merged_into_name?: string | null;
 };
 
 export const ALIAS_KINDS = [

@@ -133,7 +133,8 @@ function Form({ ref_ }: { ref_: RefData }) {
 
   const edit = (e: Entry) => {
     setEditId(e.id); setTypeId(e.typeId); setChannel(e.channel);
-    setPicked(MEMBERS.find((m) => m.id === e.memberId) ?? null); setQuery(e.name);
+    // 목록에 없는 교인(비활성·이름합치기로 합쳐짐)도 연결은 그대로 둔다
+    setPicked(MEMBERS.find((m) => m.id === e.memberId) ?? (e.memberId != null ? { id: e.memberId, name: e.name } : null)); setQuery(e.name);
     setAmount(String(e.amount / (OFFERING_TYPES.find((t) => t.id === e.typeId)?.unit ?? 1))); setMemo(e.memo);
   };
 

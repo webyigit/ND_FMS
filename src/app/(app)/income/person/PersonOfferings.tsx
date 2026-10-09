@@ -14,15 +14,17 @@ import {
 import type { FamilyMember } from "@/lib/income/family";
 import { amt, td, tdNum, th } from "../_ui/sheet";
 import { FamilyTab, PersonTab } from "./FamilyTabs";
+import NameMergeTab from "./NameMergeTab";
 
 const TABS = [
   { id: "all", label: "전체" },
   { id: "person", label: "개인별 (1명 기준)" },
   { id: "family", label: "가족단위" },
+  { id: "names", label: "이름합치기" },
 ] as const;
 type Tab = (typeof TABS)[number]["id"];
 
-// 개인별 헌금현황: 전체 / 개인별(1명) / 가족단위(이름 포함 명단 → 가족으로 합치기) 탭
+// 개인별 헌금현황: 전체 / 개인별(1명) / 가족단위(이름 포함 명단 → 가족으로 합치기) / 이름합치기(오기입 → 대표 이름) 탭
 export default function PersonOfferings() {
   const [tab, setTab] = useState<Tab>("all");
   const [base, setBase] = useState<string | null>(null);
@@ -97,6 +99,7 @@ export default function PersonOfferings() {
       {tab === "person" && <PersonTab year={year} base={basePerson} persons={persons} rows={data.data ?? []} onPick={(p) => setBase(p.key)} onFamily={() => setTab("family")} />}
       {tab === "family" && <FamilyTab key={`${year}-${base}`} year={year} base={basePerson} persons={persons} members={members.data ?? []} types={allTypes}
         onPick={(p) => setBase(p.key)} onChanged={reloadAll} />}
+      {tab === "names" && <NameMergeTab onChanged={reloadAll} />}
 
       {tab === "all" && <>
 
