@@ -119,7 +119,7 @@ export default function OfferingTypeAdmin() {
                   <button disabled={busy} onClick={() => move(t.id, -1)} className="px-1 text-label" aria-label="위로">▲</button>
                   <button disabled={busy} onClick={() => move(t.id, 1)} className="px-1 text-label" aria-label="아래로">▼</button>
                 </td>
-                <td className={t.depth ? "pl-6" : "font-medium text-heading"}>{t.depth ? "└ " : ""}{t.name}</td>
+                <td className={t.depth ? "pl-6" : "font-medium text-heading"}>{t.depth ? "ㄴ " : ""}{t.name}</td>
                 <td className="text-center">{fundName(t.fund_id)}</td>
                 <td className="text-center">{UNITS.find((u) => u.value === t.amount_unit)?.label ?? t.amount_unit}</td>
                 <td className="text-center">{t.total_only ? "O" : ""}</td>

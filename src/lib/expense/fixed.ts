@@ -6,7 +6,7 @@ export const emptyFixed = (): FixedForm => ({ weekOfMonth: 1, content: "", amoun
 /** 저장 전에 고칠 것 */
 export function fixedProblems(f: FixedForm): string[] {
   return [
-    !(f.weekOfMonth >= 1 && f.weekOfMonth <= 5) && "N째 주(1~5)",
+    !(f.weekOfMonth >= 1 && f.weekOfMonth <= 5) && "주차(1~5)",
     !f.content.trim() && "내용",
     !(f.amount > 0) && "금액",
     !f.expenseItemId && "부서·항목",

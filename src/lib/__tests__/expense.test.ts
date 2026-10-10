@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { fromFundRows, groupOfferings, lineOf, separateLines, weekSummary } from "../expense/report";
-import { byDepartment, periodRange } from "../expense/budget";
+import { byDepartment, deptInsights, periodRange } from "../expense/budget";
 import { amountMatch, filterHistory, monthlyTotals, type HistRow } from "../expense/history";
 import { clergyByPerson } from "../expense/clergy";
 import { fixedProblems, emptyFixed, sortFixed, toFixedRow } from "../expense/fixed";
@@ -69,6 +69,27 @@ describe("부서별 지출", () => {
     expect(depts[1].items[0]).toMatchObject({ remain: -20000, rate: "120.00%" });
     expect(total).toMatchObject({ budget: 300000, spent: 170000 });
   });
+  it("기금 부서(예산 없음)는 잔액을 내지 않고 합계에서 뺀다", () => {
+    const withFund = [...items, { itemId: 9, dept: "해외선교", deptOrder: 20, item: "선교사 후원", itemOrder: 1, budget: 0, noBudget: true, fundId: 3 }];
+    const r = byDepartment(withFund, [...txs, { itemId: 9, sunday: "2026-03-01", content: "송금", amount: 500000, requester: "", memo: "" }], "2026-01-01", "2026-06-30");
+    const f = r.depts.find((d) => d.dept === "해외선교")!;
+    expect(f).toMatchObject({ noBudget: true, spent: 500000, remain: 0, rate: "-" });
+    expect(r.total).toMatchObject({ budget: 300000, spent: 170000 });
+    expect(r.fundSpent).toBe(500000);
+    const funds = new Map([["해외선교", { name: "별도", carry: 10445000, income: 10128000, expense: 5735000, balance: 14838000 }]]);
+    const lines = deptInsights(r, { from: "2026-01-01", to: "2026-06-30", asOf: "2026-06-28", dept: "해외선교", funds });
+    expect(lines[0]).toContain("예산 대비 잔액·집행률을 내지 않아요");
+    expect(lines[1]).toContain("잔액 14,838,000원");
+  });
+  it("부서 인사이트: 집행률·초과·큰 항목·지출 없는 항목", () => {
+    const r = byDepartment(items, txs, "2026-01-01", "2026-12-31");
+    const music = deptInsights(r, { from: "2026-01-01", to: "2026-12-31", asOf: "2026-08-02", dept: "음악부" });
+    expect(music[0]).toContain("120%");
+    expect(music.join(" ")).toContain("예산을 넘은 항목: 찬양대(20,000원 초과)");
+    const all = deptInsights(r, { from: "2026-01-01", to: "2026-12-31", asOf: "2026-08-02" });
+    expect(all[0]).toMatch(/^전체 예산 300,000원 중 200,000원 집행/);
+    expect(all.join(" ")).toContain("예산을 넘은 부서: 음악부");
+  });
   it("기간 단축", () => {
     expect(periodRange(2026, "Y")).toEqual(["2026-01-01", "2026-12-31"]);
     expect(periodRange(2026, "H1")).toEqual(["2026-01-01", "2026-06-30"]);
@@ -119,7 +140,7 @@ describe("교역자급여·고정지출·주일", () => {
   });
   it("고정지출 확인·정렬·DB 행", () => {
     expect(fixedProblems(emptyFixed())).toEqual(["내용", "금액", "부서·항목"]);
-    expect(fixedProblems({ ...emptyFixed(), weekOfMonth: 6, content: "x", amount: 1, expenseItemId: 1 })).toEqual(["N째 주(1~5)"]);
+    expect(fixedProblems({ ...emptyFixed(), weekOfMonth: 6, content: "x", amount: 1, expenseItemId: 1 })).toEqual(["주차(1~5)"]);
     const s = sortFixed([{ weekOfMonth: 2, active: true, content: "나" }, { weekOfMonth: 1, active: false, content: "가" }, { weekOfMonth: 1, active: true, content: "다" }]);
     expect(s.map((x) => x.content)).toEqual(["다", "가", "나"]);
     expect(toFixedRow({ ...emptyFixed(), content: " 전기 ", amount: 1, expenseItemId: 3 })).toMatchObject({ content: "전기", memo: null, week_of_month: 1 });

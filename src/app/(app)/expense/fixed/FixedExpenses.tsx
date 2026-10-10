@@ -42,7 +42,17 @@ function Screen() {
   const [busy, setBusy] = useState(false);
   const [week, setWeek] = useState(0);
 
-  const itemLabel = useMemo(() => new Map((q.data?.items ?? []).map((i) => [i.id, `${i.department?.name ?? ""} · ${i.name}`])), [q.data]);
+  const itemOf = useMemo(() => new Map((q.data?.items ?? []).map((i) => [i.id, i])), [q.data]);
+  // 부서 → 항목 묶음 (선택 목록에서 항목은 ㄴ 으로 부서 아래에 보인다)
+  const groups = useMemo(() => {
+    const g: { dept: string; items: Item[] }[] = [];
+    (q.data?.items ?? []).forEach((i) => {
+      const dept = i.department?.name ?? "(부서 없음)";
+      const last = g[g.length - 1];
+      if (last?.dept === dept) last.items.push(i); else g.push({ dept, items: [i] });
+    });
+    return g;
+  }, [q.data]);
   const payeeLabel = useMemo(() => new Map((q.data?.payees ?? []).map((p) => [p.id, [p.name ?? p.holder, p.bank].filter(Boolean).join(" · ")])), [q.data]);
   const rows = useMemo(() => sortFixed((q.data?.rows ?? []).filter((r) => !week || r.weekOfMonth === week)), [q.data, week]);
   const totals = useMemo(() => [1, 2, 3, 4, 5].map((w) => (q.data?.rows ?? []).filter((r) => r.active && r.weekOfMonth === w).reduce((s, r) => s + r.amount, 0)), [q.data]);
@@ -71,9 +81,9 @@ function Screen() {
     <div className={`${card} mb-4 p-4 text-sm`}>
       <div className="mb-3 font-semibold text-heading">{edit.id ? "고정지출 고치기" : "고정지출 추가"}</div>
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <label className="text-xs text-label">N째 주
+        <label className="text-xs text-label">주차
           <select className={`${input} mt-1 block w-full`} value={edit.f.weekOfMonth} onChange={(e) => setEdit({ ...edit, f: { ...edit.f, weekOfMonth: Number(e.target.value) } })}>
-            {[1, 2, 3, 4, 5].map((w) => <option key={w} value={w}>{w}째 주</option>)}
+            {[1, 2, 3, 4, 5].map((w) => <option key={w} value={w}>{w}주</option>)}
           </select>
         </label>
         <label className="text-xs text-label lg:col-span-2">내용
@@ -86,7 +96,7 @@ function Screen() {
         <label className="text-xs text-label lg:col-span-2">부서·항목
           <select className={`${input} mt-1 block w-full`} value={edit.f.expenseItemId ?? ""} onChange={(e) => setEdit({ ...edit, f: { ...edit.f, expenseItemId: e.target.value ? Number(e.target.value) : null } })}>
             <option value="">선택</option>
-            {q.data?.items.map((i) => <option key={i.id} value={i.id}>{itemLabel.get(i.id)}</option>)}
+            {groups.map((g) => <optgroup key={g.dept} label={g.dept}>{g.items.map((i) => <option key={i.id} value={i.id}>ㄴ {i.name}</option>)}</optgroup>)}
           </select>
         </label>
         <label className="text-xs text-label lg:col-span-2">송금처
@@ -120,7 +130,7 @@ function Screen() {
       <div className={`${card} mb-4 flex flex-wrap items-center gap-2 p-3 text-sm`}>
         <div className="flex overflow-hidden rounded border">
           {[0, 1, 2, 3, 4, 5].map((w) => (
-            <button key={w} onClick={() => setWeek(w)} className={`px-3 py-1.5 ${week === w ? "bg-primary text-white" : ""}`}>{w ? `${w}째 주` : "전체"}</button>
+            <button key={w} onClick={() => setWeek(w)} className={`px-3 py-1.5 ${week === w ? "bg-primary text-white" : ""}`}>{w ? `${w}주` : "전체"}</button>
           ))}
         </div>
         <span className="ml-auto text-xs text-muted">사용 중 합계 {totals.map((t, i) => `${i + 1}주 ${won(t)}`).join(" · ")}</span>
@@ -129,17 +139,18 @@ function Screen() {
       <div className={`${card} overflow-x-auto`}>
         <table className="w-full text-sm">
           <thead className="bg-surface-2 text-xs text-label">
-            <tr><th className="w-16 py-2">주</th><th className="text-left">내용</th><th className="w-28 text-right">금액</th><th className="text-left">부서·항목</th><th className="text-left">송금처</th><th className="text-left">메모</th><th className="w-16">사용</th><th className="w-28" /></tr>
+            <tr><th className="w-16 py-2">주</th><th className="text-left">내용</th><th className="w-28 text-right">금액</th><th className="text-left">부서</th><th className="text-left">항목</th><th className="text-left">송금처</th><th className="text-left">메모</th><th className="w-16">사용</th><th className="w-28" /></tr>
           </thead>
           <tbody>
-            {q.loading && <tr><td colSpan={8} className="py-6 text-center text-muted">불러오는 중…</td></tr>}
-            {!q.loading && !rows.length && <tr><td colSpan={8} className="py-6 text-center text-muted">등록된 고정지출이 없어요.</td></tr>}
+            {q.loading && <tr><td colSpan={9} className="py-6 text-center text-muted">불러오는 중…</td></tr>}
+            {!q.loading && !rows.length && <tr><td colSpan={9} className="py-6 text-center text-muted">등록된 고정지출이 없어요.</td></tr>}
             {rows.map((r) => (
               <tr key={r.id} className={`border-t ${r.active ? "" : "text-muted"}`}>
-                <td className="py-2 text-center">{r.weekOfMonth}째</td>
+                <td className="py-2 text-center">{r.weekOfMonth}주</td>
                 <td className="text-heading">{r.content}</td>
                 <td className="text-right">{won(r.amount)}</td>
-                <td>{r.expenseItemId ? itemLabel.get(r.expenseItemId) : "-"}</td>
+                <td>{(r.expenseItemId && itemOf.get(r.expenseItemId)?.department?.name) || "-"}</td>
+                <td>{(r.expenseItemId && itemOf.get(r.expenseItemId)?.name) || "-"}</td>
                 <td>{r.payeeId ? payeeLabel.get(r.payeeId) : "-"}</td>
                 <td className="text-label">{r.memo}</td>
                 <td className="text-center">{r.active ? <span className="rounded bg-success-subtle px-2 py-0.5 text-xs text-success">사용</span> : <span className="text-xs">중지</span>}</td>
@@ -152,7 +163,7 @@ function Screen() {
           </tbody>
         </table>
       </div>
-      <p className="mt-3 text-xs text-muted">지출입력의 &apos;고정지출 불러오기&apos;는 그 주일이 몇째 주인지(날짜÷7 올림)에 맞는 사용 중 항목만 불러와요.</p>
+      <p className="mt-3 text-xs text-muted">지출입력의 &apos;고정지출 불러오기&apos;는 그 주일이 그 달 몇 주차인지(날짜÷7 올림)에 맞는 사용 중 항목만 불러와요.</p>
     </>
   );
 }
