@@ -66,7 +66,7 @@ export default function UserAdmin() {
       <PageHeader actions={pending > 0 && <span className="rounded bg-warning-subtle px-2 py-1 text-xs text-warning">승인 대기 {pending}명</span>} />
       {err && <div className="mb-3 rounded bg-danger-subtle px-3 py-2 text-sm text-danger">{err}</div>}
       <div className="overflow-x-auto rounded-lg bg-surface shadow-card">
-        <table className="w-full text-sm">
+        <table className="tbl-cards w-full text-sm">
           <thead className="bg-surface-2 text-xs text-label">
             <tr><th className="px-4 py-2 text-left">이름</th><th className="text-left">휴대폰</th><th>상태</th><th>권한</th><th className="text-left">맡은 부서(부서장)</th><th>가입일</th><th className="w-40" /></tr>
           </thead>

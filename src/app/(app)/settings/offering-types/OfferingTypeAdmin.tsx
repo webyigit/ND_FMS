@@ -108,7 +108,7 @@ export default function OfferingTypeAdmin() {
       </div>
 
       <div className={`${card} overflow-x-auto`}>
-        <table className="w-full text-sm">
+        <table className="tbl-cards w-full text-sm">
           <thead className="bg-surface-2 text-xs text-label">
             <tr><th className="w-20 px-3 py-2">순서</th><th className="text-left">이름</th><th>기금</th><th>입력 단위</th><th>총액만</th><th>내용칸</th><th>상태</th><th className="w-40" /></tr>
           </thead>

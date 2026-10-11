@@ -181,7 +181,7 @@ function Form({ ref_ }: { ref_: RefData }) {
       )}
 
       <datalist id="members">{MEMBERS.map((m) => <option key={m.id} value={m.name} />)}</datalist>
-      <div className="overflow-x-auto rounded-lg bg-surface shadow-card">
+      <div className="tbl-scroll overflow-x-auto rounded-lg bg-surface shadow-card">
         <table className="w-full text-sm">
           <thead className="bg-surface-2 text-xs text-label">
             <tr><th className="w-10 py-2">#</th><th className="text-left">내용</th><th className="w-32 text-right">금액</th><th className="w-36">부서</th><th className="w-44">항목</th><th className="w-32">청구자</th><th className="text-left">비고</th><th className="w-16">출처</th><th className="w-12" /></tr>

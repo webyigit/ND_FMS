@@ -123,7 +123,7 @@ function Body() {
           {(["income", "expense"] as const).map((kind) => (
             <section key={kind} className={kind === "expense" ? "break-before-page" : ""}>
               <h3 className="mb-2 font-semibold">{kind === "income" ? "수입 예산 (헌금구분별)" : "지출 예산 (부서·항목별)"}</h3>
-              <div className="overflow-x-auto">
+              <div className="tbl-scroll overflow-x-auto">
                 <table className="w-full min-w-[720px] border-collapse">
                   <thead><tr>
                     <th className={th}>{kind === "income" ? "기금" : "부서"}</th><th className={th}>{kind === "income" ? "헌금구분" : "항목"}</th>

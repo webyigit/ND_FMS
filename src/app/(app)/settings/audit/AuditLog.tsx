@@ -72,7 +72,7 @@ export default function AuditLog() {
       </div>
 
       <div className={`${card} overflow-x-auto`}>
-        <table className="w-full text-sm">
+        <table className="tbl-cards w-full text-sm">
           <thead className="bg-surface-2 text-xs text-label">
             <tr><th className="px-3 py-2 text-left">시각</th><th className="text-left">사용자</th><th className="text-left">동작</th><th className="text-left">대상</th><th className="text-left">내용</th><th className="w-16" /></tr>
           </thead>

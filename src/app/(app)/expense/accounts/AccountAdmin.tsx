@@ -110,7 +110,7 @@ function BankAccounts({ setNote }: { setNote: (n: Note) => void }) {
         </div>
       </div>
       <div className={`${card} overflow-x-auto`}>
-        <table className="w-full text-sm">
+        <table className="tbl-cards w-full text-sm">
           <thead className="bg-surface-2 text-xs text-label">
             <tr><th className="px-3 py-2 text-left">은행</th><th className="text-left">계좌번호</th><th className="text-left">예금주</th><th>종류</th><th className="text-left">메모</th><th className="w-40" /></tr>
           </thead>
@@ -205,7 +205,7 @@ function Payees({ setNote }: { setNote: (n: Note) => void }) {
         </div>
       </div>
       <div className={`${card} overflow-x-auto`}>
-        <table className="w-full text-sm">
+        <table className="tbl-cards w-full text-sm">
           <thead className="bg-surface-2 text-xs text-label">
             <tr><th className="px-3 py-2 text-left">이름</th><th className="text-left">교인</th><th className="text-left">은행</th><th className="text-left">계좌번호</th><th className="text-left">예금주</th><th className="text-left">메모</th><th className="w-28" /></tr>
           </thead>

@@ -33,3 +33,41 @@
   .print-sheet thead { display: table-header-group; }
   .print-sheet tr { break-inside: avoid; }
 }
+
+/* ── 폰 폭(767px 이하) 모바일 최적화 ──
+   .tbl-cards: 목록 표를 카드 목록으로(머리글 숨김, 칸마다 data-label 머리글 표기 — MobileTables가 붙임)
+   .tbl-scroll: 장표·피벗 표는 칸을 줄바꿈 없이 두고 가로 스크롤
+   .sheet-scroll: A4 장표(출력용)는 화면에서 장표 폭을 유지한 채 통째로 가로 스크롤
+   screen 한정: 인쇄(A4 폭이 768px보다 좁음)에는 적용하지 않는다 */
+@media screen and (max-width: 767px) {
+  /* 구분 버튼 묶음(.seg): 글자를 줄바꿈하지 않고 묶음이 가로로 넘치면 묶음 안에서 스크롤 */
+  .seg { max-width: 100%; overflow-x: auto; }
+  .seg > button { flex: 0 0 auto; white-space: nowrap; }
+  .tbl-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .tbl-scroll table { min-width: max-content; white-space: nowrap; }
+  .sheet-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .sheet-scroll > .sheet { min-width: 680px; }
+
+  table.tbl-cards { display: block; white-space: normal; }
+  table.tbl-cards thead, table.tbl-cards colgroup { display: none; }
+  table.tbl-cards tbody, table.tbl-cards tfoot { display: block; }
+  table.tbl-cards tr { display: block; padding: .5rem .75rem; border-top: 1px solid var(--c-border); }
+  table.tbl-cards tbody > tr:first-child { border-top: 0; }
+  table.tbl-cards td {
+    display: flex; align-items: baseline; justify-content: space-between; gap: .75rem;
+    width: auto; max-width: none; min-width: 0; padding: .125rem 0; text-align: right; white-space: normal;
+  }
+  table.tbl-cards td::before {
+    content: attr(data-label); flex: 0 0 auto; max-width: 40%;
+    color: var(--c-label); font-size: var(--fs-xs); font-weight: 400; text-align: left;
+  }
+  table.tbl-cards td[data-label=""]::before, table.tbl-cards td:not([data-label])::before { display: none; }
+  table.tbl-cards td[data-label=""] { justify-content: flex-end; }
+  table.tbl-cards td[colspan], table.tbl-cards td.tbl-full { display: block; text-align: left; }
+  table.tbl-cards td[data-empty] { display: none; }
+  table.tbl-cards td > input:not([type=checkbox]), table.tbl-cards td > select { flex: 1 1 auto; min-width: 0; max-width: 100%; }
+  /* 카드 첫 칸(이름·주일 등 대표값)은 굵게 */
+  table.tbl-cards tbody tr > td:first-child:not([colspan]) { font-weight: 500; color: var(--c-heading); }
+  /* 표 안에 숨긴 열(sm:hidden 등)은 그대로 둔다 */
+  table.tbl-cards .hidden { display: none; }
+}

@@ -24,7 +24,7 @@ export default function PastPopup({ name, memberId, onUse, onClose }: { name: st
         {q.loading && <div className="text-sm text-muted">불러오는 중…</div>}
         {q.data && !q.data.length && <div className="text-sm text-muted">지난 발행 기록이 없어요.</div>}
         {!!q.data?.length && (
-          <table className="w-full text-sm">
+          <table className="tbl-cards w-full text-sm">
             <thead className="text-xs text-label"><tr><th className="text-left">발행번호</th><th className="text-left">성명</th><th>주민번호</th><th className="text-left">주소</th><th className="text-right">금액</th><th>상태</th><th /></tr></thead>
             <tbody>
               {q.data.map((r) => (

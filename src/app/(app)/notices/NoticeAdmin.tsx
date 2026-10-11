@@ -51,7 +51,7 @@ export default function NoticeAdmin() {
           <button key={c.value} onClick={() => setFilter(c.value as Channel | "")} className={`rounded-full border px-3 py-1 ${filter === c.value ? "bg-primary text-white" : ""}`}>{c.label}</button>
         ))}
       </div>
-      <table className="w-full rounded-lg bg-surface shadow-card text-sm">
+      <table className="tbl-cards w-full rounded-lg bg-surface shadow-card text-sm">
         <thead className="bg-surface-2 text-xs text-label"><tr><th className="w-20 py-2">채널</th><th className="text-left">제목</th><th className="w-28">게재일</th><th className="w-24" /></tr></thead>
         <tbody>
           {list.length === 0 && <tr><td colSpan={4} className="py-6 text-center text-muted">{st.loaded ? "공지사항이 없어요" : "불러오는 중…"}</td></tr>}

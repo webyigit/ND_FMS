@@ -108,7 +108,7 @@ export default function NameMergeTab({ onChanged }: { onChanged: () => void }) {
         <h2 className="mb-2 font-semibold text-heading">합친 기록 {merged.data ? `${merged.data.length}건` : ""}</h2>
         {!merged.data?.length ? <p className="py-2 text-muted">아직 합친 이름이 없어요.</p> : (
           <div className="overflow-x-auto">
-            <table className="w-full border-collapse">
+            <table className="tbl-cards w-full border-collapse">
               <thead><tr><th className={th}>합쳐진 이름</th><th className={th}>대표 이름</th><th className={th}>합친 날</th><th className={th}>처리</th><th className={`${th} no-print`} /></tr></thead>
               <tbody>
                 {merged.data.map((r) => (
@@ -135,7 +135,7 @@ function MergeTable({ ms, sel, into, onToggle, onInto, why }: {
 }) {
   return (
     <div className="overflow-x-auto">
-      <table className="w-full border-collapse">
+      <table className="tbl-cards w-full border-collapse">
         <thead><tr>
           <th className={`${th} w-14 whitespace-nowrap`}>합침</th><th className={`${th} w-14 whitespace-nowrap`}>대표</th><th className={th}>이름</th><th className={th}>직분</th><th className={th}>가족</th>
           <th className={th}>헌금 기간</th><th className={th}>건수</th><th className={th}>합계</th>{why && <th className={th}>비슷한 점</th>}

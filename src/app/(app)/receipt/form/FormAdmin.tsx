@@ -71,7 +71,7 @@ function Admin() {
       {msg && <Notice kind={msg.ok ? "ok" : "error"}>{msg.text}</Notice>}
       {q.error && <Notice kind="error">불러오지 못했어요: {q.error}</Notice>}
       <div className={`${card} mb-4 overflow-x-auto`}>
-        <table className="w-full text-sm">
+        <table className="tbl-cards w-full text-sm">
           <thead className="bg-surface-2 text-xs text-label">
             <tr><th className="px-3 py-2 text-left">이름</th><th>버전</th><th className="text-left">메모</th><th>사용</th><th>기본</th><th className="w-32" /></tr>
           </thead>

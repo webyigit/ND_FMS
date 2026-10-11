@@ -72,7 +72,7 @@ function Inner() {
         <span className="ml-auto text-label">{rows.length}건 · {won(total)}원</span>
       </div>
       <div className={`${card} overflow-x-auto`}>
-        <table className="w-full min-w-[860px] text-sm">
+        <table className="tbl-cards w-full md:min-w-[860px] text-sm">
           <thead className="bg-surface-2 text-xs text-label">
             <tr><th className="px-3 py-2 text-left">신청일</th><th className="text-left">신청자</th><th className="text-left">부서/항목</th><th className="text-left">내용</th>
               <th className="text-right">금액</th><th>사용일</th><th className="text-left">송금 계좌</th><th>영수증</th><th>상태</th><th className="w-20" /></tr>

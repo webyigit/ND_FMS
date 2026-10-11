@@ -41,7 +41,7 @@ export default function DeptBudget() {
               <span className="font-semibold text-heading">{dept.name}</span>
               <span className="text-xs text-label">잔액 <b className={dept.balance < 0 ? "text-danger" : "text-heading"}>{won(dept.balance)}</b> · 집행률 {pct(dept.spent, dept.budget)}</span>
             </div>
-            <table className="w-full text-sm">
+            <table className="tbl-cards w-full text-sm">
               <thead className="text-xs text-muted"><tr><th className="px-4 py-2 text-left font-normal">항목</th><th className="text-right font-normal">예산</th><th className="text-right font-normal">지출</th><th className="px-4 text-right font-normal">잔액</th></tr></thead>
               <tbody>
                 {dept.items.map((i) => (

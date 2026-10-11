@@ -31,7 +31,7 @@ async function load(sb: SupabaseClient, year: number): Promise<Data> {
 }
 
 const MONTHS = Array.from({ length: 12 }, (_, i) => `${i + 1}월`);
-const h3 = "mb-3 flex items-center gap-2 text-sm font-semibold text-heading";
+const h3 = "mb-3 flex flex-wrap items-center gap-x-2 gap-y-0 text-sm font-semibold text-heading";
 
 export default function Dashboard() {
   const today = localDate();
@@ -105,7 +105,7 @@ function View({ d, today }: { d: Data; today: string }) {
         <div className="space-y-4 lg:col-span-2">
         <section className={`${card} p-4`}>
           <h3 className={h3}><FontAwesomeIcon icon={faFileLines} className="text-primary" />금주 리포트 <span className="font-normal text-muted">({sunday} 주일, 일반·특별)</span></h3>
-          <div className="mb-3 grid grid-cols-3 gap-2">
+          <div className="mb-3 grid grid-cols-1 gap-2 sm:grid-cols-3">
             {tile("수입", wr.income, wr.prevIncome, "text-chart-in")}
             {tile("지출", wr.expense, wr.prevExpense, "text-chart-out")}
             {tile("잔액(이월 포함)", wr.balance, null, wr.balance < 0 ? "text-danger" : "text-heading")}
@@ -116,7 +116,7 @@ function View({ d, today }: { d: Data; today: string }) {
 
         <section className={`${card} p-4`}>
           <h3 className={h3}><FontAwesomeIcon icon={faChartLine} className="text-primary" />누적 리포트 <span className="font-normal text-muted">({yr.from} ~ {sunday}, {yr.weeks}주, 일반·특별)</span></h3>
-          <div className="mb-3 grid grid-cols-3 gap-2">
+          <div className="mb-3 grid grid-cols-1 gap-2 sm:grid-cols-3">
             {tile("수입 누계", yr.income, yr.prevIncome, "text-chart-in", "작년 같은 기간")}
             {tile("지출 누계", yr.expense, yr.prevExpense, "text-chart-out", "작년 같은 기간")}
             {tile("잔액(이월 포함)", yr.balance, null, yr.balance < 0 ? "text-danger" : "text-heading")}
@@ -172,7 +172,7 @@ function View({ d, today }: { d: Data; today: string }) {
         <h3 className={h3}>분기별 수입 / 지출 <span className="font-normal text-muted">({year} · {year - 1})</span></h3>
         <div className="grid gap-4 lg:grid-cols-3">
           <div className="lg:col-span-2"><EChart option={quarter.option} label="분기별 수입·지출" /></div>
-          <table className="w-full self-start text-sm">
+          <table className="tbl-cards w-full self-start text-sm">
             <thead className="bg-surface-2 text-xs text-label"><tr><th className="px-2 py-1.5 text-left">분기</th><th className="text-right">수입</th><th className="text-right">작년</th><th className="text-right">지출</th><th className="px-2 text-right">작년</th></tr></thead>
             <tbody>{quarter.rows.map((r) => (
               <tr key={r.q} className="border-t"><td className="px-2 py-1">{r.q}분기</td><td className="text-right">{man(r.income)}</td><td className="text-right text-muted">{man(r.pi)}</td><td className="text-right">{man(r.expense)}</td><td className="px-2 text-right text-muted">{man(r.pe)}</td></tr>

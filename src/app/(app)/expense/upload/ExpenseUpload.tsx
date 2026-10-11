@@ -184,7 +184,7 @@ export default function ExpenseUpload() {
             <span>엑셀에서 읽은 지출 {sheet.length}건 <span className="font-normal text-muted">· 넣을 줄만 체크</span></span>
             <button onClick={() => setSheet([])} className="text-xs font-normal text-label">모두 지우기</button>
           </h2>
-          <div className="overflow-x-auto rounded-lg bg-surface shadow-card">
+          <div className="tbl-scroll overflow-x-auto rounded-lg bg-surface shadow-card">
             <table className="w-full min-w-[820px] text-sm">
               <thead className="bg-surface-2 text-xs text-label">
                 <tr><th className="w-8 py-2"><input type="checkbox" checked={sheet.every((r) => r.pick)} onChange={(e) => setSheet((xs) => xs.map((x) => ({ ...x, pick: e.target.checked })))} /></th>

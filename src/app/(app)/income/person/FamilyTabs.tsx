@@ -51,7 +51,7 @@ export function PersonTab({ year, base, persons, rows, onPick, onFamily }: {
         </>}
       </div>
       {!base ? <p className="py-6 text-center text-muted">이름을 찾아 한 사람을 고르세요.</p> : matrix && (
-        <div className="overflow-x-auto">
+        <div className="tbl-scroll overflow-x-auto">
           <table className="w-full border-collapse text-xs">
             <thead><tr><th className={th}>헌금구분</th>{MONTHS.map((m) => <th key={m} className={th}>{m}</th>)}<th className={th}>합계</th></tr></thead>
             <tbody>
@@ -136,7 +136,7 @@ export function FamilyTab({ year, base, persons, members, types, onPick, onChang
             <button onClick={reset} className={`${btn} ml-auto`}>선택 해제</button>
           </div>
         )}
-        <div className="overflow-x-auto">
+        <div className="tbl-scroll overflow-x-auto">
           <table className="w-full border-collapse">
             <thead><tr>
               <th className={`${th} no-print w-8`} />

@@ -79,7 +79,7 @@ export default function BankDemo() {
 
       {view.length > 0 && (
         <div className="overflow-x-auto rounded-lg bg-surface shadow-card">
-          <table className="w-full text-sm">
+          <table className="tbl-cards w-full text-sm">
             <thead className="bg-surface-2 text-xs text-label">
               <tr>
                 <th className="w-8 px-2 py-2"><input type="checkbox" checked={view.every((r) => selected.has(r.key))}

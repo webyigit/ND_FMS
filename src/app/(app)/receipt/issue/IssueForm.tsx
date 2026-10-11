@@ -257,7 +257,7 @@ function Issue() {
       {loadingInit && <div className="mb-3 text-sm text-muted">불러오는 중…</div>}
 
       <div className="grid gap-4 xl:grid-cols-[1fr_380px]">
-        <div className="space-y-4">
+        <div className="min-w-0 space-y-4">
           <section className={`${card} p-4`}>
             <div className="mb-3 flex flex-wrap items-end gap-3">
               <label className="text-xs text-label">기부 연도<br />
@@ -328,7 +328,7 @@ function Issue() {
           )}
         </div>
 
-        <aside className="space-y-4">
+        <aside className="min-w-0 space-y-4">
           <section className={`${card} space-y-3 p-4`}>
             <h2 className="text-sm font-semibold">발행금액</h2>
             <Row label="실헌금 합계" value={`${won(agg.total)}원`} />
@@ -398,7 +398,7 @@ function DonorSearch({ onPick }: { onPick: (h: DonorHit) => void }) {
     try { setHits(await searchDonors(sb, q.trim())); } catch (e) { setErr(dbError(e)); }
   };
   return (
-    <div className="relative min-w-[260px] flex-1 text-xs text-label">교인 찾기(가족 포함)
+    <div className="relative min-w-0 flex-1 text-xs text-label sm:min-w-[260px]">교인 찾기(가족 포함)
       <div className="mt-1 flex gap-2">
         <input value={q} onChange={(e) => setQ(e.target.value)} onKeyDown={(e) => e.key === "Enter" && find()} placeholder="이름" className={`${input} flex-1`} />
         <button onClick={find} className={btn}>찾기</button>
@@ -428,7 +428,7 @@ function DonorFields({ donor, setDonor, locked, onPast }: { donor: Donor; setDon
   return (
     <div className="grid gap-3 md:grid-cols-2">
       <div className="flex items-end gap-2 md:col-span-2">
-        <div className="flex overflow-hidden rounded border text-sm">
+        <div className="seg flex overflow-hidden rounded border text-sm">
           {(["PN", "CP"] as const).map((k) => (
             <button key={k} disabled={locked} onClick={() => set({ kind: k })} className={`px-3 py-1.5 ${donor.kind === k ? "bg-primary text-white" : ""} disabled:opacity-70`}>{k === "PN" ? "개인(PN)" : "법인(CP)"}</button>
           ))}

@@ -61,7 +61,7 @@ function Screen() {
         <input className={`${input} w-36`} placeholder="내용·항목" value={f.content ?? ""} onChange={set("content")} />
         <input className={`${input} w-28`} placeholder="비고" value={f.memo ?? ""} onChange={set("memo")} />
         {filtered && <button className={btn} onClick={() => setF({})}>검색 지우기</button>}
-        <div className="ml-auto flex overflow-hidden rounded border">
+        <div className="seg ml-auto flex overflow-hidden rounded border">
           {(["list", "month"] as const).map((v) => <button key={v} onClick={() => setView(v)} className={`px-3 py-1.5 ${view === v ? "bg-primary text-white" : ""}`}>{v === "list" ? "목록" : "월별 합계"}</button>)}
         </div>
       </div>
@@ -71,7 +71,7 @@ function Screen() {
       <div className="mb-2 text-sm text-label">{title} · {rows.length}건 · 합계 <b className="text-heading">{won(total)}원</b>{filtered && " (검색 결과)"}</div>
       <div className={`${card} overflow-x-auto`}>
         {view === "list" ? (
-          <table className="w-full text-sm">
+          <table className="tbl-cards w-full text-sm">
             <thead className="bg-surface-2 text-xs text-label">
               <tr><th className="px-3 py-2 text-left">주일</th><th className="text-left">부서</th><th className="text-left">항목</th><th className="text-left">내용</th><th className="px-3 text-right">금액</th><th className="text-left">청구자</th><th className="text-left">비고</th></tr>
             </thead>
@@ -88,7 +88,7 @@ function Screen() {
             </tbody>
           </table>
         ) : (
-          <table className="w-full text-sm">
+          <table className="tbl-cards w-full text-sm">
             <thead className="bg-surface-2 text-xs text-label"><tr><th className="px-3 py-2 text-left">월</th><th className="text-right">건수</th><th className="px-3 text-right">합계</th></tr></thead>
             <tbody>
               {months.map((m) => (

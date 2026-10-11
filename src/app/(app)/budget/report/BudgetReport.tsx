@@ -80,7 +80,7 @@ function Body() {
       {q.error && <Notice kind="error">불러오지 못했어요: {q.error}</Notice>}
       {q.loading && <div className="text-sm text-muted">불러오는 중…</div>}
       {q.data && L && (
-        <div className={`${card} mx-auto max-w-[210mm] space-y-5 p-6 text-sm print:max-w-none print:p-0`}>
+        <div className="sheet-scroll"><div className={`${card} sheet mx-auto max-w-[210mm] space-y-5 p-6 text-sm print:max-w-none print:p-0`}>
           <div>
             <h2 className="text-center text-lg font-bold">{year}년도 결산 및 {year + 1}년도 예산</h2>
             <div className="text-right text-label">작성일 {localDate()}{q.data.closedAt ? ` · 결산 확정 ${q.data.closedAt.slice(0, 10)}` : " · 결산 미확정"}</div>
@@ -98,7 +98,7 @@ function Body() {
           <section className="break-inside-avoid"><h3 className="mb-2 font-semibold">3. 수입 (헌금구분별)</h3><Table head={head} first="헌금구분" rows={L.income} total={L.summary[0]} /></section>
           <section className="break-inside-avoid"><h3 className="mb-2 font-semibold">4. 지출 (부서별)</h3><Table head={head} first="부서" rows={L.expense} total={L.summary[1]} /></section>
           <p className="text-xs text-muted">결산 = 그 해 주일 기준 수입·지출 합계. 별도 기금(해외선교·네팔)은 총괄 아래 따로 적었어요.</p>
-        </div>
+        </div></div>
       )}
     </>
   );

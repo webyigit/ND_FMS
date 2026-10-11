@@ -73,7 +73,7 @@ function Screen() {
       {q.data?.sunday === sunday && <Sheet key={`${sunday}-${JSON.stringify(q.data.saved)}-${q.data.closed}-${q.data.lastH}`} sunday={sunday} d={q.data} reload={q.reload} />}
 
       {q.data && q.data.history.length > 0 && (
-        <div className={`${card} no-print mt-6 overflow-x-auto`}>
+        <div className={`${card} tbl-scroll no-print mt-6 overflow-x-auto`}>
           <div className="px-4 pt-3 text-sm font-semibold text-heading">{sunday.slice(0, 4)}년 검증 기록</div>
           <table className="mt-2 w-full whitespace-nowrap text-sm">
             <thead className="bg-surface-2 text-xs text-label">
@@ -142,17 +142,17 @@ function Sheet({ sunday, d, reload }: { sunday: string; d: Data; reload: () => v
 
   const field = (label: string, value: string, set: (s: string) => void, hint?: React.ReactNode) => (
     <tr className="border-t">
-      <td className="px-4 py-2 text-label">{label}</td>
+      <td className="tbl-full px-4 py-2 text-label">{label}</td>
       <td className="px-4 py-1 text-right">
         <input className={`${input} w-40 text-right print:border-0`} inputMode="numeric" value={value} disabled={d.closed}
           onChange={(e) => set(e.target.value.replace(/[^\d-]/g, "") ? won(toAmount(e.target.value)) : "")} />
       </td>
-      <td className="px-4 text-xs text-muted">{hint}</td>
+      <td className="tbl-full px-4 text-xs text-muted">{hint}</td>
     </tr>
   );
   const calc = (label: string, value: number, how: string, strong = false) => (
     <tr className={`border-t ${strong ? "bg-surface-2 font-semibold" : ""}`}>
-      <td className="px-4 py-2 text-label">{label}</td><td className="px-4 text-right text-heading">{won(value)}</td><td className="px-4 text-xs text-muted">{how}</td>
+      <td className="tbl-full px-4 py-2 text-label">{label}</td><td className="px-4 text-right text-heading">{won(value)}</td><td className="tbl-full px-4 text-xs text-muted">{how}</td>
     </tr>
   );
 
@@ -164,7 +164,7 @@ function Sheet({ sunday, d, reload }: { sunday: string; d: Data; reload: () => v
       <div className={`${card} p-6 print:p-0`}>
         <h2 className="mb-1 text-center text-lg font-bold">검증 시트</h2>
         <div className="mb-3 text-center text-sm text-label">{sunday} 주일 기준</div>
-        <table className="mx-auto w-full max-w-3xl text-sm">
+        <table className="tbl-cards mx-auto w-full max-w-3xl text-sm">
           <tbody>
             {field("A 통장 잔액", a, setA, "농협 통장 잔액")}
             {field("B 입금 예정", b, setB)}

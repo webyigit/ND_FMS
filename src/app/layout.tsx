@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import "pretendard/dist/web/variable/pretendardvariable-dynamic-subset.css";
 import "./globals.css";
 import PwaRegister from "@/components/PwaRegister";
+import MobileTables from "@/components/MobileTables";
 
 export const metadata: Metadata = {
   title: "재정관리시스템",
@@ -12,7 +13,7 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="ko" className="h-full antialiased">
-      <body className="min-h-full"><PwaRegister />{children}</body>
+      <body className="min-h-full"><PwaRegister /><MobileTables />{children}</body>
     </html>
   );
 }
