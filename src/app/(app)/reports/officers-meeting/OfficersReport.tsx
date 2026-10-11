@@ -68,7 +68,7 @@ export default function OfficersReport() {
         <button onClick={() => window.print()} className="no-print rounded bg-primary px-3 py-1 text-sm text-white">출력·PDF</button>
       </>} />
       <div className="no-print mb-4 flex flex-wrap items-center gap-3 rounded-lg bg-surface shadow-card p-3 text-sm">
-        <div className="flex overflow-hidden rounded border">
+        <div className="seg flex overflow-hidden rounded border">
           {TABS.map((t) => <button key={t} onClick={() => setTab(t)} className={`px-3 py-1.5 ${tab === t ? "bg-primary text-white" : ""}`}>{t}</button>)}
         </div>
         {tab === "부서별 상세" && <label>시작일 <input type="date" value={from} onChange={(e) => setFrom(e.target.value)} className="rounded border px-2 py-1" /></label>}
@@ -77,7 +77,7 @@ export default function OfficersReport() {
       </div>
 
       {q.error && <Notice kind="error">불러오지 못했어요: {q.error}</Notice>}
-      <div className="rounded-lg bg-surface shadow-card p-6 text-sm print:border-0 print:p-0">
+      <div className="sheet-scroll"><div className="sheet rounded-lg bg-surface shadow-card p-6 text-sm print:border-0 print:p-0">
         {tab === "지출 현황" && (
           <>
             <h2 className="text-center text-lg font-bold">{year}년도 지출 현황</h2>
@@ -182,7 +182,7 @@ export default function OfficersReport() {
             </>
           );
         })()}
-      </div>
+      </div></div>
     </>
   );
 }

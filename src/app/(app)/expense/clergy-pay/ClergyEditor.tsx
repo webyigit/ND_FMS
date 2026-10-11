@@ -60,7 +60,7 @@ export default function ClergyEditor({ sb, clergy, items, onChange, onClose }: {
       <p className="mt-2 text-xs text-muted">그 지출 항목의 지출 중 내용에 이 말이 든 것만 모아요. 비우면 그 항목 지출 전부예요. 같은 이름으로 항목을 더 추가하면 한 사람으로 합쳐 보여요.</p>
       {err && <div className="mt-2"><Notice kind="error">{err}</Notice></div>}
       {clergy.length > 0 && (
-        <table className="mt-3 w-full text-sm">
+        <table className="tbl-cards mt-3 w-full text-sm">
           <thead className="bg-surface-2 text-xs text-label">
             <tr><th className="px-3 py-1.5 text-left">직분</th><th className="px-3 text-left">이름</th><th className="px-3 text-left">지출 항목</th><th className="px-3 text-left">내용에 들어간 말</th><th /></tr>
           </thead>

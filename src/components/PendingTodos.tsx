@@ -15,14 +15,16 @@ export default function PendingTodos() {
         <Link href="/todo" className="font-semibold text-amber-800">
           <FontAwesomeIcon icon={faListCheck} className="mr-1" />미완료 {pending.length}건
         </Link>
-        {pending.slice(0, 5).map((t) => (
-          <label key={t.id} className="flex items-center gap-1.5 text-slate-700">
+        {/* 폰에서는 2건, 그보다 넓으면 5건까지 보여주고 나머지는 건수로 */}
+        {pending.slice(0, 5).map((t, i) => (
+          <label key={t.id} className={`${i >= 2 ? "hidden sm:flex" : "flex"} items-center gap-1.5 text-slate-700`}>
             <input type="checkbox" onChange={() => todoActions.toggle(t.id)} />
             <span className={t.date < today ? "font-semibold text-red-600" : "text-label"}>{t.date.slice(5)}</span>
             {t.text}
           </label>
         ))}
-        {pending.length > 5 && <Link href="/todo" className="text-amber-800">외 {pending.length - 5}건</Link>}
+        {pending.length > 2 && <Link href="/todo" className="text-amber-800 sm:hidden">외 {pending.length - 2}건</Link>}
+        {pending.length > 5 && <Link href="/todo" className="hidden text-amber-800 sm:inline">외 {pending.length - 5}건</Link>}
       </div>
     </div>
   );

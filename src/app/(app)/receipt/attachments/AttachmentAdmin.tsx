@@ -58,7 +58,7 @@ function Admin() {
       {q.error && <Notice kind="error">불러오지 못했어요: {missingHint(q.error)}</Notice>}
 
       <div className={`${card} mb-4 overflow-x-auto`}>
-        <table className="w-full text-sm">
+        <table className="tbl-cards w-full text-sm">
           <thead className="bg-surface-2 text-xs text-label">
             <tr><th className="px-3 py-2 text-left">양식 이름</th><th className="text-left">파일</th><th>크기</th><th className="text-left">메모</th><th>출력 화면</th><th className="w-48" /></tr>
           </thead>

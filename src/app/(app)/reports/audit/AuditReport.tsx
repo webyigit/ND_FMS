@@ -96,14 +96,14 @@ export default function AuditReport() {
         <select value={year} onChange={(e) => setYear(Number(e.target.value))} className="rounded border px-2 py-1.5">
           {[0, 1, 2].map((d) => <option key={d} value={Number(today.slice(0, 4)) - d}>{Number(today.slice(0, 4)) - d}년</option>)}
         </select>
-        <div className="flex overflow-hidden rounded border">
+        <div className="seg flex overflow-hidden rounded border">
           {(["H1", "H2"] as const).map((h) => <button key={h} onClick={() => setHalf(h)} className={`px-3 py-1.5 ${half === h ? "bg-primary text-white" : ""}`}>{h === "H1" ? "상반기 (1~6월)" : "하반기 (7~12월 + 연간)"}</button>)}
         </div>
         {partial && <span className="text-xs text-amber-700">기간이 끝나지 않아 오늘({today})까지 집계했어요</span>}
       </div>
 
       {q.error && <Notice kind="error">불러오지 못했어요: {q.error}</Notice>}
-      <div className="space-y-6 rounded-lg bg-surface shadow-card p-6 text-sm print:border-0 print:p-0">
+      <div className="sheet-scroll"><div className="sheet space-y-6 rounded-lg bg-surface shadow-card p-6 text-sm print:border-0 print:p-0">
         <div>
           <h2 className="text-center text-lg font-bold">{title}</h2>
           <div className="text-right text-label">작성일 {today}</div>
@@ -178,7 +178,7 @@ export default function AuditReport() {
               <tr>{[0, 1, 2].map((i) => <td key={i} className="h-14 border border-line px-6" />)}</tr></tbody>
           </table>
         </section>
-      </div>
+      </div></div>
     </>
   );
 }

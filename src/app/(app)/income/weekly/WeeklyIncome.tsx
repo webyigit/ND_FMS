@@ -70,7 +70,7 @@ export default function WeeklyIncome() {
       )}
 
       {!rep ? <div className="text-sm text-muted">불러오는 중…</div> : (
-        <div className={`${card} print-sheet mx-auto max-w-[210mm] p-6 text-sm print:max-w-none print:p-0`}>
+        <div className="sheet-scroll"><div className={`${card} sheet print-sheet mx-auto max-w-[210mm] p-6 text-sm print:max-w-none print:p-0`}>
           <div className="mb-4 flex items-start justify-between gap-4">
             <div>
               <h2 className="text-xl font-bold text-heading">주일 헌금 현황</h2>
@@ -161,7 +161,7 @@ export default function WeeklyIncome() {
             </section>
           ))}
           <p className="text-xs text-muted">● 이체(온라인) 입금. 별도 기금(해외선교·네팔)은 일반·특별 합계에 넣지 않아요. 올해 누계 = 1월 1일부터 전주까지 누계 + 금주 합계.</p>
-        </div>
+        </div></div>
       )}
     </>
   );

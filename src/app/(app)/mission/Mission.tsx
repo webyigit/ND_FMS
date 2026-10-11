@@ -97,7 +97,7 @@ function Body() {
 
           <section>
             <h3 className="mb-2 font-semibold">월별 누적</h3>
-            <div className="overflow-x-auto">
+            <div className="tbl-scroll overflow-x-auto">
               <table className="w-full min-w-[720px] border-collapse">
                 <thead><tr>{["월", "해외선교 수입", "네팔 헌금", "해외선교 지출", "네팔 지출", "누계 수입", "누계 지출", "월말 잔액"].map((h) => <th key={h} className={th}>{h}</th>)}</tr></thead>
                 <tbody>{months.map((m) => (
@@ -112,7 +112,7 @@ function Body() {
           <section className="break-before-page">
             <h3 className="mb-2 font-semibold">주별 수입 / 지출</h3>
             <div className="overflow-x-auto">
-              <table className="w-full min-w-[640px] border-collapse">
+              <table className="tbl-cards w-full md:min-w-[640px] border-collapse">
                 <thead><tr>{["주일", "해외선교 수입", "네팔 헌금", "해외선교 지출", "네팔 지출", "잔액"].map((h) => <th key={h} className={th}>{h}</th>)}</tr></thead>
                 <tbody>
                   <tr className="bg-surface-2"><td className={`${td} text-center`}>{year - 1}년 이월</td><td className={td} colSpan={4} /><td className={td}>{won(carry)}</td></tr>

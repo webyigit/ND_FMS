@@ -66,7 +66,7 @@ export default function MemberAdmin() {
             <span className="text-sm text-muted">{q.loading ? "불러오는 중…" : `${list.length}명`}</span>
           </div>
           <div className={`${card} overflow-x-auto`}>
-            <table className="w-full text-sm">
+            <table className="tbl-cards w-full text-sm">
               <thead className="bg-surface-2 text-xs text-label">
                 <tr>
                   <th className="px-3 py-2 text-left">이름</th><th className="text-left">직분</th><th className="text-left">교구/구역</th>

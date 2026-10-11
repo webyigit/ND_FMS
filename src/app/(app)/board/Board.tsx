@@ -72,7 +72,7 @@ export default function Board() {
         <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="제목·내용·작성자 검색" className="w-full outline-none" />
       </div>
       <div className="overflow-hidden rounded-lg bg-surface shadow-card text-sm">
-        <table className="w-full">
+        <table className="tbl-cards w-full">
           <thead className="bg-surface-2 text-xs text-label"><tr><th className="w-14 py-2">번호</th><th className="text-left">제목</th><th className="hidden w-28 sm:table-cell">작성자</th><th className="w-24">작성일</th></tr></thead>
           <tbody>
             {list.length === 0 && <tr><td colSpan={4} className="py-8 text-center text-muted">{q ? "검색 결과가 없어요" : st.loaded ? "아직 글이 없어요. 첫 기록을 남겨보세요." : "불러오는 중…"}</td></tr>}

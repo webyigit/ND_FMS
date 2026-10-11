@@ -109,7 +109,7 @@ function Screen() {
         <div className={`${card} p-6 text-sm print:p-0`}>
           <h2 className="text-center text-lg font-bold">{year}년 부서별 지출내역{dept && ` - ${dept}`}</h2>
           <div className="mb-2 text-right text-label">기간 {periodLabel}</div>
-          <table className="w-full border-collapse">
+          <table className="tbl-cards w-full border-collapse">
             <thead><tr><th className={th}>부서</th><th className={th}>항목</th><th className={th}>예산</th><th className={th}>지출</th><th className={th}>잔액</th><th className={th}>집행률</th></tr></thead>
             <tbody>
               {total && <tr className="bg-primary-subtle font-bold">

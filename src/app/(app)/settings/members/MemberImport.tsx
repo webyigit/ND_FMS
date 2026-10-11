@@ -55,7 +55,7 @@ export default function MemberImport({ existing, onDone }: { existing: string[];
       {rows && (
         <>
           <div className="max-h-80 overflow-auto rounded border">
-            <table className="w-full text-xs">
+            <table className="tbl-cards w-full text-xs">
               <thead className="sticky top-0 bg-surface-2 text-label">
                 <tr><th className="px-2 py-1 text-left">이름</th><th className="text-left">직분</th><th className="text-left">교구</th><th className="text-left">구역</th><th className="text-left">휴대폰</th><th>처리</th></tr>
               </thead>

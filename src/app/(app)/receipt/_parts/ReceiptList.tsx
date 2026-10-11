@@ -85,7 +85,7 @@ function List({ mode }: { mode: "status" | "past" }) {
 
       <h2 className="mb-2 hidden text-center text-lg font-bold print:block">{title}</h2>
       <div className={`${card} overflow-x-auto`}>
-        <table className="w-full text-sm">
+        <table className="tbl-cards w-full text-sm">
           <thead className="bg-surface-2 text-xs text-label">
             <tr>
               <th className="px-3 py-2 text-left">발행번호</th><th className="text-left">성명(법인명)</th><th>주민번호(사업자번호)</th>

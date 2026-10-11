@@ -79,7 +79,7 @@ function Inner() {
         <span className="ml-auto text-label">신청 {won(sum())}원 · 승인 {won(sum("approved"))}원 · 검토 중 {won(sum("requested"))}원</span>
       </div>
       <div className={`${card} overflow-x-auto`}>
-        <table className="w-full min-w-[760px] text-sm">
+        <table className="tbl-cards w-full md:min-w-[760px] text-sm">
           <thead className="bg-surface-2 text-xs text-label">
             <tr><th className="px-3 py-2 text-left">부서</th><th className="text-left">항목</th><th className="text-right">금액</th><th className="text-left">사유</th>
               <th>신청자</th><th>신청일</th><th>상태</th><th className="w-32" /></tr>

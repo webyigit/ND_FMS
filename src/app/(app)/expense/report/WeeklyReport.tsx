@@ -89,7 +89,7 @@ function Report({ d }: { d: Data }) {
   const m = useMemo(() => model(d), [d]);
   const year = d.sunday.slice(0, 4);
   return (
-    <div className={`${card} mx-auto max-w-[210mm] p-8 text-[13px] print:max-w-none print:p-0`}>
+    <div className="sheet-scroll"><div className={`${card} sheet mx-auto max-w-[210mm] p-8 text-[13px] print:max-w-none print:p-0`}>
       <div className="flex items-start justify-between gap-4">
         <div>
           <h2 className="text-xl font-bold text-heading">금주 수입·지출 보고</h2>
@@ -181,7 +181,7 @@ function Report({ d }: { d: Data }) {
         </table>
       )}
       <p className="no-print mt-1 text-xs text-muted">이월금은 별도 기금 하나로만 있어 해외선교·네팔 각각의 잔액은 따로 내지 않아요. 별도 기금 지출은 항목·내용에 &apos;네팔&apos;이 있으면 네팔, 아니면 해외선교로 나눠요 [확인 필요].</p>
-    </div>
+    </div></div>
   );
 }
 

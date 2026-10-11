@@ -184,7 +184,7 @@ export default function BankDb() {
             {(accounts.data ?? []).map((a) => <option key={a.id} value={a.id}>{accLabel(a)}</option>)}
           </select>
         </label>
-        <div className="flex overflow-hidden rounded border">
+        <div className="seg flex overflow-hidden rounded border">
           {VIEWS.map(([v, l]) => <button key={v} onClick={() => setView(v)} className={`px-3 py-1.5 ${view === v ? "bg-primary text-white" : ""}`}>{l}</button>)}
         </div>
         <label className="text-xs text-label" title="거래일이 평일일 때 어느 주일 수입으로 넣을지">평일 입금 반영 주일 [확인 필요]
@@ -210,7 +210,7 @@ export default function BankDb() {
       ) : (
         <div className={`${card} overflow-x-auto`}>
           <datalist id="bank-members">{members.map((m) => <option key={m.id} value={m.name} />)}</datalist>
-          <table className="w-full text-sm">
+          <table className="tbl-cards w-full text-sm">
             <thead className="bg-surface-2 text-xs text-label">
               <tr>
                 <th className="w-8 px-2 py-2">

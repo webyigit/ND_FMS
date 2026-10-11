@@ -72,7 +72,7 @@ export default function ClergyPay() {
           <option value={0}>전체 월</option>{Array.from({ length: 12 }, (_, i) => <option key={i} value={i + 1}>{i + 1}월</option>)}
         </select>
         <input value={name} onChange={(e) => setName(e.target.value)} placeholder="이름" className={sel} />
-        <div className="ml-auto flex overflow-hidden rounded border">
+        <div className="seg ml-auto flex overflow-hidden rounded border">
           {(["month", "detail"] as const).map((v) => (
             <button key={v} onClick={() => setView(v)} className={`px-3 py-1.5 ${view === v ? "bg-primary text-white" : ""}`}>{v === "month" ? "월별 합계" : "지급 상세"}</button>
           ))}
@@ -84,7 +84,7 @@ export default function ClergyPay() {
       {!demo && (q.error || ref.error) && <Notice kind="error">불러오지 못했어요: {q.error || ref.error}</Notice>}
       <div className="mb-2 text-sm text-slate-600">{year}년 {month ? `${month}월` : "전체"} · {people.length}명 · 합계 <b>{won(total)}원</b></div>
 
-      <div className="overflow-x-auto rounded-lg bg-surface shadow-card">
+      <div className="tbl-scroll overflow-x-auto rounded-lg bg-surface shadow-card">
         {view === "month" ? (
           <table className="w-full whitespace-nowrap text-sm">
             <thead className="bg-surface-2 text-xs text-label">
@@ -107,7 +107,7 @@ export default function ClergyPay() {
             </tbody>
           </table>
         ) : (
-          <table className="w-full text-sm">
+          <table className="tbl-cards w-full text-sm">
             <thead className="bg-surface-2 text-xs text-label">
               <tr><th className="px-3 py-2 text-left">지급일</th><th className="px-3 text-left">직분</th><th className="px-3 text-left">이름</th><th className="px-3 text-left">항목</th><th className="px-3 text-right">금액</th></tr>
             </thead>

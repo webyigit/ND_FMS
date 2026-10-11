@@ -70,7 +70,7 @@ function Report({ d, year }: { d: S; year: number }) {
       <section>
         <h3 className="mb-2 font-semibold">1. 기금별 이월</h3>
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[600px] border-collapse">
+          <table className="tbl-cards w-full md:min-w-[600px] border-collapse">
             <thead><tr>{["기금", `${year - 1}년 이월(A)`, "수입(B)", "지출(C)", "회계 간 대체(D)", `${year + 1}년 이월(A+B−C+D)`].map((h) => <th key={h} className={th}>{h}</th>)}</tr></thead>
             <tbody>{d.funds.map((f) => (
               <tr key={f.fundId}><td className={td}>{f.name}</td>{[f.carry, f.income, f.expense, f.transferIn - f.transferOut].map((v, i) => <td key={i} className={tdr}>{wonOrDash(v)}</td>)}
@@ -84,7 +84,7 @@ function Report({ d, year }: { d: S; year: number }) {
       <section>
         <h3 className="mb-2 font-semibold">2. 수입 (헌금구분별 예산 대비)</h3>
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[600px] border-collapse">
+          <table className="tbl-cards w-full md:min-w-[600px] border-collapse">
             <thead><tr>{["헌금구분", "기금", "예산(A)", "수입(B)", "달성률(B/A)", "차이(B−A)"].map((h) => <th key={h} className={th}>{h}</th>)}</tr></thead>
             <tbody>
               {(["일반", "특별", "별도"] as const).map((f) => {
@@ -106,7 +106,7 @@ function Report({ d, year }: { d: S; year: number }) {
       <section className="break-before-page">
         <h3 className="mb-2 font-semibold">3. 지출 (부서·항목별 예산 대비)</h3>
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[640px] border-collapse">
+          <table className="tbl-cards w-full md:min-w-[640px] border-collapse">
             <thead><tr>{["부서", "항목", "예산(A)", "지출(B)", "집행률(B/A)", "잔액(A−B)"].map((h) => <th key={h} className={th}>{h}</th>)}</tr></thead>
             <tbody>
               <tr className="bg-primary-subtle font-bold"><td className={td} colSpan={2}>합계(일반·특별)</td><td className={tdr}>{won(exp.operating.budget)}</td><td className={tdr}>{won(exp.operating.actual)}</td><td className={tdr}>{rate(exp.operating.actual, exp.operating.budget)}</td><td className={tdr}>{won(exp.operating.budget - exp.operating.actual)}</td></tr>

@@ -118,7 +118,7 @@ function Screen() {
       {form}
 
       <div className={`${card} mb-4 flex flex-wrap items-center gap-2 p-3 text-sm`}>
-        <div className="flex overflow-hidden rounded border">
+        <div className="seg flex overflow-hidden rounded border">
           {[0, 1, 2, 3, 4, 5].map((w) => (
             <button key={w} onClick={() => setWeek(w)} className={`px-3 py-1.5 ${week === w ? "bg-primary text-white" : ""}`}>{w ? `${w}째 주` : "전체"}</button>
           ))}
@@ -127,7 +127,7 @@ function Screen() {
       </div>
 
       <div className={`${card} overflow-x-auto`}>
-        <table className="w-full text-sm">
+        <table className="tbl-cards w-full text-sm">
           <thead className="bg-surface-2 text-xs text-label">
             <tr><th className="w-16 py-2">주</th><th className="text-left">내용</th><th className="w-28 text-right">금액</th><th className="text-left">부서·항목</th><th className="text-left">송금처</th><th className="text-left">메모</th><th className="w-16">사용</th><th className="w-28" /></tr>
           </thead>

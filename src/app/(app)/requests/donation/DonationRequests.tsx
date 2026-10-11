@@ -51,7 +51,7 @@ function List() {
       {q.error && <Notice kind="error">불러오지 못했어요: {q.error}</Notice>}
       <div className="grid gap-4 xl:grid-cols-[1fr_420px]">
         <div className={`${card} overflow-x-auto`}>
-          <table className="w-full text-sm">
+          <table className="tbl-cards w-full text-sm">
             <thead className="bg-surface-2 text-xs text-label">
               <tr><th className="px-3 py-2 text-left">접수번호</th><th className="text-left">성명</th><th>주민번호</th><th>휴대폰</th><th>연도</th><th>교인</th><th>상태</th><th>신청일</th></tr>
             </thead>

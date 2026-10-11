@@ -162,7 +162,7 @@ function Form({ ref_ }: { ref_: RefData }) {
             </select>
           </label>
           <div className="text-xs text-label">구분
-            <div className="mt-1 flex overflow-hidden rounded border text-sm">
+            <div className="seg mt-1 flex overflow-hidden rounded border text-sm">
               {(["cash", "online"] as const).map((c) => (
                 <button key={c} onClick={() => setChannel(c)} className={`flex-1 py-1.5 ${channel === c ? "bg-primary text-white" : "text-slate-700"}`}>
                   {c === "cash" ? "현금" : "이체"}
