@@ -12,6 +12,7 @@ import { enqueue, getWeekCache, setWeekCache, syncNow } from "@/lib/offline/sync
 import { isNetworkError } from "@/lib/offline/logic";
 import { readFirstSheet } from "@/lib/bank/readXlsx";
 import { parseNonghyupRows, type BankTx } from "@/lib/bank/nonghyup";
+import { newFixedOnly } from "@/lib/expense/fixed";
 
 const KEY = "ndfms.expense.draft"; // 지출증빙 올리기 화면도 이 키에 행을 덧붙인다
 const KEY_META = "ndfms.expense.draft.meta"; // {sunday, savedSig}
@@ -111,9 +112,13 @@ function Form({ ref_ }: { ref_: RefData }) {
 
   const loadFixed = () => {
     const w = weekOfMonth(sunday);
-    const add = FIXED_EXPENSES.filter((f) => f.weekOfMonth === w).map((f) => ({ ...blank(), ...f, source: "고정" as const }));
-    setRows((xs) => [...xs, ...add]);
-    setMsg(`${w}째 주 고정지출 ${add.length}건을 불러왔어요.`);
+    const all = FIXED_EXPENSES.filter((f) => f.weekOfMonth === w);
+    if (!all.length) { setErr(""); return setMsg(`${w}째 주 고정지출이 없어요.`); }
+    const { add, dup } = newFixedOnly(all, rows);
+    if (!add.length) { setMsg(""); return setErr(`${w}째 주 고정지출 ${dup}건은 이미 추가돼 있어요. 중복이라 다시 추가할 수 없어요.`); }
+    setRows((xs) => [...xs, ...add.map((f) => ({ ...blank(), ...f, source: "고정" as const }))]);
+    setErr("");
+    setMsg(`${w}째 주 고정지출 ${add.length}건을 불러왔어요.${dup ? ` 이미 있는 ${dup}건은 중복이라 빼었어요.` : ""}`);
   };
 
   const onBank = async (f: File) => {

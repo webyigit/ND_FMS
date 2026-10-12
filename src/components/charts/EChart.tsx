@@ -14,7 +14,7 @@ export const man = (v: number) => `${Math.round(v / 10000).toLocaleString("ko-KR
 export const wonTip = (v: number) => `${Number(v).toLocaleString("ko-KR")}원`;
 
 /** ECharts(svg) 공통 틀: option만 넘기면 크기 맞춤·정리까지 */
-export default function EChart({ option, className = "h-64", label }: { option: EChartsCoreOption; className?: string; label: string }) {
+export default function EChart({ option, className = "h-64", label, height }: { option: EChartsCoreOption; className?: string; label: string; height?: number }) {
   const el = useRef<HTMLDivElement>(null);
   useEffect(() => {
     if (!el.current) return;
@@ -24,12 +24,12 @@ export default function EChart({ option, className = "h-64", label }: { option: 
     ro.observe(el.current);
     return () => { ro.disconnect(); chart.dispose(); };
   }, [option]);
-  return <div ref={el} className={`w-full ${className}`} role="img" aria-label={label} />;
+  return <div ref={el} className={`w-full ${height ? "" : className}`} style={height ? { height } : undefined} role="img" aria-label={label} />;
 }
 
 const legend = { top: 0, right: 0, itemWidth: 12, itemHeight: 8, textStyle: { color: C.text } };
 const catAxis = (data: string[]) => ({ type: "category", data, axisTick: { show: false }, axisLine: { lineStyle: { color: C.line } }, axisLabel: { color: C.axis } });
-const valAxis = { type: "value", axisLabel: { formatter: man, color: C.axis }, splitLine: { lineStyle: { color: C.split } } };
+const valAxis = { type: "value", axisLabel: { formatter: man, color: C.axis, hideOverlap: true }, splitLine: { lineStyle: { color: C.split } } };
 const bar = (name: string, data: number[], color: string) => ({ name, type: "bar", data, itemStyle: { color, borderRadius: [3, 3, 0, 0] }, barMaxWidth: 16 });
 
 /** 수입·지출 막대 + 수지차 선 */
