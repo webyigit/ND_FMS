@@ -36,7 +36,7 @@ export const MENU: MenuGroup[] = [
       { href: "/expense/history", label: "과거 지출내역" },
     ],
   },
-  { label: "해외선교", icon: faEarthAsia, items: [{ href: "/mission", label: "해외선교" }] },
+  { label: "해외선교", icon: faEarthAsia, items: [{ href: "/mission/entry", label: "해외선교 입력" }, { href: "/mission", label: "해외선교 현황" }] },
   {
     label: "신청관리", icon: faInbox,
     items: [

@@ -3,7 +3,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faWonSign } from "@fortawesome/free-solid-svg-icons";
-import { MENU } from "@/lib/menu";
+import { MENU, findMenu } from "@/lib/menu";
 
 export default function Sidebar() {
   const path = usePathname();
@@ -21,7 +21,7 @@ export default function Sidebar() {
                 <Link
                   key={i.href}
                   href={i.href}
-                  className={`block rounded-menu px-4 py-2 font-medium ${path.startsWith(i.href) ? "bg-primary-subtle text-primary" : "text-heading hover:text-primary"}`}
+                  className={`block rounded-menu px-4 py-2 font-medium ${findMenu(path)?.item.href === i.href ? "bg-primary-subtle text-primary" : "text-heading hover:text-primary"}`}
                 >
                   {i.label}
                 </Link>
