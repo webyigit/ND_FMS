@@ -105,6 +105,19 @@ export function ytdCompare<T extends { sunday: string; amount: number; fund: Inc
   return [...m.values()].sort((a, b) => b.cur - a.cur || b.prev - a.prev || a.order - b.order);
 }
 
+/** 구분(부서)별 항목 지출: 올해 누계·작년 같은 기간. 구분은 올해 지출 큰 순서, 항목도 큰 순서 */
+export function itemsByDept(xs: ExpWeek[], today: string) {
+  const rows = ytdCompare(xs, (r) => `${r.dept}\u0000${r.item}`, today, (r) => r.itemOrder ?? 0);
+  const m = new Map<string, { dept: string; cur: number; prev: number; items: { name: string; cur: number; prev: number }[] }>();
+  for (const r of rows) {
+    const [dept, name] = r.name.split("\u0000");
+    const g = m.get(dept) ?? { dept, cur: 0, prev: 0, items: [] };
+    g.cur += r.cur; g.prev += r.prev; g.items.push({ name, cur: r.cur, prev: r.prev });
+    m.set(dept, g);
+  }
+  return [...m.values()].sort((a, b) => b.cur - a.cur || b.prev - a.prev);
+}
+
 export type PayeeActivity = { payeeId: number; name: string; bank: string | null; account: string | null; first: string; last: string; cnt: number; total: number };
 
 /** 송금 계좌 알림: 이번 주 처음 이체한 계좌, months개월 넘게 이체가 없는 계좌(최근 것부터) */
