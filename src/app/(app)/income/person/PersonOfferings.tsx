@@ -96,7 +96,7 @@ export default function PersonOfferings() {
         ))}
       </div>
 
-      {tab === "person" && <PersonTab year={year} base={basePerson} persons={persons} rows={data.data ?? []} onPick={(p) => setBase(p.key)} onFamily={() => setTab("family")} />}
+      {tab === "person" && <PersonTab year={year} base={basePerson} persons={persons} members={members.data ?? []} rows={data.data ?? []} onPick={(p) => setBase(p.key)} onFamily={() => setTab("family")} />}
       {tab === "family" && <FamilyTab key={`${year}-${base}`} year={year} base={basePerson} persons={persons} members={members.data ?? []} types={allTypes}
         onPick={(p) => setBase(p.key)} onChanged={reloadAll} />}
       {tab === "names" && <NameMergeTab onChanged={reloadAll} />}

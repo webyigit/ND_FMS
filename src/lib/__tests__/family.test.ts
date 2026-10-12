@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { coreName, defaultHead, familyCandidates, mergePlan, sumCandidates, type FamilyMember } from "../income/family";
+import { coreName, defaultHead, familyCandidates, familyOf, mergePlan, sumCandidates, type FamilyMember } from "../income/family";
 import type { PersonTotal } from "../income/report";
 
 // 가상 이름·금액 (실데이터 아님)
@@ -14,6 +14,14 @@ const members = [mem(1, "가나다"), mem(2, "가나다A"), mem(3, "가나다가
 const persons = [pt("m1", "가나다", 100), pt("m2", "가나다A", 50), pt("m3", "가나다가정", 30, 9), pt("m4", "라마바", 20, 9), pt("m5", "사아자", 10), pt("l가나다,사아자", "가나다,사아자", 5)];
 
 describe("가족단위", () => {
+  it("실제 가족: 같은 household 교인 전부, 세대주 먼저, 헌금 없는 가족은 0원", () => {
+    const ms = [...members, mem(7, "하파", 9)];
+    expect(familyOf(persons[3], persons, ms)).toEqual({
+      householdId: 9, total: 50,
+      people: [{ id: 3, name: "가나다가정", total: 30 }, { id: 4, name: "라마바", total: 20 }, { id: 7, name: "하파", total: 0 }],
+    });
+    expect(familyOf(persons[0], persons, ms)).toBeNull();
+  });
   it("이름 핵심", () => {
     expect(coreName("가나다 A")).toBe("가나다");
     expect(coreName("가나다,라마바")).toBe("가나다라마바");

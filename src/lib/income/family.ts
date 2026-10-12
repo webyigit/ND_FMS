@@ -68,3 +68,14 @@ export function mergePlan(selected: Candidate[], headId: number): number[] {
 
 /** 고른 사람들 합계 */
 export const sumCandidates = (cs: Candidate[]) => cs.reduce((s, c) => s + c.total, 0);
+
+/** 한 사람의 실제 가족(지금 같은 household 로 묶인 교인)과 그 해 헌금 합계. 가족이 없으면 null */
+export function familyOf(base: PersonTotal, persons: PersonTotal[], members: FamilyMember[]) {
+  if (base.householdId == null) return null;
+  const hid = base.householdId;
+  const people = members.filter((m) => m.household_id === hid)
+    .sort((a, b) => Number(b.is_household_head) - Number(a.is_household_head) || a.id - b.id)
+    .map((m) => ({ id: m.id, name: m.full_name, total: persons.find((p) => p.key === `m${m.id}`)?.total ?? 0 }));
+  if (people.length < 2) return null;
+  return { householdId: hid, people, total: people.reduce((s, p) => s + p.total, 0) };
+}
