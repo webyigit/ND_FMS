@@ -3,6 +3,7 @@ import { useMemo, useState } from "react";
 import PageHeader from "@/components/PageHeader";
 import DbOnly from "@/components/ui/DbOnly";
 import Notice from "@/components/ui/Notice";
+import MonthTabs, { thisMonth } from "@/components/ui/MonthTabs";
 import YearSelect from "@/components/ui/YearSelect";
 import { ExcelButton, PrintButton, btn, card, input } from "@/components/ui/Buttons";
 import { useDbQuery } from "@/lib/db/useDb";
@@ -18,9 +19,9 @@ export default function ExpenseHistory() {
 }
 
 function Screen() {
-  // 기본은 올해, 지난 연도는 연도 선택으로
+  // 기본은 올해 이번 달 탭. 1년 전체는 '전체' 탭을 누를 때만 불러온다(목록이 커서 느림)
   const [year, setYear] = useState(thisYear());
-  const [month, setMonth] = useState(0);
+  const [month, setMonth] = useState(thisMonth());
   const [f, setF] = useState<HistFilter>({});
   const [view, setView] = useState<"list" | "month">("list");
 
@@ -53,9 +54,6 @@ function Screen() {
       <PageHeader actions={<><ExcelButton onClick={excel} disabled={!rows.length} /><PrintButton /></>} />
       <div className={`${card} no-print mb-4 flex flex-wrap items-end gap-2 p-4 text-sm`}>
         <YearSelect value={year} onChange={setYear} />
-        <select className={input} value={month} onChange={(e) => setMonth(Number(e.target.value))}>
-          <option value={0}>전체 월</option>{Array.from({ length: 12 }, (_, i) => <option key={i} value={i + 1}>{i + 1}월</option>)}
-        </select>
         <input className={`${input} w-28`} placeholder="이름(청구자)" value={f.name ?? ""} onChange={set("name")} />
         <input className={`${input} w-36`} placeholder="금액 (예: 10000~50000)" value={f.amount ?? ""} onChange={set("amount")} />
         <input className={`${input} w-36`} placeholder="내용·항목" value={f.content ?? ""} onChange={set("content")} />
@@ -65,6 +63,7 @@ function Screen() {
           {(["list", "month"] as const).map((v) => <button key={v} onClick={() => setView(v)} className={`px-3 py-1.5 ${view === v ? "bg-primary text-white" : ""}`}>{v === "list" ? "목록" : "월별 합계"}</button>)}
         </div>
       </div>
+      <MonthTabs value={month} onChange={setMonth} />
       {q.error && <Notice kind="error">불러오지 못했어요: {q.error}</Notice>}
 
       <h2 className="mb-1 hidden text-center text-lg font-bold print:block">{title}</h2>

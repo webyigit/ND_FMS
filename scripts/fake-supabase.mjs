@@ -63,6 +63,22 @@ const db = {
   add(14, fam[1], 100000, { memo: "가상" });
   for (let i = 0; i < 10; i++) add(15, fam[i], 10000 * (1 + (i % 3)));
 }
+// 과거 수입내역(/income/history) 월 탭 확인용: 9월 가상 수입 몇 건 + 헌금구분별 월 합계 뷰
+{
+  const types = Object.fromEntries(db.offering_type.map((t) => [t.id, t]));
+  [[3, "가나다", 300000], [3, "사아자", 200000], [6, "라마바", 30000], [13, "차카타", 10000]].forEach(([t, label, amount], i) =>
+    db.v_income.push({ id: 2000 + i, year: 2026, month: 9, sunday: "2026-09-27", offering_type_id: t, offering_type: types[t].name, type_order: types[t].sort_order, fund_kind: types[t].fund.kind, member_id: i + 1, member_name: label, payer_label: label, channel: "online", amount, memo: null, bank_tx_id: null }));
+  const agg = new Map();
+  for (const r of db.v_income.filter((x) => x.offering_type_id)) {
+    const k = [r.year, r.month, r.offering_type_id, r.channel].join("|");
+    const a = agg.get(k) ?? { year: r.year, month: r.month, offering_type_id: r.offering_type_id, offering_type: r.offering_type, type_order: r.type_order, fund_kind: r.fund_kind, channel: r.channel, amount: 0, n: 0 };
+    a.amount += r.amount; a.n++; agg.set(k, a);
+  }
+  db.v_income_type_month = [...agg.values()];
+}
+// 과거 지출내역(/expense/history) 월 탭 확인용 가상 지출
+db.v_expense = [[9, "2026-09-27", "교육부", "교재비", "공과 교재", 120000, "차카타"], [10, "2026-10-04", "찬양부", "악보", "성가 악보", 80000, "파하가"], [10, "2026-10-11", "관리부", "수선비", "전등 교체", 45000, "나다라"]]
+  .map(([month, sunday, department, item, content, amount, requester_label], i) => ({ id: 3000 + i, year: 2026, month, sunday, department, item, content, amount, requester_label, memo: null }));
 let nextReceipt = 900;
 
 // 이름합치기(개인별 헌금현황 > 이름합치기) 가상 데이터: 홍길동 ↔ 홍길둥·홍길똥 오기입, 김가나 ↔ 김가니(다른 사람)

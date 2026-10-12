@@ -2,6 +2,7 @@
 import { useMemo, useState } from "react";
 import PageHeader from "@/components/PageHeader";
 import Notice from "@/components/ui/Notice";
+import MonthTabs, { thisMonth } from "@/components/ui/MonthTabs";
 import YearSelect from "@/components/ui/YearSelect";
 import { ExcelButton, PrintButton, btnPrimary, card, input } from "@/components/ui/Buttons";
 import { useRefData } from "@/lib/db/refData";
@@ -17,10 +18,11 @@ type Filter = { year: number; month: number; typeId: number; name: string; amoun
 type TypeMonthRow = { year: number; month: number; offering_type_id: number; offering_type: string; type_order: number | null; fund_kind: string | null; channel: string; amount: number; n: number };
 const SHOW = 1000; // 화면에 그리는 최대 행(엑셀은 전체)
 
-// 과거 수입내역: 연·월로 찾고 이름·금액·헌금구분 검색, 헌금구분별·월별 리포트
+// 과거 수입내역: 연도와 월 탭(전체·1~12월)으로 찾고 이름·금액·헌금구분 검색, 헌금구분별·월별 리포트
+// 처음엔 이번 달 탭만 불러오고, 1년 전체 목록은 '전체' 탭을 누를 때만 불러온다(목록이 커서 느림)
 export default function IncomeHistory() {
   const { ref } = useRefData();
-  const [draft, setDraft] = useState<Filter>({ year: thisYear(), month: 0, typeId: 0, name: "", amount: "" });
+  const [draft, setDraft] = useState<Filter>({ year: thisYear(), month: thisMonth(), typeId: 0, name: "", amount: "" });
   const [f, setF] = useState<Filter>(draft);
   const set = (p: Partial<Filter>) => setDraft((d) => ({ ...d, ...p }));
   // 연·월·구분은 바로, 이름·금액은 '검색'으로
@@ -65,12 +67,6 @@ export default function IncomeHistory() {
       <PageHeader actions={<><ExcelButton disabled={list.loading} onClick={excel} /><PrintButton /></>} />
       <form onSubmit={(e) => { e.preventDefault(); setF(draft); }} className={`${card} no-print mb-4 flex flex-wrap items-end gap-3 p-3 text-sm`}>
         <label className="text-xs text-label">연도<div className="mt-1"><YearSelect value={draft.year} onChange={(y) => pick({ year: y })} /></div></label>
-        <label className="text-xs text-label">월
-          <select value={draft.month} onChange={(e) => pick({ month: Number(e.target.value) })} className={`${input} mt-1 block`}>
-            <option value={0}>전체</option>
-            {MONTHS.map((m, i) => <option key={m} value={i + 1}>{m}</option>)}
-          </select>
-        </label>
         <label className="text-xs text-label">헌금구분
           <select value={draft.typeId} onChange={(e) => pick({ typeId: Number(e.target.value) })} className={`${input} mt-1 block`}>
             <option value={0}>전체</option>
@@ -81,6 +77,7 @@ export default function IncomeHistory() {
         <label className="text-xs text-label">금액<input inputMode="numeric" value={draft.amount} onChange={(e) => set({ amount: e.target.value.replace(/[^\d,]/g, "") })} placeholder="정확한 금액" className={`${input} mt-1 block w-32 text-right`} /></label>
         <button className={btnPrimary}>검색</button>
       </form>
+      <MonthTabs value={f.month} onChange={(month) => pick({ month })} />
       {(list.error || report.error) && <Notice kind="error">불러오지 못했어요: {list.error ?? report.error}</Notice>}
 
       <div className={`${card} mb-4 p-4 text-sm print:p-0`}>
