@@ -6,6 +6,7 @@ import { btn, btnPrimary, card, input } from "@/components/ui/Buttons";
 import { must, useDbQuery } from "@/lib/db/useDb";
 import { dbError } from "@/lib/db/weekly";
 import { supabaseBrowser } from "@/lib/supabase/client";
+import { useListNav } from "@/lib/listNav";
 import { fetchAll, isInUse } from "@/lib/settings/db";
 import { matchMember, type MemberRow } from "@/lib/settings/members";
 import { ACCOUNT_KINDS, cleanAccountNo, isAccountNo } from "@/lib/settings/payee";
@@ -171,6 +172,7 @@ function Payees({ setNote }: { setNote: (n: Note) => void }) {
     setMq("");
     setF((x) => ({ ...x, member_id: m.id, member_name: m.full_name, name: x.name || m.full_name, holder: x.holder || m.full_name }));
   };
+  const nav = useListNav(found, pick, mq);
   const can = f.name.trim() && (f.account_no === "" || isAccountNo(f.account_no)) && (f.id || f.account_no);
 
   return (
@@ -185,10 +187,10 @@ function Payees({ setNote }: { setNote: (n: Note) => void }) {
           <div className="relative text-xs text-label">연결 교인(선택)
             {f.member_id
               ? <div className="mt-1 flex items-center gap-2 py-1.5 text-sm text-heading">{f.member_name}<button onClick={() => setF({ ...f, member_id: null, member_name: "" })} className="text-xs text-danger">해제</button></div>
-              : <input value={mq} onChange={(e) => setMq(e.target.value)} placeholder="교인 검색" className={`${input} mt-1 w-full`} />}
+              : <input value={mq} onChange={(e) => setMq(e.target.value)} onKeyDown={nav.onKeyDown} placeholder="교인 검색" className={`${input} mt-1 w-full`} />}
             {found.length > 0 && (
               <ul className="absolute z-10 mt-1 w-full rounded border bg-surface text-sm text-heading shadow">
-                {found.map((m) => <li key={m.id}><button onClick={() => pick(m)} className="w-full px-2 py-1 text-left hover:bg-surface-2">{m.full_name} <span className="text-xs text-muted">{m.title}</span></button></li>)}
+                {found.map((m, i) => <li key={m.id} {...nav.itemProps(i)}><button onClick={() => pick(m)} className="w-full px-2 py-1 text-left hover:bg-surface-2">{m.full_name} <span className="text-xs text-muted">{m.title}</span></button></li>)}
               </ul>
             )}
           </div>

@@ -7,25 +7,37 @@ import { supabaseBrowser } from "@/lib/supabase/client";
 import { must } from "@/lib/db/useDb";
 import { dbError } from "@/lib/db/weekly";
 import { won } from "@/lib/format";
-import { coreName, defaultHead, familyCandidates, familyOf, mergePlan, sumCandidates, type Candidate, type FamilyMember } from "@/lib/income/family";
+import { coreName, defaultHead, familyCandidates, familyOf, filterFamilies, mergePlan, sumCandidates, type Candidate, type FamilyHit, type FamilyMember } from "@/lib/income/family";
+import { useListNav } from "@/lib/listNav";
 import { MONTHS, filterByName, typeMonthMatrix, type PersonAggRow, type PersonTotal } from "@/lib/income/report";
 import { amt, td, tdNum, th } from "../_ui/sheet";
 
 type Type = { id: number; name: string };
 
-/** 한 사람 고르기: 이름으로 찾아서 누른다 */
-export function PickPerson({ persons, onPick, placeholder = "이름으로 찾기" }: { persons: PersonTotal[]; onPick: (p: PersonTotal) => void; placeholder?: string }) {
+/** 한 사람 고르기: 이름으로 찾아서 누르거나 ↑↓·Enter. families 를 주면 그 이름이 든 가족 합산 항목도 같이 뜬다 */
+export function PickPerson({ persons, families, onPick, onPickFamily, placeholder = "이름으로 찾기" }: {
+  persons: PersonTotal[]; families?: FamilyHit[]; onPick: (p: PersonTotal) => void; onPickFamily?: (f: FamilyHit) => void; placeholder?: string;
+}) {
   const [q, setQ] = useState("");
-  const hits = useMemo(() => (q.trim() ? filterByName(persons, q).slice(0, 12) : []), [persons, q]);
+  type Hit = { kind: "p"; p: PersonTotal } | { kind: "f"; f: FamilyHit };
+  const hits = useMemo<Hit[]>(() => (q.trim() ? [
+    ...filterByName(persons, q).slice(0, 12).map((p) => ({ kind: "p" as const, p })),
+    ...(families && onPickFamily ? filterFamilies(families, q).slice(0, 4).map((f) => ({ kind: "f" as const, f })) : []),
+  ] : []), [persons, families, onPickFamily, q]);
+  const choose = (h: Hit) => { if (h.kind === "p") onPick(h.p); else onPickFamily?.(h.f); setQ(""); };
+  const nav = useListNav(hits, choose, q);
   return (
     <div className="relative">
-      <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={placeholder} className={`${input} w-56`} />
+      <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={placeholder} className={`${input} w-56`}
+        onKeyDown={(e) => { if (!nav.onKeyDown(e) && e.key === "Enter" && hits[0]) choose(hits[0]); }} />
       {hits.length > 0 && (
-        <ul className="absolute z-10 mt-1 w-72 rounded border bg-surface text-sm shadow">
-          {hits.map((p) => (
-            <li key={p.key}><button onClick={() => { onPick(p); setQ(""); }} className="flex w-full justify-between px-2 py-1 text-left hover:bg-surface-2">
-              <span>{p.name}{p.memberId == null && <span className="ml-1 text-[11px] text-muted">미등록</span>}{p.householdLabel && <span className="ml-1 text-xs text-muted">· {p.householdLabel}</span>}</span>
-              <span className="text-xs text-label">{won(p.total)}</span>
+        <ul className="absolute z-10 mt-1 max-h-96 w-80 overflow-auto rounded border bg-surface text-sm shadow">
+          {hits.map((h, i) => (
+            <li key={h.kind === "p" ? h.p.key : h.f.key} {...nav.itemProps(i)}><button onClick={() => choose(h)} className="flex w-full justify-between gap-2 px-2 py-1 text-left hover:bg-surface-2">
+              {h.kind === "p"
+                ? <span>{h.p.name}{h.p.memberId == null && <span className="ml-1 text-[11px] text-muted">미등록</span>}</span>
+                : <span><span className="mr-1 rounded bg-primary-subtle px-1 text-[11px] text-primary">가족 합산</span>{h.f.members.join("·")}</span>}
+              <span className="shrink-0 text-xs text-label">{won(h.kind === "p" ? h.p.total : h.f.total)}</span>
             </button></li>
           ))}
         </ul>
@@ -35,10 +47,10 @@ export function PickPerson({ persons, onPick, placeholder = "이름으로 찾기
 }
 
 /** 개인별: 1명 기준 헌금구분 × 월 */
-export function PersonTab({ year, base, persons, members, rows, onPick, onFamily }: {
-  year: number; base: PersonTotal | null; persons: PersonTotal[]; members: FamilyMember[]; rows: PersonAggRow[]; onPick: (p: PersonTotal) => void; onFamily: () => void;
+export function PersonTab({ year, base, persons, members, families, rows, withFamily, setWithFamily, onPick, onPickFamily, onFamily }: {
+  year: number; base: PersonTotal | null; persons: PersonTotal[]; members: FamilyMember[]; families: FamilyHit[]; rows: PersonAggRow[];
+  withFamily: boolean; setWithFamily: (v: boolean) => void; onPick: (p: PersonTotal) => void; onPickFamily: (f: FamilyHit) => void; onFamily: () => void;
 }) {
-  const [withFamily, setWithFamily] = useState(false);
   // 가족 = 지금 같은 가족(household)으로 묶인 교인 전부. 가족 이름표(household label)는 묶을 때 정한 이름이라 구성원과 다를 수 있다
   const fam = useMemo(() => (base ? familyOf(base, persons, members) : null), [base, persons, members]);
   const showFamily = withFamily && fam != null;
@@ -51,7 +63,7 @@ export function PersonTab({ year, base, persons, members, rows, onPick, onFamily
   return (
     <div className={`${card} p-4 text-sm`}>
       <div className="mb-3 flex flex-wrap items-center gap-3">
-        <PickPerson persons={persons} onPick={onPick} />
+        <PickPerson persons={persons} families={families} onPick={onPick} onPickFamily={onPickFamily} />
         {base && <>
           <b className="text-heading">{base.name}</b>
           <span className="text-label">{year}년 본인 합계 {won(base.total)}원 · {base.n}건</span>
@@ -102,6 +114,8 @@ export function FamilyTab({ year, base, persons, members, types, onPick, onChang
     return k ? members.filter((m) => coreName(m.full_name).includes(k) && !list.some((c) => c.memberId === m.id)).slice(0, 8) : [];
   }, [q, members, list]);
 
+  const addExtra = (m: FamilyMember) => { setExtra((x) => [...x, m.id]); setQ(""); };
+  const addNav = useListNav(found, addExtra, q);
   const reset = () => { setSel(new Set()); setHead(null); };
   const pick = (p: PersonTotal) => { onPick(p); setExtra([]); reset(); setMsg(null); };
   const toggle = (k: string) => setSel((s) => { const n = new Set(s); if (n.has(k)) n.delete(k); else n.add(k); return n; });
@@ -185,11 +199,11 @@ export function FamilyTab({ year, base, persons, members, types, onPick, onChang
           </table>
         </div>
         <div className="no-print relative mt-3">
-          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="이름이 다른 가족 추가 (예: 배우자)" className={`${input} w-64`} />
+          <input value={q} onChange={(e) => setQ(e.target.value)} onKeyDown={addNav.onKeyDown} placeholder="이름이 다른 가족 추가 (예: 배우자)" className={`${input} w-64`} />
           {found.length > 0 && (
             <ul className="absolute z-10 mt-1 w-72 rounded border bg-surface shadow">
-              {found.map((m) => (
-                <li key={m.id}><button onClick={() => { setExtra((x) => [...x, m.id]); setQ(""); }} className="w-full px-2 py-1 text-left hover:bg-surface-2">
+              {found.map((m, i) => (
+                <li key={m.id} {...addNav.itemProps(i)}><button onClick={() => addExtra(m)} className="w-full px-2 py-1 text-left hover:bg-surface-2">
                   {m.full_name} <span className="text-xs text-muted">{m.title} {m.household_label && `· ${m.household_label}`}</span>
                 </button></li>
               ))}

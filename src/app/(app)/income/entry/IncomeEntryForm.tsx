@@ -6,6 +6,7 @@ import { sortForList } from "@/lib/offeringOrder";
 import { useRefData, type RefData } from "@/lib/db/refData";
 import { dbError, incomeSig, loadIncome, saveIncome, type IncomeEntry as Entry } from "@/lib/db/weekly";
 import { supabaseBrowser } from "@/lib/supabase/client";
+import { useListNav } from "@/lib/listNav";
 import { enqueue, getWeekCache, setWeekCache, syncNow } from "@/lib/offline/sync";
 import { isNetworkError } from "@/lib/offline/logic";
 
@@ -114,6 +115,9 @@ function Form({ ref_ }: { ref_: RefData }) {
     [query, picked, MEMBERS],
   );
 
+  const pickSuggestion = (m: Member) => { setPicked(m); setQuery(m.name); amountRef.current?.focus(); };
+  const nav = useListNav(suggestions, pickSuggestion, query);
+
   const reset = () => { setQuery(""); setPicked(null); setAmount(""); setMemo(""); setEditId(null); };
 
   const submit = () => {
@@ -173,12 +177,12 @@ function Form({ ref_ }: { ref_: RefData }) {
           <div className="relative text-xs text-label">이름 {type.totalOnly && "(총액만 입력)"}
             <input ref={nameRef} disabled={type.totalOnly} value={query}
               onChange={(e) => { setQuery(e.target.value); setPicked(null); }}
-              onKeyDown={(e) => { if (e.key === "Enter") { if (suggestions[0]) { setPicked(suggestions[0]); setQuery(suggestions[0].name); } amountRef.current?.focus(); } }}
+              onKeyDown={(e) => { if (nav.onKeyDown(e)) return; if (e.key === "Enter") { if (suggestions[0]) { setPicked(suggestions[0]); setQuery(suggestions[0].name); } amountRef.current?.focus(); } }}
               placeholder="두 글자 이상 입력" className="mt-1 w-full rounded border px-2 py-1.5 text-sm text-heading disabled:bg-surface-2" />
             {suggestions.length > 0 && (
               <ul className="absolute z-10 mt-1 w-full rounded border bg-surface text-sm text-heading shadow">
-                {suggestions.map((m) => (
-                  <li key={m.id}><button className="w-full px-2 py-1 text-left hover:bg-surface-2" onClick={() => { setPicked(m); setQuery(m.name); amountRef.current?.focus(); }}>{m.name} {m.title && <span className="text-muted">{m.title}</span>}</button></li>
+                {suggestions.map((m, i) => (
+                  <li key={m.id} {...nav.itemProps(i)}><button className="w-full px-2 py-1 text-left hover:bg-surface-2" onClick={() => pickSuggestion(m)}>{m.name} {m.title && <span className="text-muted">{m.title}</span>}</button></li>
                 ))}
               </ul>
             )}

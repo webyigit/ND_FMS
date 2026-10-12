@@ -11,7 +11,7 @@ import { fetchAll } from "@/lib/income/db";
 import {
   MONTHS, filterByName, householdTotals, personKey, personSheet, personTotals, sumSelected, typeMonthMatrix, type PersonAggRow, type PersonTotal,
 } from "@/lib/income/report";
-import type { FamilyMember } from "@/lib/income/family";
+import { familyHits, type FamilyMember } from "@/lib/income/family";
 import { amt, td, tdNum, th } from "../_ui/sheet";
 import { FamilyTab, PersonTab } from "./FamilyTabs";
 import NameMergeTab from "./NameMergeTab";
@@ -34,6 +34,7 @@ export default function PersonOfferings() {
   const [family, setFamily] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [detail, setDetail] = useState<PersonTotal | null>(null);
+  const [famView, setFamView] = useState(false);
 
   const data = useDbQuery((sb) => fetchAll<PersonAggRow>((a, b) => sb.from("v_income_person").select("*").eq("year", year)
     .order("member_id", { nullsFirst: false }).order("payer_label").order("offering_type_id").order("month").range(a, b)), [year]);
@@ -53,6 +54,7 @@ export default function PersonOfferings() {
   }, [rows, family, q]);
   const persons = useMemo(() => personTotals(data.data ?? []), [data.data]);
   const basePerson = persons.find((p) => p.key === base) ?? null;
+  const families = useMemo(() => familyHits(persons, members.data ?? []), [persons, members.data]);
   const reloadAll = () => { data.reload(); members.reload(); };
   const sel = sumSelected(list, selected);
   const grand = list.reduce((s, p) => s + p.total, 0);
@@ -96,7 +98,8 @@ export default function PersonOfferings() {
         ))}
       </div>
 
-      {tab === "person" && <PersonTab year={year} base={basePerson} persons={persons} members={members.data ?? []} rows={data.data ?? []} onPick={(p) => setBase(p.key)} onFamily={() => setTab("family")} />}
+      {tab === "person" && <PersonTab year={year} base={basePerson} persons={persons} members={members.data ?? []} families={families} rows={data.data ?? []}
+        withFamily={famView} setWithFamily={setFamView} onPick={(p) => { setBase(p.key); setFamView(false); }} onPickFamily={(f) => { setBase(f.baseKey); setFamView(true); }} onFamily={() => setTab("family")} />}
       {tab === "family" && <FamilyTab key={`${year}-${base}`} year={year} base={basePerson} persons={persons} members={members.data ?? []} types={allTypes}
         onPick={(p) => setBase(p.key)} onChanged={reloadAll} />}
       {tab === "names" && <NameMergeTab onChanged={reloadAll} />}

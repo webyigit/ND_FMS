@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { coreName, defaultHead, familyCandidates, familyOf, mergePlan, sumCandidates, type FamilyMember } from "../income/family";
+import { coreName, defaultHead, familyCandidates, familyHits, familyOf, filterFamilies, mergePlan, sumCandidates, type FamilyMember } from "../income/family";
 import type { PersonTotal } from "../income/report";
 
 // 가상 이름·금액 (실데이터 아님)
@@ -21,6 +21,15 @@ describe("가족단위", () => {
       people: [{ id: 3, name: "가나다가정", total: 30 }, { id: 4, name: "라마바", total: 20 }, { id: 7, name: "하파", total: 0 }],
     });
     expect(familyOf(persons[0], persons, ms)).toBeNull();
+  });
+  it("가족 합산 검색 항목: 2명 이상 가족만, 누구 이름으로 찾아도 나옴", () => {
+    const ms = [...members, mem(7, "하파", 9)];
+    const fs = familyHits(persons, ms);
+    expect(fs).toEqual([{ key: "h9", baseKey: "m3", name: "가나다가정 가족", members: ["가나다가정", "라마바", "하파"], total: 50, n: 2 }]);
+    expect(filterFamilies(fs, "하파")).toHaveLength(1);
+    expect(filterFamilies(fs, "라 마")).toHaveLength(1);
+    expect(filterFamilies(fs, "사아자")).toHaveLength(0);
+    expect(filterFamilies(fs, "")).toHaveLength(0);
   });
   it("이름 핵심", () => {
     expect(coreName("가나다 A")).toBe("가나다");
