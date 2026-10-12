@@ -13,7 +13,9 @@ import { downloadXlsx } from "@/lib/excel";
 import { fileName, won } from "@/lib/format";
 import { isSunday } from "@/lib/income/dates";
 import { fetchAll } from "@/lib/income/db";
-import { FUNDS, NO_NAME, entryLabel, listedTypes, toGrid, weeklyReport, weeklySheets, type IncomeViewRow, type PriorRow } from "@/lib/income/report";
+import { NO_NAME, cumulativeWeeks, entryLabel, listedTypes, pct, progressReport, progressSheet, sundayIndex, toGrid, weeklyReport, weeklySheets, type IncomeViewRow, type PriorRow, type ProgressRow } from "@/lib/income/report";
+import { loadChurch } from "@/lib/receipt/api";
+import ProgressChart from "./ProgressChart";
 import { amt, longDate, td, tdNum, th } from "../_ui/sheet";
 
 type Week = { sunday: string; closed: boolean };
@@ -32,21 +34,35 @@ export default function WeeklyIncome() {
     .eq("sunday", sunday).order("id").range(a, b)), [sunday]);
   // 올해 1/1 ~ 전주 헌금구분별 합계 (누계용)
   const prior = useDbQuery((sb) => fetchAll<PriorRow>((a, b) => sb.from("v_income_week")
-    .select("offering_type_id, offering_type, type_order, fund_kind, amount")
+    .select("sunday, offering_type_id, offering_type, type_order, fund_kind, amount")
     .gte("sunday", `${sunday.slice(0, 4)}-01-01`).lt("sunday", sunday).order("sunday").order("offering_type_id").range(a, b)), [sunday]);
+  const year = Number(sunday.slice(0, 4));
+  // 헌금구분별 올해 예산(A) — 진도율용
+  const budget = useDbQuery(async (sb) => must(await sb.from("budget").select("offering_type_id, amount").eq("year", year).not("offering_type_id", "is", null)) as { offering_type_id: number; amount: number }[], [year]);
+  const church = useDbQuery(loadChurch, []);
 
   const rep = useMemo(() => {
     if (!ref || !rows.data || !prior.data) return null;
     const rank = new Map(ref.members.map((m) => [m.id, m.displayRank]));
     return weeklyReport(rows.data, ref.offeringTypes, (id) => rank.get(id), prior.data);
   }, [ref, rows.data, prior.data]);
+  const secs = useMemo(() => {
+    if (!rep) return [];
+    const b = new Map<number, number>();
+    (budget.data ?? []).forEach((r) => b.set(r.offering_type_id, (b.get(r.offering_type_id) ?? 0) + Number(r.amount)));
+    return progressReport(rep, (id) => b.get(id) ?? 0);
+  }, [rep, budget.data]);
+  const general = secs.find((s) => s.fund === "일반")?.total;
+  const cum = useMemo(() => (rep && prior.data ? cumulativeWeeks(prior.data, sunday, rep.byFund.일반.total) : []), [rep, prior.data, sunday]);
+  const pos = sundayIndex(sunday);
+  const churchName = church.data?.name?.trim() || "남도교회";
   const week = weeks.data?.find((w) => w.sunday === sunday);
-  const err = refErr ?? weeks.error ?? rows.error ?? prior.error;
+  const err = refErr ?? weeks.error ?? rows.error ?? prior.error ?? budget.error;
 
   return (
     <>
       <PageHeader printHidden actions={<>
-        <ExcelButton disabled={!rep?.count} onClick={() => rep && downloadXlsx(fileName(`주일헌금_${sunday.replace(/-/g, "").slice(4)}`, "xlsx"), weeklySheets(rep, sunday))} />
+        <ExcelButton disabled={!rep?.count} onClick={() => rep && downloadXlsx(fileName(`주일헌금_${sunday.replace(/-/g, "").slice(4)}`, "xlsx"), [progressSheet(rep, secs, sunday, `대한예수교장로회 ${churchName}`), ...weeklySheets(rep, sunday)])} />
         <PrintButton />
       </>} />
       <div className={`${card} no-print mb-4 flex flex-wrap items-end gap-3 p-3 text-sm`}>
@@ -71,14 +87,19 @@ export default function WeeklyIncome() {
 
       {!rep ? <div className="text-sm text-muted">불러오는 중…</div> : (
         <div className="sheet-scroll"><div className={`${card} sheet print-sheet mx-auto max-w-[210mm] p-6 text-sm print:max-w-none print:p-0`}>
-          <div className="mb-4 flex items-start justify-between gap-4">
-            <div>
-              <h2 className="text-xl font-bold text-heading">주일 헌금 현황</h2>
+          <div className="mb-3 grid grid-cols-[1fr_auto_1fr] items-end gap-4">
+            <div className="flex items-center gap-2">
+              {/* 원본 시트의 교단 휘장 */}
+              <img src="/church-emblem.png" alt="교단 휘장" className="h-14 w-auto print:h-12" />
+              <div className="leading-tight"><div className="text-xs text-label">대한예수교장로회</div><div className="text-lg font-bold tracking-[0.3em] text-heading">{churchName}</div></div>
+            </div>
+            <div className="text-center">
+              <h2 className="text-2xl font-bold tracking-[0.2em] text-heading underline decoration-double underline-offset-4">주일 헌금 현황</h2>
               <div className="mt-1 text-label">{longDate(sunday)} 주일</div>
               <div className="text-xs text-muted">{rep.count}건{week?.closed ? " · 마감된 주" : ""}</div>
             </div>
             {!!titles.data?.length && (
-              <table className="border-collapse text-xs">
+              <table className="justify-self-end border-collapse text-xs">
                 <tbody>
                   <tr><th rowSpan={2} className={`${th} w-6 leading-tight`}>결<br />재</th>{titles.data.map((t, i) => <th key={i} className={`${th} w-16`}>{t}</th>)}</tr>
                   <tr>{titles.data.map((_, i) => <td key={i} className={`${td} h-12`} />)}</tr>
@@ -89,42 +110,44 @@ export default function WeeklyIncome() {
 
           {rep.count === 0 && <Notice kind="warn">이 주일에 입력된 수입이 없어요.</Notice>}
 
+          {/* 원본 상단 1: 일반회계 예산 대비 */}
+          {general && (
+            <table className="mb-2 w-full border-collapse">
+              <thead><tr><th className={th}>구분</th><th className={th}>{year}년 예산액(A)</th><th className={th}>이번 주 헌금액</th><th className={th}>지난주 누계액</th><th className={th}>{year}년 총누계액(B)</th><th className={th}>{year}년 진도율(%)(B/A)</th></tr></thead>
+              <tbody><tr className="font-semibold">
+                <td className={`${td} text-center`}>일반회계</td>
+                <td className={tdNum}>{amt(general.budget)}</td><td className={tdNum}>{amt(general.week)}</td><td className={tdNum}>{amt(general.prev)}</td><td className={tdNum}>{amt(general.ytd)}</td>
+                <td className={tdNum}><Rate r={general.rate} /></td>
+              </tr></tbody>
+            </table>
+          )}
+          <div className="mb-3 flex flex-wrap items-baseline justify-between gap-2">
+            <div className="font-semibold">이번주헌금 <span className="text-xs font-normal text-label">(일반+특별)</span> <span className="ml-2 text-base">{won(rep.generalSpecial.total)}원</span>
+              <span className="ml-2 text-xs font-normal text-muted">현금 {won(rep.generalSpecial.cash)} · 이체 {won(rep.generalSpecial.online)}</span></div>
+            <div className="text-xs text-muted">올해 {pos.index}/{pos.total}번째 주일 · 경과율 {(pos.index / pos.total * 100).toFixed(2)}%</div>
+          </div>
+
+          {/* 원본 상단 2: 회계 › 구분 › 항목별 예산·이번 주·지난주까지·총누계·진도율 */}
           <table className="mb-6 w-full border-collapse">
-            <thead><tr><th className={th}>기금</th><th className={th}>헌금구분</th><th className={th}>현금</th><th className={th}>이체</th><th className={th}>금주 합계</th><th className={th}>건수</th><th className={th}>전주까지 누계</th><th className={th}>올해 누계</th></tr></thead>
+            <colgroup><col className="w-[10%]" /><col className="w-[10%]" /><col className="w-[14%]" /><col /><col /><col /><col /><col className="w-[15%]" /></colgroup>
+            <thead><tr><th className={th}>회계</th><th className={th}>구분</th><th className={th}>항목</th><th className={th}>{year}예산(A)</th><th className={th}>이번 주</th><th className={th}>지난주까지</th><th className={th}>총누계(B)</th><th className={th}>진도율(%)(B/A)</th></tr></thead>
             <tbody>
-              {FUNDS.map((f) => {
-                const ts = rep.types.filter((t) => t.fund === f);
-                return (
-                  <Fragment key={f}>
-                    {ts.map((t, i) => (
-                      <tr key={t.id}>
-                        {i === 0 && <td rowSpan={ts.length + 1} className={`${td} text-center font-semibold`}>{f}{f === "별도" && <div className="text-[11px] font-normal text-muted">합계 제외</div>}</td>}
-                        <td className={td}>{t.name}{t.totalOnly && <span className="text-xs text-muted"> (총액)</span>}</td>
-                        <td className={tdNum}>{amt(t.cash)}</td><td className={tdNum}>{amt(t.online)}</td><td className={`${tdNum} font-medium`}>{amt(t.total)}</td>
-                        <td className={`${td} text-center`}>{t.count || ""}</td>
-                        <td className={tdNum}>{amt(t.prev)}</td><td className={`${tdNum} font-medium`}>{amt(t.ytd)}</td>
-                      </tr>
-                    ))}
-                    <tr className="bg-surface-2 font-semibold">
-                      {ts.length === 0 && <td className={`${td} text-center`}>{f}</td>}
-                      <td className={td}>{f} 소계</td>
-                      <td className={tdNum}>{amt(rep.byFund[f].cash)}</td><td className={tdNum}>{amt(rep.byFund[f].online)}</td><td className={tdNum}>{amt(rep.byFund[f].total)}</td><td className={td} />
-                      <td className={tdNum}>{amt(rep.byFund[f].prev)}</td><td className={tdNum}>{amt(rep.byFund[f].ytd)}</td>
+              {secs.map((s) => (
+                <Fragment key={s.fund}>
+                  <tr className={s.fund === "별도" ? "font-semibold" : "bg-surface-2 font-semibold"}>
+                    <td rowSpan={s.rows.length + 1} className={`${td} text-center font-semibold`}>{s.label}{s.fund === "별도" && <div className="text-[11px] font-normal text-muted">합계 제외</div>}</td>
+                    <td className={`${td} text-center`} colSpan={2}>합　계</td>
+                    <ProgressCells r={s.total} />
+                  </tr>
+                  {s.rows.map((r, i) => (
+                    <tr key={r.item}>
+                      {(i === 0 || s.rows[i - 1].group !== r.group) && <td rowSpan={s.rows.slice(i).findIndex((x) => x.group !== r.group) === -1 ? s.rows.length - i : s.rows.slice(i).findIndex((x) => x.group !== r.group)} className={`${td} text-center`}>{r.group}</td>}
+                      <td className={`${td} whitespace-nowrap`}>{r.item}</td>
+                      <ProgressCells r={r} />
                     </tr>
-                  </Fragment>
-                );
-              })}
-              <tr className="bg-primary-subtle font-bold">
-                <td className={td} colSpan={2}>일반·특별 합계</td>
-                <td className={tdNum}>{amt(rep.generalSpecial.cash)}</td><td className={tdNum}>{amt(rep.generalSpecial.online)}</td><td className={tdNum}>{amt(rep.generalSpecial.total)}</td><td className={td} />
-                <td className={tdNum}>{amt(rep.generalSpecial.prev)}</td><td className={tdNum}>{amt(rep.generalSpecial.ytd)}</td>
-              </tr>
-              <tr className="font-semibold">
-                <td className={td} colSpan={2}>총계 (별도 포함)</td>
-                <td className={tdNum}>{amt(rep.grand.cash)}</td><td className={tdNum}>{amt(rep.grand.online)}</td><td className={tdNum}>{amt(rep.grand.total)}</td>
-                <td className={`${td} text-center`}>{rep.count}</td>
-                <td className={tdNum}>{amt(rep.grand.prev)}</td><td className={tdNum}>{amt(rep.grand.ytd)}</td>
-              </tr>
+                  ))}
+                </Fragment>
+              ))}
             </tbody>
           </table>
 
@@ -160,9 +183,38 @@ export default function WeeklyIncome() {
               )}
             </section>
           ))}
-          <p className="text-xs text-muted">● 이체(온라인) 입금. 별도 기금(해외선교·네팔)은 일반·특별 합계에 넣지 않아요. 올해 누계 = 1월 1일부터 전주까지 누계 + 금주 합계.</p>
+          <p className="text-xs text-muted">● 이체(온라인) 입금. 별도 기금(해외선교·네팔)은 일반·특별 합계에 넣지 않아요. 총누계(B) = 1월 1일부터 지난주까지 + 이번 주. 진도율 = 총누계 ÷ 올해 예산.</p>
         </div></div>
+      )}
+      {rep && general && cum.length > 1 && (
+        <div className={`${card} no-print mx-auto mt-4 max-w-[210mm] p-4`}>
+          <div className="mb-1 flex flex-wrap items-baseline justify-between gap-2">
+            <h3 className="font-bold text-heading">일반회계 누계 추이</h3>
+            <span className="text-xs text-muted">예산 {won(general.budget)}원 · 진도율 {pct(general.rate)}% · 경과율 {(pos.index / pos.total * 100).toFixed(2)}%</span>
+          </div>
+          <ProgressChart weeks={cum} budget={general.budget} totalSundays={pos.total} />
+        </div>
       )}
     </>
   );
+}
+
+/** 진도율: 숫자 + 막대(100% 넘으면 강조) */
+function Rate({ r }: { r: number | null }) {
+  if (r == null || r === 0) return <>-</>;
+  return (
+    <span className="inline-flex items-center justify-end gap-1.5">
+      <span className="hidden h-1.5 w-12 overflow-hidden rounded-full bg-surface-2 sm:inline-block print:inline-block print:border print:border-line">
+        <span className={`block h-full ${r >= 100 ? "bg-success" : "bg-primary"}`} style={{ width: `${Math.min(r, 100)}%` }} />
+      </span>
+      <span className={r >= 100 ? "font-semibold text-success" : ""}>{pct(r)}</span>
+    </span>
+  );
+}
+
+function ProgressCells({ r }: { r: ProgressRow }) {
+  return (<>
+    <td className={tdNum}>{amt(r.budget)}</td><td className={`${tdNum} font-medium`}>{amt(r.week)}</td><td className={tdNum}>{amt(r.prev)}</td>
+    <td className={`${tdNum} font-medium`}>{amt(r.ytd)}</td><td className={tdNum}><Rate r={r.rate} /></td>
+  </>);
 }

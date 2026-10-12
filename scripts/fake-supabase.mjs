@@ -46,7 +46,10 @@ const db = {
   fixed_expense: [],
   week: [{ sunday: "2026-10-04", closed: false }, { sunday: "2026-09-27", closed: true }],
   app_setting: [],
-  v_income_week: [3, 1, 6, 5, 9, 11, 13, 14, 15].map((t, i) => ({ sunday: "2026-09-27", offering_type_id: t, offering_type: "", type_order: i + 1, fund_kind: t >= 15 ? "separate" : t >= 13 ? "special" : "general", amount: 1000000 * (10 - i) })),
+  // 올해 1/4~9/27 주별 헌금구분 합계(가상). 금주 수입내역 누계·진도율·추이 그래프 확인용
+  v_income_week: Array.from({ length: 39 }, (_, w) => new Date(Date.UTC(2026, 0, 4 + w * 7)).toISOString().slice(0, 10)).flatMap((sunday, w) =>
+    [[3, 4800000], [1, 700000], [6, 250000], [5, 500000], [9, 150000], [11, 30000], [13, 170000], [14, 50000], [15, 200000]].map(([t, a], i) => ({ sunday, offering_type_id: t, offering_type: "", type_order: i + 1, fund_kind: t >= 15 ? "separate" : t >= 13 ? "special" : "general", amount: a + ((w * 37 + i * 11) % 9) * 10000 }))),
+  budget: [[3, 250000000], [1, 36000000], [5, 51500000], [11, 2000000]].map(([offering_type_id, amount]) => ({ year: 2026, offering_type_id, amount })),
 };
 {
   const types = Object.fromEntries(db.offering_type.map((t) => [t.id, t]));
