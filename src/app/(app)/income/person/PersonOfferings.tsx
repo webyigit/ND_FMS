@@ -35,6 +35,11 @@ export default function PersonOfferings() {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [detail, setDetail] = useState<PersonTotal | null>(null);
   const [famView, setFamView] = useState(false);
+  const [resetN, setResetN] = useState(0);
+  // 초기화: 연도·탭은 그대로 두고, 고른 사람·검색어·헌금구분·가족 합산·체크·상세를 비운다(탭 안의 입력도 새로 그림)
+  const resetAll = () => {
+    setBase(null); setFamView(false); setTypeId(0); setQ(""); setFamily(false); setSelected(new Set()); setDetail(null); setResetN((n) => n + 1);
+  };
 
   const data = useDbQuery((sb) => fetchAll<PersonAggRow>((a, b) => sb.from("v_income_person").select("*").eq("year", year)
     .order("member_id", { nullsFirst: false }).order("payer_label").order("offering_type_id").order("month").range(a, b)), [year]);
@@ -89,6 +94,7 @@ export default function PersonOfferings() {
         <label className="flex items-center gap-1 pb-1.5"><input type="checkbox" checked={family} onChange={(e) => { setFamily(e.target.checked); setSelected(new Set()); setDetail(null); }} /> 가족 단위 합산</label>
         </>}
         <span className="ml-auto pb-1.5 text-xs text-muted">주일헌금(총액 입력)은 개인별에 들어가지 않아요.</span>
+        <button type="button" onClick={resetAll} className={btn}>초기화</button>
       </div>
       {(data.error || members.error) && <Notice kind="error">불러오지 못했어요: {data.error ?? members.error}</Notice>}
       <div role="tablist" className="no-print mb-4 flex gap-1 border-b text-sm">
@@ -98,11 +104,11 @@ export default function PersonOfferings() {
         ))}
       </div>
 
-      {tab === "person" && <PersonTab year={year} base={basePerson} persons={persons} members={members.data ?? []} families={families} rows={data.data ?? []}
+      {tab === "person" && <PersonTab key={resetN} year={year} base={basePerson} persons={persons} members={members.data ?? []} families={families} rows={data.data ?? []}
         withFamily={famView} setWithFamily={setFamView} onPick={(p) => { setBase(p.key); setFamView(false); }} onPickFamily={(f) => { setBase(f.baseKey); setFamView(true); }} onFamily={() => setTab("family")} />}
-      {tab === "family" && <FamilyTab key={`${year}-${base}`} year={year} base={basePerson} persons={persons} members={members.data ?? []} types={allTypes}
+      {tab === "family" && <FamilyTab key={`${year}-${base}-${resetN}`} year={year} base={basePerson} persons={persons} members={members.data ?? []} types={allTypes}
         onPick={(p) => setBase(p.key)} onChanged={reloadAll} />}
-      {tab === "names" && <NameMergeTab onChanged={reloadAll} />}
+      {tab === "names" && <NameMergeTab key={resetN} onChanged={reloadAll} />}
 
       {tab === "all" && <>
 
