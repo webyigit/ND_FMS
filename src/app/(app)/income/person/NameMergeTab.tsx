@@ -4,6 +4,7 @@ import Link from "next/link";
 import Notice from "@/components/ui/Notice";
 import { btn, btnPrimary, card, input } from "@/components/ui/Buttons";
 import { supabaseBrowser } from "@/lib/supabase/client";
+import { useListNav } from "@/lib/listNav";
 import { must, useDbQuery } from "@/lib/db/useDb";
 import { dbError } from "@/lib/db/weekly";
 import { fetchAll } from "@/lib/income/db";
@@ -202,6 +203,7 @@ function ManualMerge({ all, busy, onMerge }: { all: MergeMember[]; busy: boolean
   const intoM = pickedNow.find((m) => m.id === intoNow);
   const hits = useMemo(() => searchMembers(all, q, new Set(ids)), [all, q, ids]);
   const add = (m: MergeMember) => { setIds((x) => [...x, m.id]); setQ(""); };
+  const nav = useListNav(hits, add, q);
   const toggle = (id: number) => setOff((s) => { const n = new Set(s); if (n.has(id)) n.delete(id); else n.add(id); return n; });
   const clear = () => { setIds([]); setOff(new Set()); setInto(null); };
   const sum = sumMembers(pickedNow);
@@ -210,11 +212,11 @@ function ManualMerge({ all, busy, onMerge }: { all: MergeMember[]; busy: boolean
       <div className="mb-2 flex flex-wrap items-center gap-2">
         <h2 className="font-semibold text-heading">직접 합치기</h2>
         <div className="relative">
-          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="이름으로 찾아 담기" className={`${input} w-56`} />
+          <input value={q} onChange={(e) => setQ(e.target.value)} onKeyDown={nav.onKeyDown} placeholder="이름으로 찾아 담기" className={`${input} w-56`} />
           {hits.length > 0 && (
             <ul className="absolute z-10 mt-1 w-80 rounded border bg-surface shadow">
-              {hits.map((m) => (
-                <li key={m.id}><button onClick={() => add(m)} className="flex w-full justify-between px-2 py-1 text-left hover:bg-surface-2">
+              {hits.map((m, i) => (
+                <li key={m.id} {...nav.itemProps(i)}><button onClick={() => add(m)} className="flex w-full justify-between px-2 py-1 text-left hover:bg-surface-2">
                   <span>{m.full_name} <span className="text-xs text-muted">{m.title} {m.household_label && `· ${m.household_label}`}</span></span>
                   <span className="text-xs text-label">{m.n}건</span>
                 </button></li>

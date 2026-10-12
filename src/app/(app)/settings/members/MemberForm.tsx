@@ -3,6 +3,7 @@ import { useMemo, useState } from "react";
 import { btn, btnPrimary, card, input } from "@/components/ui/Buttons";
 import { must, useDbQuery } from "@/lib/db/useDb";
 import { supabaseBrowser } from "@/lib/supabase/client";
+import { useListNav } from "@/lib/listNav";
 import { ALIAS_KINDS, matchMember, normalizePhone, normalizeRrn, type AliasKind, type MemberRow } from "@/lib/settings/members";
 
 type Props = {
@@ -118,6 +119,7 @@ function Family({ member, members, run }: { member: MemberRow; members: MemberRo
     // 이 교인에게 가족이 있으면 그 가족으로, 없으면 새 가족(이 교인이 세대주)
     run(async () => must(await sb.rpc("join_family", { p_member: m.id, p_with: member.id })), `${m.full_name} 님을 가족에 넣었어요.`);
   };
+  const nav = useListNav(found, add, q);
 
   return (
     <div className="mt-5 border-t pt-4">
@@ -137,11 +139,11 @@ function Family({ member, members, run }: { member: MemberRow; members: MemberRo
         {!family.length && <li className="text-xs text-muted">묶인 가족이 없어요.</li>}
       </ul>
       <div className="relative">
-        <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="가족 추가: 이름 검색" className={`${input} w-full`} />
+        <input value={q} onChange={(e) => setQ(e.target.value)} onKeyDown={nav.onKeyDown} placeholder="가족 추가: 이름 검색" className={`${input} w-full`} />
         {found.length > 0 && (
           <ul className="absolute z-10 mt-1 w-full rounded border bg-surface shadow">
-            {found.map((m) => (
-              <li key={m.id}><button onClick={() => add(m)} className="w-full px-2 py-1 text-left hover:bg-surface-2">
+            {found.map((m, i) => (
+              <li key={m.id} {...nav.itemProps(i)}><button onClick={() => add(m)} className="w-full px-2 py-1 text-left hover:bg-surface-2">
                 {m.full_name} <span className="text-xs text-muted">{m.title} {m.household_label && `· ${m.household_label}에서 옮김`}</span>
               </button></li>
             ))}

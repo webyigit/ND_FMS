@@ -18,6 +18,7 @@ import { rankCandidates } from "@/lib/receipt/match";
 import { loadPending, notifyRequestsChanged } from "@/lib/requests/pending";
 import { brnChecksumOk, normalizeBrn, normalizeRrn } from "@/lib/receipt/validate";
 import { supabaseBrowser } from "@/lib/supabase/client";
+import { useListNav } from "@/lib/listNav";
 import ReceiptPreview from "../_parts/ReceiptPreview";
 import ReceiptPaper from "../_parts/ReceiptPaper";
 import PastPopup from "./PastPopup";
@@ -397,19 +398,21 @@ function DonorSearch({ onPick }: { onPick: (h: DonorHit) => void }) {
     setErr("");
     try { setHits(await searchDonors(sb, q.trim())); } catch (e) { setErr(dbError(e)); }
   };
+  const choose = (h: DonorHit) => { onPick(h); setHits(null); setQ(""); };
+  const nav = useListNav(hits ?? [], choose, hits);
   return (
     <div className="relative min-w-0 flex-1 text-xs text-label sm:min-w-[260px]">교인 찾기(가족 포함)
       <div className="mt-1 flex gap-2">
-        <input value={q} onChange={(e) => setQ(e.target.value)} onKeyDown={(e) => e.key === "Enter" && find()} placeholder="이름" className={`${input} flex-1`} />
+        <input value={q} onChange={(e) => setQ(e.target.value)} onKeyDown={(e) => { if (!nav.onKeyDown(e) && e.key === "Enter") find(); }} placeholder="이름" className={`${input} flex-1`} />
         <button onClick={find} className={btn}>찾기</button>
       </div>
       {err && <div className="mt-1 text-danger">{err}</div>}
       {hits && (
         <ul className="absolute z-10 mt-1 max-h-72 w-full overflow-auto rounded border bg-surface text-sm text-heading shadow">
           {!hits.length && <li className="px-3 py-2 text-muted">찾는 교인이 없어요. 아래에 직접 입력하세요.</li>}
-          {hits.map((h) => (
-            <li key={h.member_id}>
-              <button onClick={() => { onPick(h); setHits(null); setQ(""); }} className="w-full px-3 py-1.5 text-left hover:bg-surface-2">
+          {hits.map((h, i) => (
+            <li key={h.member_id} {...nav.itemProps(i)}>
+              <button onClick={() => choose(h)} className="w-full px-3 py-1.5 text-left hover:bg-surface-2">
                 {h.name} {h.title && <span className="text-muted">{h.title}</span>} {h.is_household_head && <span className="text-xs text-primary">가장</span>}
                 <span className="block text-xs text-muted">{h.rrn_masked ?? "주민번호 없음"} · {h.family.length ? `가족 ${h.family.join(", ")}` : "가족 없음"}</span>
               </button>

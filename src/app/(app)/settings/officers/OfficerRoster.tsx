@@ -9,6 +9,7 @@ import { dbError } from "@/lib/db/weekly";
 import { downloadXlsx } from "@/lib/excel";
 import { fileName, thisYear } from "@/lib/format";
 import { supabaseBrowser } from "@/lib/supabase/client";
+import { useListNav } from "@/lib/listNav";
 import { fetchAll } from "@/lib/settings/db";
 import { matchMember, type MemberRow } from "@/lib/settings/members";
 
@@ -41,6 +42,7 @@ export default function OfficerRoster() {
     finally { setBusy(false); }
   };
   const add = (m: M) => { setQ(""); act(async () => { must(await sb.from("officer_roster").insert({ year, member_id: m.id, position: m.title })); }); };
+  const nav = useListNav(found, add, q);
   const setPosition = (r: R, position: string) => position !== (r.position ?? "") &&
     act(async () => { must(await sb.from("officer_roster").update({ position: position || null }).eq("year", year).eq("member_id", r.member_id).select("year")); });
   const remove = (r: R, name: string) => confirm(`${year}년 명단에서 ${name} 님을 뺄까요?`) &&
@@ -64,11 +66,11 @@ export default function OfficerRoster() {
 
       <div className="mb-3 flex flex-wrap items-center gap-2 text-sm">
         <div className="relative">
-          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="교인 검색해 추가" className={`${input} w-64`} />
+          <input value={q} onChange={(e) => setQ(e.target.value)} onKeyDown={nav.onKeyDown} placeholder="교인 검색해 추가" className={`${input} w-64`} />
           {found.length > 0 && (
             <ul className="absolute z-10 mt-1 w-full rounded border bg-surface shadow">
-              {found.map((m) => (
-                <li key={m.id}><button onClick={() => add(m)} className="w-full px-2 py-1 text-left hover:bg-surface-2">{m.full_name} <span className="text-xs text-muted">{m.title} {m.district}</span></button></li>
+              {found.map((m, i) => (
+                <li key={m.id} {...nav.itemProps(i)}><button onClick={() => add(m)} className="w-full px-2 py-1 text-left hover:bg-surface-2">{m.full_name} <span className="text-xs text-muted">{m.title} {m.district}</span></button></li>
               ))}
             </ul>
           )}

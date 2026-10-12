@@ -79,3 +79,32 @@ export function familyOf(base: PersonTotal, persons: PersonTotal[], members: Fam
   if (people.length < 2) return null;
   return { householdId: hid, people, total: people.reduce((s, p) => s + p.total, 0) };
 }
+
+/** 이름 검색에 같이 띄우는 가족 합산 항목 */
+export type FamilyHit = { key: string; baseKey: string; name: string; members: string[]; total: number; n: number };
+
+/** 가족(2명 이상 묶인 household)마다 합산 항목. 기준(baseKey)은 헌금이 있는 세대주, 없으면 헌금이 있는 첫 가족. 헌금 없는 가족은 뺀다 */
+export function familyHits(persons: PersonTotal[], members: FamilyMember[]): FamilyHit[] {
+  const byKey = new Map(persons.map((p) => [p.key, p]));
+  const groups = new Map<number, FamilyMember[]>();
+  members.forEach((m) => { if (m.household_id != null) groups.set(m.household_id, [...(groups.get(m.household_id) ?? []), m]); });
+  const out: FamilyHit[] = [];
+  groups.forEach((ms, hid) => {
+    if (ms.length < 2) return;
+    ms.sort((a, b) => Number(b.is_household_head) - Number(a.is_household_head) || a.id - b.id);
+    const paid = ms.filter((m) => byKey.has(`m${m.id}`));
+    if (!paid.length) return;
+    const ps = paid.map((m) => byKey.get(`m${m.id}`)!);
+    out.push({
+      key: `h${hid}`, baseKey: `m${paid[0].id}`, name: `${ms[0].full_name} 가족`, members: ms.map((m) => m.full_name),
+      total: ps.reduce((s, p) => s + p.total, 0), n: ps.reduce((s, p) => s + p.n, 0),
+    });
+  });
+  return out;
+}
+
+/** 가족 항목 이름 검색: 가족 누구 이름이든 들어 있으면 */
+export const filterFamilies = (fs: FamilyHit[], q: string) => {
+  const s = q.replace(/\s+/g, "");
+  return s ? fs.filter((f) => f.members.some((m) => m.includes(s))) : [];
+};
