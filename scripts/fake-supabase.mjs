@@ -76,6 +76,9 @@ const db = {
   }
   db.v_income_type_month = [...agg.values()];
 }
+// 과거 지출내역(/expense/history) 월 탭 확인용 가상 지출
+db.v_expense = [[9, "2026-09-27", "교육부", "교재비", "공과 교재", 120000, "차카타"], [10, "2026-10-04", "찬양부", "악보", "성가 악보", 80000, "파하가"], [10, "2026-10-11", "관리부", "수선비", "전등 교체", 45000, "나다라"]]
+  .map(([month, sunday, department, item, content, amount, requester_label], i) => ({ id: 3000 + i, year: 2026, month, sunday, department, item, content, amount, requester_label, memo: null }));
 let nextReceipt = 900;
 
 // 이름합치기(개인별 헌금현황 > 이름합치기) 가상 데이터: 홍길동 ↔ 홍길둥·홍길똥 오기입, 김가나 ↔ 김가니(다른 사람)

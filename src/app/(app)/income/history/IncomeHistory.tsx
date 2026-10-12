@@ -2,6 +2,7 @@
 import { useMemo, useState } from "react";
 import PageHeader from "@/components/PageHeader";
 import Notice from "@/components/ui/Notice";
+import MonthTabs, { thisMonth } from "@/components/ui/MonthTabs";
 import YearSelect from "@/components/ui/YearSelect";
 import { ExcelButton, PrintButton, btnPrimary, card, input } from "@/components/ui/Buttons";
 import { useRefData } from "@/lib/db/refData";
@@ -21,7 +22,7 @@ const SHOW = 1000; // 화면에 그리는 최대 행(엑셀은 전체)
 // 처음엔 이번 달 탭만 불러오고, 1년 전체 목록은 '전체' 탭을 누를 때만 불러온다(목록이 커서 느림)
 export default function IncomeHistory() {
   const { ref } = useRefData();
-  const [draft, setDraft] = useState<Filter>({ year: thisYear(), month: new Date().getMonth() + 1, typeId: 0, name: "", amount: "" });
+  const [draft, setDraft] = useState<Filter>({ year: thisYear(), month: thisMonth(), typeId: 0, name: "", amount: "" });
   const [f, setF] = useState<Filter>(draft);
   const set = (p: Partial<Filter>) => setDraft((d) => ({ ...d, ...p }));
   // 연·월·구분은 바로, 이름·금액은 '검색'으로
@@ -76,14 +77,7 @@ export default function IncomeHistory() {
         <label className="text-xs text-label">금액<input inputMode="numeric" value={draft.amount} onChange={(e) => set({ amount: e.target.value.replace(/[^\d,]/g, "") })} placeholder="정확한 금액" className={`${input} mt-1 block w-32 text-right`} /></label>
         <button className={btnPrimary}>검색</button>
       </form>
-      <div role="tablist" aria-label="월" className="no-print mb-4 flex flex-wrap gap-1 border-b border-line text-sm">
-        {["전체", ...MONTHS].map((m, i) => (
-          <button key={m} type="button" role="tab" aria-selected={f.month === i} onClick={() => pick({ month: i })}
-            className={`-mb-px border-b-2 px-3 py-2 font-medium ${f.month === i ? "border-primary text-primary" : "border-transparent text-label hover:text-heading"}`}>
-            {m}
-          </button>
-        ))}
-      </div>
+      <MonthTabs value={f.month} onChange={(month) => pick({ month })} />
       {(list.error || report.error) && <Notice kind="error">불러오지 못했어요: {list.error ?? report.error}</Notice>}
 
       <div className={`${card} mb-4 p-4 text-sm print:p-0`}>
