@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { addMonths, change, fundOf, lastYearSameDay, sundayOf, type ExpWeek, type IncWeek } from "../reports/common";
-import { insights, monthlyOf, payeeAlerts, quarterlyOf, reportSunday, weekReport, weekReportText, weeklySeries, yearElapsed, ytdCompare, ytdReport, ytdReportText, type PayeeActivity } from "../reports/dashboard";
+import { insights, itemsByDept, monthlyOf, payeeAlerts, quarterlyOf, reportSunday, weekReport, weekReportText, weeklySeries, yearElapsed, ytdCompare, ytdReport, ytdReportText, type PayeeActivity } from "../reports/dashboard";
 import { isNepal, missionMonths, missionTxs, missionWeeks } from "../reports/mission";
 import { copyPrevBudget, fundNext, planGroups, planLines, settleExpense, settleIncome, toBudgetPayload, type ItemRef, type OtRef } from "../reports/budget";
 import { toBudgetItems, toExpenseTx, toIncomeBudgets, toIncomeTx } from "../reports/reportData";
@@ -74,6 +74,18 @@ describe("대시보드", () => {
     const r = ytdCompare(inc, (x) => x.type, "2026-10-07");
     expect(r.find((x) => x.name === "십일조")).toMatchObject({ cur: 2500, prev: 1000 }); // 12/28 것은 제외
     expect(r.some((x) => x.name === "해외선교")).toBe(false);
+  });
+  it("구분별 항목 지출: 큰 구분부터, 항목 합 = 구분 합, 별도 기금 제외", () => {
+    const xs: ExpWeek[] = [...exp,
+      { sunday: "2026-10-04", dept: "교육부", item: "교재비", fund: "일반", amount: 2000 },
+      { sunday: "2026-10-04", dept: "관리부", item: "수선비", fund: "특별", amount: 900 },
+      { sunday: "2025-10-05", dept: "관리부", item: "수선비", fund: "일반", amount: 100 },
+    ];
+    const g = itemsByDept(xs, "2026-10-07");
+    expect(g.map((x) => x.dept)).toEqual(["관리부", "교육부"]);
+    expect(g[0]).toMatchObject({ cur: 2400, prev: 400 });
+    expect(g[0].items).toEqual([{ name: "공공요금", cur: 1500, prev: 300 }, { name: "수선비", cur: 900, prev: 100 }]);
+    expect(itemsByDept([], "2026-10-07")).toEqual([]);
   });
   it("송금 계좌 알림", () => {
     const ps: PayeeActivity[] = [
