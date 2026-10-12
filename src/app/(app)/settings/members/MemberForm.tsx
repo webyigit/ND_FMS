@@ -83,7 +83,7 @@ export default function MemberForm({ member, members, onClose, onSaved, onError 
           <input value={rrn} onChange={(e) => setRrn(e.target.value.replace(/[^\d-]/g, ""))} autoComplete="off" inputMode="numeric"
             placeholder={member?.has_rrn ? "바꿀 때만 입력" : "900101-1234567"} className={`${input} mt-1 w-full ${rrnBad ? "border-danger" : ""}`} />
         </label>
-        <label className="text-xs text-label" title="비우면 가나다순">헌금명단 순서
+        <label className="text-xs text-label" title="같은 직분 안에서의 순서(수입입력 > 명단순서에서 한눈에 바꿀 수 있음). 비우면 가나다순">헌금명단 순서
           <input value={f.display_rank} inputMode="numeric" onChange={(e) => set("display_rank", e.target.value.replace(/\D/g, ""))} placeholder="비우면 가나다" className={`${input} mt-1 w-full`} />
         </label>
       </div>

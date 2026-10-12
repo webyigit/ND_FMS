@@ -1,6 +1,7 @@
 // Supabase 연결 전 화면 확인용 가상 데이터(실명 아님)
 export type OfferingType = { id: number; fund: "일반" | "특별" | "별도"; name: string; totalOnly?: boolean; unit?: number; hasMemo?: boolean };
-export type Member = { id: number; name: string; title?: string; displayRank?: number };
+/** rank = 교인별 순서(display_rank), displayRank = 직분 순서까지 합친 명단 정렬 순위(listRank) */
+export type Member = { id: number; name: string; title?: string; rank?: number; displayRank?: number };
 
 export const OFFERING_TYPES: OfferingType[] = [
   { id: 1, fund: "일반", name: "십일조", unit: 1000 },
@@ -24,8 +25,8 @@ export const OFFERING_TYPES: OfferingType[] = [
 const SURNAMES = "김이박최정강조윤장임";
 const GIVEN = ["민준", "서연", "도윤", "하은", "시우", "지유", "예준", "수아", "주원", "지호", "하준", "서윤"];
 export const MEMBERS: Member[] = [
-  { id: 1, name: "가원로", title: "원로목사", displayRank: 1 },
-  { id: 2, name: "나담임", title: "담임목사", displayRank: 2 },
+  { id: 1, name: "가원로", title: "원로목사", rank: 1, displayRank: 1 },
+  { id: 2, name: "나담임", title: "담임목사", rank: 2, displayRank: 100002 },
   ...Array.from({ length: 60 }, (_, i) => ({
     id: i + 3,
     name: SURNAMES[i % SURNAMES.length] + GIVEN[i % GIVEN.length] + (i >= 12 ? String.fromCharCode(65 + Math.floor(i / 12) - 1) : ""),
