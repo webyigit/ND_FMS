@@ -7,7 +7,7 @@ import { supabaseBrowser } from "@/lib/supabase/client";
 import { must } from "@/lib/db/useDb";
 import { dbError } from "@/lib/db/weekly";
 import { won } from "@/lib/format";
-import { coreName, defaultHead, familyCandidates, mergePlan, sumCandidates, type Candidate, type FamilyMember } from "@/lib/income/family";
+import { coreName, defaultHead, familyCandidates, familyOf, mergePlan, sumCandidates, type Candidate, type FamilyMember } from "@/lib/income/family";
 import { MONTHS, filterByName, typeMonthMatrix, type PersonAggRow, type PersonTotal } from "@/lib/income/report";
 import { amt, td, tdNum, th } from "../_ui/sheet";
 
@@ -35,21 +35,36 @@ export function PickPerson({ persons, onPick, placeholder = "이름으로 찾기
 }
 
 /** 개인별: 1명 기준 헌금구분 × 월 */
-export function PersonTab({ year, base, persons, rows, onPick, onFamily }: {
-  year: number; base: PersonTotal | null; persons: PersonTotal[]; rows: PersonAggRow[]; onPick: (p: PersonTotal) => void; onFamily: () => void;
+export function PersonTab({ year, base, persons, members, rows, onPick, onFamily }: {
+  year: number; base: PersonTotal | null; persons: PersonTotal[]; members: FamilyMember[]; rows: PersonAggRow[]; onPick: (p: PersonTotal) => void; onFamily: () => void;
 }) {
-  const matrix = useMemo(() => (base ? typeMonthMatrix(rows.filter((r) => (r.member_id != null ? `m${r.member_id}` : `l${r.payer_label ?? ""}`) === base.key)) : null), [base, rows]);
+  const [withFamily, setWithFamily] = useState(false);
+  // 가족 = 지금 같은 가족(household)으로 묶인 교인 전부. 가족 이름표(household label)는 묶을 때 정한 이름이라 구성원과 다를 수 있다
+  const fam = useMemo(() => (base ? familyOf(base, persons, members) : null), [base, persons, members]);
+  const showFamily = withFamily && fam != null;
+  const matrix = useMemo(() => {
+    if (!base) return null;
+    const ids = new Set(fam?.people.map((p) => p.id));
+    return typeMonthMatrix(rows.filter((r) => (showFamily ? r.member_id != null && ids.has(r.member_id)
+      : (r.member_id != null ? `m${r.member_id}` : `l${r.payer_label ?? ""}`) === base.key)));
+  }, [base, rows, fam, showFamily]);
   return (
     <div className={`${card} p-4 text-sm`}>
       <div className="mb-3 flex flex-wrap items-center gap-3">
         <PickPerson persons={persons} onPick={onPick} />
         {base && <>
           <b className="text-heading">{base.name}</b>
-          {base.householdLabel && <span className="text-xs text-muted">가족: {base.householdLabel}</span>}
-          <span className="text-label">{year}년 합계 {won(base.total)}원 · {base.n}건</span>
+          <span className="text-label">{year}년 본인 합계 {won(base.total)}원 · {base.n}건</span>
+          {fam && <label className="no-print flex items-center gap-1 text-label"><input type="checkbox" checked={withFamily} onChange={(e) => setWithFamily(e.target.checked)} /> 가족 합산으로 보기</label>}
           <button onClick={onFamily} className={`${btn} no-print ml-auto`}>이 이름으로 가족단위 보기</button>
         </>}
       </div>
+      {base && fam && (
+        <div className="mb-3 rounded-lg bg-surface-2 px-3 py-2 text-xs text-label">
+          <b className="text-heading">가족 {fam.people.length}명 합계 {won(fam.total)}원</b>
+          <span className="ml-2">{fam.people.map((p) => `${p.name} ${won(p.total)}`).join(" · ")}</span>
+        </div>
+      )}
       {!base ? <p className="py-6 text-center text-muted">이름을 찾아 한 사람을 고르세요.</p> : matrix && (
         <div className="tbl-scroll overflow-x-auto">
           <table className="w-full border-collapse text-xs">

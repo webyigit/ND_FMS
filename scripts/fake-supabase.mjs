@@ -87,6 +87,7 @@ const nmMembers = [
   { id: 12, full_name: "홍길둥", title: null, n: 2, total: 200000, first_sunday: "2025-03-02", last_sunday: "2025-03-09", household_id: null, household_label: null },
   { id: 13, full_name: "홍길똥", title: null, n: 1, total: 100000, first_sunday: "2025-04-06", last_sunday: "2025-04-06", household_id: null, household_label: null },
   { id: 14, full_name: "김가나", title: "집사", n: 30, total: 900000, first_sunday: "2024-01-07", last_sunday: "2025-12-28", household_id: null, household_label: null },
+  { id: 16, full_name: "성춘향", title: "권사", n: 5, total: 500000, first_sunday: "2026-03-01", last_sunday: "2026-03-29", household_id: 50, household_label: "홍길동 가정" },
   { id: 15, full_name: "김가니", title: "권사", n: 25, total: 750000, first_sunday: "2024-02-04", last_sunday: "2025-12-21", household_id: null, household_label: null },
 ].map((m) => ({ ...m, name: m.full_name, name_suffix: null, is_group: false, is_anonymous: false, active: true, merged_into: null, merged_into_name: null }));
 db.v_member = nmMembers;
