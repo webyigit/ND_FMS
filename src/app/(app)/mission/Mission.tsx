@@ -70,7 +70,7 @@ function Body() {
 
   return (
     <>
-      <PageHeader actions={<><ExcelButton onClick={excel} disabled={!q.data} /><PrintButton /></>} />
+      <PageHeader actions={<><Link href="/mission/entry" className="no-print whitespace-nowrap rounded bg-primary px-3 py-1.5 text-sm text-white">해외선교 입력</Link><ExcelButton onClick={excel} disabled={!q.data} /><PrintButton /></>} />
       <div className="no-print mb-4 flex flex-wrap items-center gap-3 rounded-lg bg-surface p-3 text-sm shadow-card">
         <YearSelect value={year} onChange={(y) => { setYear(y); setCarryInput(null); setNote(null); }} />
         <label className="flex items-center gap-2">{year - 1}년 이월금
@@ -80,7 +80,7 @@ function Body() {
         <span className="text-xs text-muted">전년 결산을 확정하면 자동으로 들어가요</span>
       </div>
       <Notice kind="warn">
-        매주 지출은 <Link href="/expense/entry" className="underline">지출입력</Link> 화면에서 부서 &lsquo;해외선교&rsquo;로 입력하세요. 수입은 <Link href="/income/entry" className="underline">수입입력</Link>의 헌금구분 해외선교·네팔선교로 들어와요.
+        매주 해외선교·네팔 수입과 지출은 <Link href="/mission/entry" className="underline">해외선교 입력</Link> 화면에서 넣어요. 수입입력·지출입력 화면에서 헌금구분 해외선교·네팔선교, 부서 &lsquo;해외선교&rsquo;로 넣어도 같은 곳에 저장돼요.
       </Notice>
       {note && <Notice kind={note.ok ? "ok" : "error"}>{note.text}</Notice>}
       {q.error && <Notice kind="error">불러오지 못했어요: {q.error}</Notice>}

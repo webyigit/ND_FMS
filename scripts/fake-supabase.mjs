@@ -41,7 +41,7 @@ const db = {
   // 금주 수입내역(/income/weekly) 확인용: 2026-10-04 주일
   offering_type: [
     [3, "십일조", "general", false], [1, "주일헌금", "general", true], [6, "범사감사", "general", false], [5, "기타감사", "general", false],
-    [9, "일천번제", "general", false], [11, "기관헌금", "general", false], [13, "이웃사랑", "special", false], [14, "꽃꽂이", "special", false], [15, "해외선교", "separate", false],
+    [9, "일천번제", "general", false], [11, "기관헌금", "general", false], [13, "이웃사랑", "special", false], [14, "꽃꽂이", "special", false], [15, "해외선교", "separate", false], [16, "네팔선교", "separate", false],
   ].map(([id, name, kind, total_only], i) => ({ id, name, total_only, amount_unit: 1000, has_memo: id === 5, sort_order: i + 1, active: true, fund: { kind } })),
   fixed_expense: [],
   week: [{ sunday: "2026-10-04", closed: false }, { sunday: "2026-09-27", closed: true }],
@@ -106,6 +106,18 @@ const resolvePerson = () => db.v_income_person.forEach((r) => {
   r.member_id = into.id; r.member_name = into.full_name;
 });
 
+// 해외선교 입력(/mission/entry) 확인용: 2026-10-11 주일 일반 수입·지출 + 해외선교 몫. 주간 저장 RPC는 그 주일 행을 통째로 바꾼다
+db.expense_item.push(...["선교사 후원", "선교회 후원", "노회 선교", "네팔 구호"].map((name, i) => ({ id: 64 + i, name, sort_order: i + 1, department: { id: 13, name: "해외선교", sort_order: 13 } })));
+db.income = [[3, "가나다", 300000], [15, "가나다", 20000], [15, "라마바", 10000], [16, "사아자", 50000]]
+  .map(([t, label, amount], i) => ({ id: 5000 + i, sunday: "2026-10-11", offering_type_id: t, member_id: null, payer_label: label, channel: "cash", amount, memo: null, bank_tx_id: null }));
+const expRow = (id, dept, item, content, amount) => ({ id, sunday: "2026-10-11", content, amount, requester_label: null, memo: null, source: "직접", bank_tx_id: null, expense_item: { name: item, department: { name: dept } }, receipt_file: null });
+db.expense = [expRow(6000, "교육부", "교재비", "공과 교재", 120000), expRow(6001, "해외선교", "네팔 구호", "네팔 구호 송금", 500000)];
+let nextRow = 7000;
+const saveWeek = (table, sunday, rows, toRow) => {
+  db[table] = [...db[table].filter((r) => r.sunday !== sunday), ...rows.map((r) => ({ ...toRow(r), id: r.id ?? ++nextRow, sunday, bank_tx_id: null }))];
+  return rows.length;
+};
+
 function parseFilters(sp) {
   const f = [];
   for (const [k, v] of sp) {
@@ -129,6 +141,8 @@ const test = (row, { col, op, val }) => {
   return true;
 };
 const rpc = {
+  save_week_income: ({ p_sunday, p_rows }) => saveWeek("income", p_sunday, p_rows, (r) => ({ offering_type_id: r.offering_type_id, member_id: r.member_id, payer_label: r.payer_label, channel: r.channel, amount: r.amount, memo: r.memo })),
+  save_week_expense: ({ p_sunday, p_rows }) => saveWeek("expense", p_sunday, p_rows, (r) => ({ content: r.content, amount: r.amount, requester_label: r.requester || null, memo: r.memo, source: r.source, expense_item: { name: r.item, department: { name: r.dept } }, receipt_file: null })),
   log_event: () => null,
   receipt_donor_search: ({ p_q }) => members.filter((m) => m.name.includes(p_q.trim())).map(donorHit),
   issue_donation_receipts: ({ p_rows }) => p_rows.map((r) => {

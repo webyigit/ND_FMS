@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faBars, faXmark } from "@fortawesome/free-solid-svg-icons";
-import { MENU } from "@/lib/menu";
+import { MENU, findMenu } from "@/lib/menu";
 
 // 폰·태블릿(사이드바가 숨는 폭)에서 쓰는 전체 메뉴
 export default function MobileNav() {
@@ -23,7 +23,7 @@ export default function MobileNav() {
                 <div className="flex items-center gap-2 px-3 py-1.5 text-xs font-semibold text-muted"><FontAwesomeIcon icon={g.icon} className="w-3.5" /> {g.label}</div>
                 {g.items.map((i) => (
                   <Link key={i.href} href={i.href} onClick={() => setOpen(false)}
-                    className={`block rounded-md px-3 py-2 ${path.startsWith(i.href) ? "bg-primary-subtle font-medium text-primary" : "text-heading"}`}>{i.label}</Link>
+                    className={`block rounded-md px-3 py-2 ${findMenu(path)?.item.href === i.href ? "bg-primary-subtle font-medium text-primary" : "text-heading"}`}>{i.label}</Link>
                 ))}
               </div>
             ))}
