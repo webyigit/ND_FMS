@@ -84,9 +84,9 @@ export default function ClergyPay() {
       {!demo && (q.error || ref.error) && <Notice kind="error">불러오지 못했어요: {q.error || ref.error}</Notice>}
       <div className="mb-2 text-sm text-slate-600">{year}년 {month ? `${month}월` : "전체"} · {people.length}명 · 합계 <b>{won(total)}원</b></div>
 
-      <div className="tbl-scroll overflow-x-auto rounded-lg bg-surface shadow-card">
+      <div className="overflow-x-auto rounded-lg bg-surface shadow-card">
         {view === "month" ? (
-          <table className="w-full whitespace-nowrap text-sm">
+          <table className="tbl-cards w-full whitespace-nowrap text-sm">
             <thead className="bg-surface-2 text-xs text-label">
               <tr><th className="px-3 py-2 text-left">직분</th><th className="px-3 text-left">이름</th>{months.map((m) => <th key={m} className="px-3 text-right">{m}월</th>)}<th className="px-3 text-right">합계</th></tr>
             </thead>

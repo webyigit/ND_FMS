@@ -78,8 +78,8 @@ export function PersonTab({ year, base, persons, members, families, rows, withFa
         </div>
       )}
       {!base ? <p className="py-6 text-center text-muted">이름을 찾아 한 사람을 고르세요.</p> : matrix && (
-        <div className="tbl-scroll overflow-x-auto">
-          <table className="w-full border-collapse text-xs">
+        <div className="overflow-x-auto">
+          <table className="tbl-cards w-full border-collapse text-xs">
             <thead><tr><th className={th}>헌금구분</th>{MONTHS.map((m) => <th key={m} className={th}>{m}</th>)}<th className={th}>합계</th></tr></thead>
             <tbody>
               {matrix.types.map((t) => <tr key={t.id}><td className={td}>{t.name}</td>{t.months.map((v, i) => <td key={i} className={tdNum}>{amt(v)}</td>)}<td className={`${tdNum} font-semibold`}>{amt(t.total)}</td></tr>)}
@@ -165,8 +165,8 @@ export function FamilyTab({ year, base, persons, members, types, onPick, onChang
             <button onClick={reset} className={`${btn} ml-auto`}>선택 해제</button>
           </div>
         )}
-        <div className="tbl-scroll overflow-x-auto">
-          <table className="w-full border-collapse">
+        <div className="overflow-x-auto">
+          <table className="tbl-cards w-full border-collapse">
             <thead><tr>
               <th className={`${th} no-print w-8`} />
               <th className={th}>이름</th><th className={th}>직분</th><th className={th}>지금 가족</th><th className={th}>찾은 이유</th>

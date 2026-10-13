@@ -73,9 +73,9 @@ function Screen() {
       {q.data?.sunday === sunday && <Sheet key={`${sunday}-${JSON.stringify(q.data.saved)}-${q.data.closed}-${q.data.lastH}`} sunday={sunday} d={q.data} reload={q.reload} />}
 
       {q.data && q.data.history.length > 0 && (
-        <div className={`${card} tbl-scroll no-print mt-6 overflow-x-auto`}>
+        <div className={`${card} no-print mt-6 overflow-x-auto`}>
           <div className="px-4 pt-3 text-sm font-semibold text-heading">{sunday.slice(0, 4)}년 검증 기록</div>
-          <table className="mt-2 w-full whitespace-nowrap text-sm">
+          <table className="tbl-cards mt-2 w-full whitespace-nowrap text-sm">
             <thead className="bg-surface-2 text-xs text-label">
               <tr><th className="px-3 py-2 text-left">주일</th><th className="text-right">A 통장</th><th className="text-right">C 실잔액</th><th className="text-right">E 계좌</th><th className="text-right">F 장부</th><th className="text-right">G−H</th><th>판정</th><th>마감</th></tr>
             </thead>

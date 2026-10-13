@@ -35,7 +35,7 @@ function lines(d: Settlement) {
 
 function Table({ head, first, rows, total }: { head: string[]; first: string; rows: Line[]; total?: Line }) {
   return (
-    <table className="w-full border-collapse">
+    <table className="tbl-cards w-full border-collapse">
       <thead><tr><th className={th}>{first}</th>{head.map((h) => <th key={h} className={th}>{h}</th>)}</tr></thead>
       <tbody>
         {[...rows, ...(total ? [total] : [])].map((l) => (
@@ -88,7 +88,7 @@ function Body() {
           <section><h3 className="mb-2 font-semibold">1. 총괄</h3><Table head={head} first="구분" rows={L.summary} /></section>
           <section>
             <h3 className="mb-2 font-semibold">2. 기금별 이월</h3>
-            <table className="w-full border-collapse">
+            <table className="tbl-cards w-full border-collapse">
               <thead><tr>{["기금", `${year - 1}년 이월`, "수입", "지출", "대체", `${year + 1}년 이월`].map((h) => <th key={h} className={th}>{h}</th>)}</tr></thead>
               <tbody>{q.data.funds.map((f) => (
                 <tr key={f.fundId}><td className={td}>{f.name}</td>{[f.carry, f.income, f.expense, f.transferIn - f.transferOut].map((v, i) => <td key={i} className={tdr}>{wonOrDash(v)}</td>)}<td className={`${tdr} font-semibold`}>{won(f.next)}</td></tr>

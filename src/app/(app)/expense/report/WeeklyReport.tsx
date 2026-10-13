@@ -90,7 +90,7 @@ function Report({ d }: { d: Data }) {
   const year = d.sunday.slice(0, 4);
   return (
     <div className="sheet-scroll"><div className={`${card} sheet mx-auto max-w-[210mm] p-8 text-[13px] print:max-w-none print:p-0`}>
-      <div className="flex items-start justify-between gap-4">
+      <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <h2 className="text-xl font-bold text-heading">금주 수입·지출 보고</h2>
           <div className="mt-1 text-label">{koDate(d.sunday)} 주일</div>
@@ -104,7 +104,7 @@ function Report({ d }: { d: Data }) {
       </div>
 
       <H>1. 수입·지출</H>
-      <table className="w-full border-collapse">
+      <table className="tbl-cards w-full border-collapse">
         <thead><tr>
           <th className={th}>구분</th><th className={th}>지난주 잔액(A)</th><th className={th}>이번 주 수입(B)</th><th className={th}>이번 주 지출(C)</th>
           {m.showTransfer && <th className={th}>회계 간 대체</th>}<th className={th}>잔액(A+B−C)</th>
@@ -121,7 +121,7 @@ function Report({ d }: { d: Data }) {
       <p className="no-print mt-1 text-xs text-muted">잔액 = {year}년 이월금 + {year}년 누계 수입 − 지출(송금 수수료 포함). 별도 기금(해외선교·네팔)은 아래에 따로 [확인 필요].</p>
 
       <H>2. 차입 현황</H>
-      <table className="w-full border-collapse">
+      <table className="tbl-cards w-full border-collapse">
         <thead><tr><th className={th}>차입처</th><th className={th}>금액</th><th className={th}>비고</th></tr></thead>
         <tbody>
           {d.loans.map((l) => <tr key={l.id}><td className={td}>{l.lender}</td><td className={num}>{won(Number(l.principal ?? 0))}</td><td className={td}>{l.memo}</td></tr>)}
@@ -132,7 +132,7 @@ function Report({ d }: { d: Data }) {
       <p className="no-print mt-1 text-xs text-muted">차입은 원금만 기록돼 있어요(상환 내역 없음) [확인 필요].</p>
 
       <H>3. 특별헌금 내역</H>
-      <table className="w-full border-collapse">
+      <table className="tbl-cards w-full border-collapse">
         <thead><tr><th className={`${th} w-28`}>구분</th><th className={th}>이름</th><th className={`${th} w-32`}>금액</th></tr></thead>
         <tbody>
           {m.offerings.map((g) => (
@@ -147,7 +147,7 @@ function Report({ d }: { d: Data }) {
       </table>
 
       <H>4. 지출 상세</H>
-      <table className="w-full border-collapse">
+      <table className="tbl-cards w-full border-collapse">
         <thead><tr><th className={`${th} w-10`}>순번</th><th className={th}>내용</th><th className={`${th} w-28`}>금액</th><th className={th}>부서</th><th className={th}>항목</th><th className={th}>비고</th></tr></thead>
         <tbody>
           {m.expenses.map((e, i) => (
@@ -162,7 +162,7 @@ function Report({ d }: { d: Data }) {
       </table>
 
       <H>5. 해외선교·네팔 (별도 기금)</H>
-      <table className="w-full border-collapse">
+      <table className="tbl-cards w-full border-collapse">
         <thead><tr><th className={th}>구분</th><th className={th}>이번 주 수입</th><th className={th}>이번 주 지출</th><th className={th}>{year}년 누계 수입</th><th className={th}>{year}년 누계 지출</th></tr></thead>
         <tbody>
           {m.sep.map((s) => (
@@ -175,7 +175,7 @@ function Report({ d }: { d: Data }) {
         </tbody>
       </table>
       {m.sepWeek.length > 0 && (
-        <table className="mt-2 w-full border-collapse">
+        <table className="tbl-cards mt-2 w-full border-collapse">
           <thead><tr><th className={th}>이번 주 별도 기금 지출</th><th className={`${th} w-28`}>금액</th><th className={th}>항목</th><th className={th}>비고</th></tr></thead>
           <tbody>{m.sepWeek.map((e) => <tr key={e.id}><td className={td}>{e.content}</td><td className={num}>{won(Number(e.amount))}</td><td className={td}>{e.item}</td><td className={td}>{e.memo}</td></tr>)}</tbody>
         </table>
