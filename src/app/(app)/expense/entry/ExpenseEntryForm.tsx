@@ -215,6 +215,7 @@ function Form({ ref_ }: { ref_: RefData }) {
       </div>
 
       <div className="mt-4 flex flex-wrap gap-4 text-sm">
+        <button onClick={() => setRows((xs) => [...xs, blank()])} className="rounded border bg-surface px-3 py-1.5">행 추가</button>
         <div className="rounded-lg bg-surface shadow-card px-4 py-3">금주 지출 합계 <b>{won(total)}원</b> · {rows.length}건</div>
         {!demo && <button onClick={save} disabled={busy || !dirty} className="rounded bg-primary px-4 py-1.5 text-white disabled:bg-slate-300">{busy ? "처리 중…" : dirty ? "입력 완료(저장)" : "저장됨"}</button>}
         {byDept.map(([d, n]) => <div key={d} className="rounded-lg bg-surface shadow-card px-4 py-3">{d} {won(n)}</div>)}
