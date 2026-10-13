@@ -30,6 +30,25 @@ export function byDepartment(items: ItemBudget[], txs: DeptTx[], from: string, t
   return { depts, total: { budget, spent, remain: remain(budget, spent), rate: rate(spent, budget) } };
 }
 
+/** 검색: 부서·항목 이름이 맞으면 그 항목 전체, 아니면 내용·청구자·비고·주일이 맞는 지출만 남긴다(금액은 그대로) */
+export function searchDepts(depts: DeptLine[], q: string) {
+  const k = q.trim().toLowerCase();
+  if (!k) return { depts, hits: null };
+  const has = (v: string) => v.toLowerCase().includes(k);
+  const out: DeptLine[] = [];
+  let count = 0, amount = 0;
+  for (const d of depts) {
+    const items = d.items.flatMap((i) => {
+      const txs = has(d.dept) || has(i.item) ? i.txs : i.txs.filter((t) => has(t.content) || has(t.requester) || has(t.memo) || t.sunday.includes(k));
+      if (!txs.length && !has(d.dept) && !has(i.item)) return [];
+      txs.forEach((t) => { count++; amount += t.amount; });
+      return [{ ...i, txs }];
+    });
+    if (items.length) out.push({ ...d, items });
+  }
+  return { depts: out, hits: { count, amount } };
+}
+
 /** 기간 단축: 연간·상반기·하반기·분기·월 */
 export function periodRange(year: number, period: string): [string, string] {
   const end = (m: number) => `${year}-${String(m).padStart(2, "0")}-${new Date(year, m, 0).getDate()}`;

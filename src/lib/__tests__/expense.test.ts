@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { fromFundRows, groupOfferings, lineOf, separateLines, weekSummary } from "../expense/report";
-import { byDepartment, periodRange } from "../expense/budget";
+import { byDepartment, periodRange, searchDepts } from "../expense/budget";
 import { amountMatch, filterHistory, monthlyTotals, type HistRow } from "../expense/history";
 import { clergyByPerson } from "../expense/clergy";
 import { fixedProblems, emptyFixed, sortFixed, toFixedRow, newFixedOnly } from "../expense/fixed";
@@ -68,6 +68,18 @@ describe("부서별 지출", () => {
     expect(depts[0]).toMatchObject({ budget: 200000, spent: 50000, remain: 150000, rate: "25.00%" });
     expect(depts[1].items[0]).toMatchObject({ remain: -20000, rate: "120.00%" });
     expect(total).toMatchObject({ budget: 300000, spent: 170000 });
+  });
+  it("검색: 항목명은 항목 전체, 내용·청구자는 맞는 지출만", () => {
+    const { depts } = byDepartment(items, txs, "2026-01-01", "2026-12-31");
+    expect(searchDepts(depts, "").hits).toBeNull();
+    const a = searchDepts(depts, "공공");
+    expect(a.depts.map((d) => d.items.map((i) => i.item))).toEqual([["공공요금"]]);
+    expect(a.hits).toEqual({ count: 2, amount: 80000 });
+    const b = searchDepts(depts, " 수도 ");
+    expect(b.depts[0].items[0].txs.map((t) => t.content)).toEqual(["수도"]);
+    expect(b.depts[0].items[0].spent).toBe(80000);
+    expect(searchDepts(depts, "가나다").hits).toEqual({ count: 1, amount: 120000 });
+    expect(searchDepts(depts, "없는말").depts).toEqual([]);
   });
   it("기간 단축", () => {
     expect(periodRange(2026, "Y")).toEqual(["2026-01-01", "2026-12-31"]);
