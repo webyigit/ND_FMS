@@ -4,6 +4,7 @@ import PageHeader from "@/components/PageHeader";
 import Notice from "@/components/ui/Notice";
 import { ExcelButton, btn, btnPrimary, card, input } from "@/components/ui/Buttons";
 import { useDbQuery } from "@/lib/db/useDb";
+import { useRefData } from "@/lib/db/refData";
 import { dbError } from "@/lib/db/weekly";
 import { downloadXlsx } from "@/lib/excel";
 import { fileName } from "@/lib/format";
@@ -28,11 +29,12 @@ export default function MemberAdmin() {
   const [importing, setImporting] = useState(false);
   const [note, setNote] = useState<{ ok: boolean; text: string } | null>(null);
 
+  const titleOrder = useRefData().ref?.titleOrder;
   const all = useMemo(() => q.data ?? [], [q.data]);
   const list = useMemo(() => {
     const xs = all.filter((m) => (status === "all" || m.active === (status === "active")) && matchMember(m, query));
-    return order === "rank" ? sortMembers(xs) : xs;
-  }, [all, status, query, order]);
+    return order === "rank" ? sortMembers(xs, titleOrder) : xs;
+  }, [all, status, query, order, titleOrder]);
 
   const exportXlsx = () =>
     downloadXlsx(fileName("교인명단", "xlsx"), [{ name: "교인명단", rows: exportRows(list), widths: [12, 10, 8, 8, 12, 10, 15, 30, 16, 14, 6, 8, 6, 6, 10, 8] }])

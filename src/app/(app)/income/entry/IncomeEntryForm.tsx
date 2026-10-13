@@ -10,6 +10,7 @@ import { supabaseBrowser } from "@/lib/supabase/client";
 import { useListNav } from "@/lib/listNav";
 import { enqueue, getWeekCache, setWeekCache, syncNow } from "@/lib/offline/sync";
 import { isNetworkError } from "@/lib/offline/logic";
+import ListOrderModal from "./ListOrderModal";
 
 const KEY_TYPE = "ndfms.income.type"; // 헌금구분은 바꾸기 전까지 유지
 const KEY_DRAFT = "ndfms.income.draft"; // 완료 전까지 계속 입력(임시저장)
@@ -21,15 +22,16 @@ const load = <T,>(k: string, d: T): T => {
 type Meta = { sunday: string; savedSig: string | null };
 
 export default function IncomeEntryForm() {
-  const { ref, error } = useRefData();
+  const { ref, error, reload } = useRefData();
   if (error) return <><PageHeader /><div className="rounded bg-danger-subtle px-3 py-2 text-sm text-danger">기준정보를 불러오지 못했어요: {error}</div></>;
   if (!ref) return <><PageHeader /><div className="text-sm text-muted">불러오는 중…</div></>;
   if (!ref.offeringTypes.length) return <><PageHeader /><div className="rounded bg-warning-subtle px-3 py-2 text-sm text-warning">헌금구분이 없어요. 설정 &gt; 헌금구분을 먼저 채워 주세요(supabase/seed.sql).</div></>;
-  return <Form ref_={ref} />;
+  return <Form ref_={ref} reloadRef={reload} />;
 }
 
-function Form({ ref_ }: { ref_: RefData }) {
+function Form({ ref_, reloadRef }: { ref_: RefData; reloadRef: () => Promise<void> }) {
   const { offeringTypes: OFFERING_TYPES, members: MEMBERS, demo } = ref_;
+  const [ordering, setOrdering] = useState(false);
   const sb = supabaseBrowser();
   const [meta0] = useState(() => load<Meta | null>(KEY_META, null));
   const [typeId, setTypeId] = useState(() => {
@@ -155,9 +157,16 @@ function Form({ ref_ }: { ref_: RefData }) {
 
   return (
     <>
-      <PageHeader actions={demo
-        ? <span className="rounded bg-warning-subtle px-2 py-1 text-xs text-warning">데모 데이터 · DB 연결 전 브라우저에만 임시저장</span>
-        : dirty && <span className="rounded bg-warning-subtle px-2 py-1 text-xs text-warning">저장 안 됨</span>} />
+      <PageHeader actions={<>
+        {demo
+          ? <span className="rounded bg-warning-subtle px-2 py-1 text-xs text-warning">데모 데이터 · DB 연결 전 브라우저에만 임시저장</span>
+          : dirty && <span className="rounded bg-warning-subtle px-2 py-1 text-xs text-warning">저장 안 됨</span>}
+        <button onClick={() => setOrdering(true)} className="whitespace-nowrap rounded border bg-surface px-3 py-1.5 text-sm" title="헌금명단 노출 순서 보기·설정">명단순서</button>
+      </>} />
+      {ordering && (
+        <ListOrderModal members={MEMBERS} titleOrder={ref_.titleOrder} demo={demo} onClose={() => setOrdering(false)}
+          onSaved={(text) => { setOrdering(false); setNote({ ok: true, text }); void reloadRef(); }} />
+      )}
 
       <div className="mb-6 rounded-lg bg-surface shadow-card p-4">
         <div className="grid gap-3 md:grid-cols-[140px_180px_160px_1fr_160px_auto]">

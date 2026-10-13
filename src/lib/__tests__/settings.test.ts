@@ -22,6 +22,14 @@ describe("교인명단", () => {
     const xs = [m({ id: 1, full_name: "하하" }), m({ id: 2, full_name: "다다", display_rank: 2 }), m({ id: 3, full_name: "가가" }), m({ id: 4, full_name: "라라", display_rank: 1 })];
     expect(sortMembers(xs).map((x) => x.id)).toEqual([4, 2, 3, 1]);
   });
+  it("지정 직분 → 같은 직분은 교인 순서 → 개별 지정 → 가나다", () => {
+    const xs = [
+      m({ id: 1, full_name: "가가" }), m({ id: 2, full_name: "나나", title: "시무장로", display_rank: 2 }),
+      m({ id: 3, full_name: "다다", title: "시무장로", display_rank: 1 }), m({ id: 4, full_name: "라라", title: "담임목사" }),
+      m({ id: 5, full_name: "마마", display_rank: 1 }), m({ id: 6, full_name: "바바", title: "권사" }), m({ id: 7, full_name: "사사", title: "시무장로" }),
+    ];
+    expect(sortMembers(xs, ["담임목사", "시무장로"]).map((x) => x.id)).toEqual([4, 3, 2, 7, 5, 1, 6]);
+  });
   it("주민번호·휴대폰 형식", () => {
     expect(normalizeRrn("9001011234567")).toBe("900101-1234567");
     expect(normalizeRrn("900101-123456")).toBeNull();

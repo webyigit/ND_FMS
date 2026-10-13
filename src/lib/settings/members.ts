@@ -1,5 +1,5 @@
 // 교인명단: 검색·정렬·주민번호 형식·엑셀 일괄 등록/내려받기 (순수 함수)
-import { sortForList } from "../offeringOrder";
+import { DEFAULT_TITLE_ORDER, listRank, sortForList } from "../offeringOrder";
 
 export type MemberRow = {
   id: number; name: string; name_suffix: string | null; full_name: string;
@@ -27,9 +27,9 @@ export function matchMember(m: Pick<MemberRow, "full_name" | "title" | "district
   return [m.full_name, m.title, m.district, m.zone].some((v) => (v ?? "").replace(/\s/g, "").includes(k));
 }
 
-/** 헌금명단 순서: 노출순서 먼저, 나머지 가나다 (offeringOrder 규칙) */
-export const sortMembers = <T extends Pick<MemberRow, "full_name" | "display_rank">>(xs: T[]) =>
-  sortForList(xs.map((x) => ({ ...x, name: x.full_name, displayRank: x.display_rank }))) as unknown as T[];
+/** 헌금명단 순서: 지정 직분 → 교인별 순서 → 나머지 가나다 (offeringOrder 규칙) */
+export const sortMembers = <T extends Pick<MemberRow, "full_name" | "title" | "display_rank">>(xs: T[], titleOrder = DEFAULT_TITLE_ORDER) =>
+  sortForList(xs.map((x) => ({ x, name: x.full_name, displayRank: listRank({ title: x.title, rank: x.display_rank }, titleOrder) }))).map((y) => y.x);
 
 /** 주민번호: 숫자 13자리면 900101-1234567 형식, 아니면 null */
 export function normalizeRrn(s: string) {
