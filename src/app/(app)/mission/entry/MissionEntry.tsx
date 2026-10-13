@@ -6,7 +6,8 @@ import PageHeader from "@/components/PageHeader";
 import DbOnly from "@/components/ui/DbOnly";
 import Notice from "@/components/ui/Notice";
 import { btn, btnPrimary, card, input } from "@/components/ui/Buttons";
-import { currentSunday, type Member } from "@/lib/demo";
+import { type Member } from "@/lib/demo";
+import { sundayOf, upcomingSunday } from "@/lib/income/dates";
 import { useRefData, type RefData } from "@/lib/db/refData";
 import { dbError, expenseProblems, expenseSig, incomeSig, loadExpense, loadIncome, saveExpense, saveIncome, type ExpenseRow, type IncomeEntry } from "@/lib/db/weekly";
 import { supabaseBrowser } from "@/lib/supabase/client";
@@ -38,7 +39,7 @@ function Form({ ref_ }: { ref_: RefData }) {
   const MEMBERS = ref_.members;
 
   const [tab, setTab] = useState<"income" | "expense">("income");
-  const [sunday, setSunday] = useState(currentSunday);
+  const [sunday, setSunday] = useState(() => upcomingSunday());
   const [inc, setInc] = useState<IncomeEntry[]>([]);
   const [exp, setExp] = useState<ExpenseRow[]>([]);
   const [sig, setSig] = useState({ inc: "[]", exp: "[]" });
@@ -59,8 +60,10 @@ function Form({ ref_ }: { ref_: RefData }) {
 
   useEffect(() => { void pull(sunday); }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const changeSunday = (day: string) => {
-    if (!day) return;
+  const changeSunday = (picked: string) => {
+    if (!picked) return;
+    const day = sundayOf(picked, "next"); // 주일이 아닌 날을 고르면 그 주의 주일로
+    if (day === sunday) return;
     if (dirty && !confirm("저장하지 않은 입력이 있어요. 버리고 다른 주일로 갈까요?")) return;
     setSunday(day); setNote(null); setBusy(true); void pull(day);
   };
@@ -89,6 +92,7 @@ function Form({ ref_ }: { ref_: RefData }) {
       <div className="mb-4 flex flex-wrap items-end gap-3 rounded-lg bg-surface p-4 text-sm shadow-card">
         <label className="text-xs text-label">주일
           <input type="date" value={sunday} onChange={(e) => changeSunday(e.target.value)} className="mt-1 block rounded border px-2 py-1.5 text-sm text-heading" />
+            {sunday !== upcomingSunday() && <button type="button" onClick={() => changeSunday(upcomingSunday())} className="mt-1 block text-xs text-primary underline">돌아오는 주일로</button>}
         </label>
         <div className="seg flex overflow-hidden rounded border" role="tablist">
           {([["income", `수입 ${inc.length}건 · ${won(incTotal)}`], ["expense", `지출 ${exp.length}건 · ${won(expTotal)}`]] as const).map(([k, l]) => (

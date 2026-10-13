@@ -4,7 +4,8 @@ import ExcelJS from "exceljs";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faPaperclip } from "@fortawesome/free-solid-svg-icons";
 import PageHeader from "@/components/PageHeader";
-import { currentSunday, weekOfMonth } from "@/lib/demo";
+import { weekOfMonth } from "@/lib/demo";
+import { sundayOf, upcomingSunday } from "@/lib/income/dates";
 import { useRefData, type RefData } from "@/lib/db/refData";
 import { dbError, expenseProblems, expenseSig, loadExpense, saveExpense, type ExpenseRow as Row } from "@/lib/db/weekly";
 import { supabaseBrowser } from "@/lib/supabase/client";
@@ -33,13 +34,14 @@ function Form({ ref_ }: { ref_: RefData }) {
   const { departments: DEPARTMENTS, fixedExpenses: FIXED_EXPENSES, members: MEMBERS, demo } = ref_;
   const sb = supabaseBrowser();
   const [meta0] = useState(loadMeta);
-  const [sunday, setSunday] = useState(() => (!demo && meta0?.sunday) || currentSunday());
   const [rows, setRows] = useState<Row[]>(load);
   const [savedSig, setSavedSig] = useState<string | null>(() => meta0?.savedSig ?? null);
   const [bankTx, setBankTx] = useState<(BankTx & { key: string })[]>([]);
   const [pick, setPick] = useState<Set<string>>(new Set());
   // 처음 열 때: 저장 안 한 행(증빙 올리기에서 넘어온 것 포함)이 있으면 이어서, 없으면 DB에서
   const [resumed] = useState(() => !demo && rows.length > 0 && meta0?.savedSig !== expenseSig(rows));
+  // 처음 열면 돌아오는 주일. 저장 안 한 입력을 이어서 보여줄 때만 그 입력의 주일을 쓴다
+  const [sunday, setSunday] = useState(() => (resumed && meta0?.sunday) || upcomingSunday());
   const [msg, setMsg] = useState(resumed ? "저장하지 않은 지출을 이어서 보여드려요." : "");
   const [busy, setBusy] = useState(!demo && !resumed);
   const [err, setErr] = useState("");
@@ -72,8 +74,10 @@ function Form({ ref_ }: { ref_: RefData }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const changeSunday = (day: string) => {
-    if (!day) return;
+  const changeSunday = (picked: string) => {
+    if (!picked) return;
+    const day = sundayOf(picked, "next"); // 주일이 아닌 날을 고르면 그 주의 주일로
+    if (day === sunday) return;
     if (dirty && !confirm("저장하지 않은 지출이 있어요. 버리고 다른 주일로 갈까요?")) return;
     setSunday(day); setMsg("");
     if (!demo) fetchWeek(day);
@@ -158,6 +162,7 @@ function Form({ ref_ }: { ref_: RefData }) {
       <div className="mb-4 flex flex-wrap items-end gap-2 rounded-lg bg-surface shadow-card p-4 text-sm">
         <label className="text-xs text-label">주일
           <input type="date" value={sunday} onChange={(e) => changeSunday(e.target.value)} className="mt-1 block rounded border px-2 py-1.5 text-sm text-heading" />
+            {sunday !== upcomingSunday() && <button type="button" onClick={() => changeSunday(upcomingSunday())} className="mt-1 block text-xs text-primary underline">돌아오는 주일로</button>}
         </label>
         <button onClick={loadFixed} className="rounded border px-3 py-1.5">고정지출 불러오기</button>
         <label className="cursor-pointer rounded border px-3 py-1.5">은행 엑셀 업로드

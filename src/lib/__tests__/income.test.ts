@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { classifyDeposit, keywordsFor } from "../classify";
 import { parseDateTime } from "../bank/nonghyup";
-import { addDays, isSunday, kstDate, kstDateTime, sundayOf } from "../income/dates";
+import { addDays, isSunday, kstDate, kstDateTime, sundayOf, upcomingSunday } from "../income/dates";
 import { linkProblems, suggest, toImportRows, toLinkPayload } from "../income/bank";
 import { fetchAll, safeTerm } from "../income/db";
 import {
@@ -33,6 +33,13 @@ describe("날짜·반영 주일", () => {
     expect(addDays("2026-12-31", 1)).toBe("2027-01-01");
     expect(isSunday("2026-10-11")).toBe(true);
     expect(isSunday("2026-10-12")).toBe(false);
+  });
+  it("돌아오는 주일(한국시간, 주일이면 그날)", () => {
+    expect(upcomingSunday(new Date("2026-10-13T01:30:00Z"))).toBe("2026-10-18"); // 화요일
+    expect(upcomingSunday(new Date("2026-10-10T16:00:00Z"))).toBe("2026-10-11"); // 한국 주일 01시
+    expect(upcomingSunday(new Date("2026-10-11T14:59:00Z"))).toBe("2026-10-11"); // 한국 주일 23:59
+    expect(upcomingSunday(new Date("2026-10-11T15:00:00Z"))).toBe("2026-10-18"); // 한국 월요일 00시
+    expect(upcomingSunday(new Date("2026-12-28T00:00:00Z"))).toBe("2027-01-03");
   });
   it("엑셀 날짜 셀은 한국 시각으로", () => {
     expect(parseDateTime(new Date(Date.UTC(2026, 9, 4, 10, 11, 12)))).toBe("2026-10-04T10:11:12+09:00");
