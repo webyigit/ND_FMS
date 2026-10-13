@@ -1,7 +1,8 @@
 "use client";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import PageHeader from "@/components/PageHeader";
-import { currentSunday, type Member } from "@/lib/demo";
+import { type Member } from "@/lib/demo";
+import { sundayOf, upcomingSunday } from "@/lib/income/dates";
 import { sortForList } from "@/lib/offeringOrder";
 import { useRefData, type RefData } from "@/lib/db/refData";
 import { dbError, incomeSig, loadIncome, saveIncome, type IncomeEntry as Entry } from "@/lib/db/weekly";
@@ -31,7 +32,6 @@ function Form({ ref_ }: { ref_: RefData }) {
   const { offeringTypes: OFFERING_TYPES, members: MEMBERS, demo } = ref_;
   const sb = supabaseBrowser();
   const [meta0] = useState(() => load<Meta | null>(KEY_META, null));
-  const [sunday, setSunday] = useState(() => (!demo && meta0?.sunday) || currentSunday());
   const [typeId, setTypeId] = useState(() => {
     const t = load(KEY_TYPE, OFFERING_TYPES[0]?.id ?? 1);
     return OFFERING_TYPES.some((o) => o.id === t) ? t : OFFERING_TYPES[0]?.id ?? 1;
@@ -45,6 +45,8 @@ function Form({ ref_ }: { ref_: RefData }) {
   const [savedSig, setSavedSig] = useState<string | null>(() => meta0?.savedSig ?? null);
   // 처음 열 때: 저장 안 한 입력이 있으면 이어서, 없으면 DB에서 불러온다
   const [resumed] = useState(() => !demo && entries.length > 0 && meta0?.savedSig !== incomeSig(entries));
+  // 처음 열면 돌아오는 주일. 저장 안 한 입력을 이어서 보여줄 때만 그 입력의 주일을 쓴다
+  const [sunday, setSunday] = useState(() => (resumed && meta0?.sunday) || upcomingSunday());
   const [editId, setEditId] = useState<string | null>(null);
   const [busy, setBusy] = useState(!demo && !resumed);
   const [note, setNote] = useState<{ ok: boolean; text: string } | null>(resumed ? { ok: true, text: "저장하지 않은 입력을 이어서 보여드려요." } : null);
@@ -80,8 +82,10 @@ function Form({ ref_ }: { ref_: RefData }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const changeSunday = (day: string) => {
-    if (!day) return;
+  const changeSunday = (picked: string) => {
+    if (!picked) return;
+    const day = sundayOf(picked, "next"); // 주일이 아닌 날을 고르면 그 주의 주일로
+    if (day === sunday) return;
     if (dirty && !confirm("저장하지 않은 입력이 있어요. 버리고 다른 주일로 갈까요?")) return;
     setSunday(day); reset();
     if (!demo) fetchWeek(day);
@@ -159,6 +163,7 @@ function Form({ ref_ }: { ref_: RefData }) {
         <div className="grid gap-3 md:grid-cols-[140px_180px_160px_1fr_160px_auto]">
           <label className="text-xs text-label">주일
             <input type="date" value={sunday} onChange={(e) => changeSunday(e.target.value)} className="mt-1 w-full rounded border px-2 py-1.5 text-sm text-heading" />
+            {sunday !== upcomingSunday() && <button type="button" onClick={() => changeSunday(upcomingSunday())} className="mt-1 block text-xs text-primary underline">돌아오는 주일로</button>}
           </label>
           <label className="text-xs text-label">헌금구분 (고정)
             <select value={typeId} onChange={(e) => { setTypeId(Number(e.target.value)); reset(); }} className="mt-1 w-full rounded border px-2 py-1.5 text-sm text-heading">
