@@ -87,8 +87,8 @@ export default function WeeklyIncome() {
 
       {!rep ? <div className="text-sm text-muted">불러오는 중…</div> : (
         <div className="sheet-scroll"><div className={`${card} sheet print-sheet mx-auto max-w-[210mm] p-6 text-sm print:max-w-none print:p-0`}>
-          <div className="mb-3 grid grid-cols-[1fr_auto_1fr] items-end gap-4">
-            <div className="flex items-center gap-2">
+          <div className="mb-3 grid grid-cols-1 items-end gap-3 sm:grid-cols-[1fr_auto_1fr] sm:gap-4">
+            <div className="flex items-center justify-center gap-2 sm:justify-start">
               {/* 원본 시트의 교단 휘장 */}
               <img src="/church-emblem.png" alt="교단 휘장" className="h-14 w-auto print:h-12" />
               <div className="leading-tight"><div className="text-xs text-label">대한예수교장로회</div><div className="text-lg font-bold tracking-[0.3em] text-heading">{churchName}</div></div>
@@ -99,7 +99,7 @@ export default function WeeklyIncome() {
               <div className="text-xs text-muted">{rep.count}건{week?.closed ? " · 마감된 주" : ""}</div>
             </div>
             {!!titles.data?.length && (
-              <table className="justify-self-end border-collapse text-xs">
+              <table className="justify-self-center border-collapse text-xs sm:justify-self-end">
                 <tbody>
                   <tr><th rowSpan={2} className={`${th} w-6 leading-tight`}>결<br />재</th>{titles.data.map((t, i) => <th key={i} className={`${th} w-16`}>{t}</th>)}</tr>
                   <tr>{titles.data.map((_, i) => <td key={i} className={`${td} h-12`} />)}</tr>
@@ -112,7 +112,7 @@ export default function WeeklyIncome() {
 
           {/* 원본 상단 1: 일반회계 예산 대비 */}
           {general && (
-            <table className="mb-2 w-full border-collapse">
+            <table className="tbl-cards mb-2 w-full border-collapse">
               <thead><tr><th className={th}>구분</th><th className={th}>{year}년 예산액(A)</th><th className={th}>이번 주 헌금액</th><th className={th}>지난주 누계액</th><th className={th}>{year}년 총누계액(B)</th><th className={th}>{year}년 진도율(%)(B/A)</th></tr></thead>
               <tbody><tr className="font-semibold">
                 <td className={`${td} text-center`}>일반회계</td>
@@ -128,7 +128,7 @@ export default function WeeklyIncome() {
           </div>
 
           {/* 원본 상단 2: 회계 › 구분 › 항목별 예산·이번 주·지난주까지·총누계·진도율 */}
-          <table className="mb-6 w-full border-collapse">
+          <table className="tbl-cards mb-6 w-full border-collapse">
             <colgroup><col className="w-[10%]" /><col className="w-[10%]" /><col className="w-[14%]" /><col /><col /><col /><col /><col className="w-[15%]" /></colgroup>
             <thead><tr><th className={th}>회계</th><th className={th}>구분</th><th className={th}>항목</th><th className={th}>{year}예산(A)</th><th className={th}>이번 주</th><th className={th}>지난주까지</th><th className={th}>총누계(B)</th><th className={th}>진도율(%)(B/A)</th></tr></thead>
             <tbody>
@@ -159,7 +159,18 @@ export default function WeeklyIncome() {
                 <span>{t.totalOnly ? "총액" : `${t.count}건`} · {won(t.total)}원</span>
               </div>
               {!t.totalOnly && (
-                <table className="w-full table-fixed border-collapse">
+                <ul className="grid grid-cols-2 gap-x-3 text-sm sm:hidden print:hidden">
+                  {t.entries.map((e, i) => (
+                    <li key={i} className="flex items-baseline justify-between gap-2 border-b border-line py-0.5" title={entryLabel(e)}>
+                      <span className="min-w-0 truncate">{e.name}{e.memo && <span className="text-xs text-muted">({e.memo})</span>}{e.channel === "online" && <span className="ml-0.5 text-[10px] text-info" title="이체">●</span>}</span>
+                      <span className="shrink-0 tabular-nums">{won(e.amount)}</span>
+                    </li>
+                  ))}
+                  {!!t.noName && <li className="col-span-2 flex justify-between border-b border-line py-0.5"><span className="text-muted">{NO_NAME}</span><span className="tabular-nums">{won(t.noName)}</span></li>}
+                </ul>
+              )}
+              {!t.totalOnly && (
+                <table className="hidden w-full table-fixed border-collapse sm:table print:table">
                   <colgroup>{[0, 1, 2, 3].map((i) => <Fragment key={i}><col className="w-[15%]" /><col className="w-[10%]" /></Fragment>)}</colgroup>
                   <thead><tr>{[0, 1, 2, 3].map((i) => <Fragment key={i}><th className={th}>성명</th><th className={th}>금액</th></Fragment>)}</tr></thead>
                   <tbody>

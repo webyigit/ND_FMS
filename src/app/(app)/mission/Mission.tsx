@@ -97,8 +97,8 @@ function Body() {
 
           <section>
             <h3 className="mb-2 font-semibold">월별 누적</h3>
-            <div className="tbl-scroll overflow-x-auto">
-              <table className="w-full min-w-[720px] border-collapse">
+            <div className="overflow-x-auto">
+              <table className="tbl-cards w-full md:min-w-[720px] border-collapse">
                 <thead><tr>{["월", "해외선교 수입", "네팔 헌금", "해외선교 지출", "네팔 지출", "누계 수입", "누계 지출", "월말 잔액"].map((h) => <th key={h} className={th}>{h}</th>)}</tr></thead>
                 <tbody>{months.map((m) => (
                   <tr key={m.month}><td className={`${td} text-center`}>{m.month}월</td>
