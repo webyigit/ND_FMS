@@ -16,3 +16,6 @@ export function sundayOf(d: string, mode: "prev" | "next" = "prev") {
   if (!w) return d;
   return addDays(d, mode === "prev" ? -w : 7 - w);
 }
+
+/** 돌아오는 주일(한국시간 기준, 오늘이 주일이면 오늘). 수입·지출 입력 화면의 기본 날짜 */
+export const upcomingSunday = (now = new Date()) => sundayOf(kstDate(now.toISOString()), "next");

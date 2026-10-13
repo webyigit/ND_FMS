@@ -1,12 +1,13 @@
 import { describe, expect, it } from "vitest";
 import { classifyDeposit, keywordsFor } from "../classify";
 import { parseDateTime } from "../bank/nonghyup";
-import { addDays, isSunday, kstDate, kstDateTime, sundayOf } from "../income/dates";
+import { addDays, isSunday, kstDate, kstDateTime, sundayOf, upcomingSunday } from "../income/dates";
 import { linkProblems, suggest, toImportRows, toLinkPayload } from "../income/bank";
 import { fetchAll, safeTerm } from "../income/db";
 import {
   filterByName, householdTotals, matrixSheet, personSheet, personTotals, sumSelected, toGrid, typeMonthMatrix,
   weeklyReport, weeklySheets, listedTypes, NO_NAME, type IncomeViewRow, type PersonAggRow,
+  progressReport, progressSheet, pct, sundayIndex, cumulativeWeeks,
 } from "../income/report";
 
 // 테스트 데이터는 모두 가상(실명·실금액 아님)
@@ -32,6 +33,13 @@ describe("날짜·반영 주일", () => {
     expect(addDays("2026-12-31", 1)).toBe("2027-01-01");
     expect(isSunday("2026-10-11")).toBe(true);
     expect(isSunday("2026-10-12")).toBe(false);
+  });
+  it("돌아오는 주일(한국시간, 주일이면 그날)", () => {
+    expect(upcomingSunday(new Date("2026-10-13T01:30:00Z"))).toBe("2026-10-18"); // 화요일
+    expect(upcomingSunday(new Date("2026-10-10T16:00:00Z"))).toBe("2026-10-11"); // 한국 주일 01시
+    expect(upcomingSunday(new Date("2026-10-11T14:59:00Z"))).toBe("2026-10-11"); // 한국 주일 23:59
+    expect(upcomingSunday(new Date("2026-10-11T15:00:00Z"))).toBe("2026-10-18"); // 한국 월요일 00시
+    expect(upcomingSunday(new Date("2026-12-28T00:00:00Z"))).toBe("2027-01-03");
   });
   it("엑셀 날짜 셀은 한국 시각으로", () => {
     expect(parseDateTime(new Date(Date.UTC(2026, 9, 4, 10, 11, 12)))).toBe("2026-10-04T10:11:12+09:00");
@@ -189,5 +197,37 @@ describe("DB 도우미", () => {
   });
   it("검색어 정리", () => {
     expect(safeTerm(" 가나,다(%) ")).toBe("가나다");
+  });
+});
+
+describe("예산 대비 진도율(원본 상단 표)", () => {
+  // 가상 금액. 감사헌금 = 범사+기타+일천번제 한 줄, 예산은 기타감사에만
+  const ts = [
+    { id: 3, name: "십일조", fund: "일반" as const }, { id: 6, name: "범사감사", fund: "일반" as const }, { id: 5, name: "기타감사", fund: "일반" as const },
+    { id: 9, name: "일천번제", fund: "일반" as const }, { id: 13, name: "이웃사랑", fund: "특별" as const }, { id: 17, name: "소원예물", fund: "특별" as const },
+    { id: 15, name: "해외선교", fund: "별도" as const },
+  ];
+  const r = (id: number, amount: number) => ({ id: amount, sunday: "2026-10-04", offering_type_id: id, offering_type: "", type_order: 1, fund_kind: null, member_id: null, member_name: null, payer_label: "가", channel: "cash" as const, amount, memo: null, bank_tx_id: null });
+  const prior = [[3, 9000], [6, 1000], [5, 2000], [9, 500], [13, 700]].map(([id, amount]) => ({ sunday: "2026-09-27", offering_type_id: id, offering_type: "", type_order: 1, fund_kind: id === 13 ? "special" : "general", amount }));
+  const rep = weeklyReport([r(3, 1000), r(6, 100), r(9, 50), r(13, 30)], ts, () => null, prior);
+  const budget: Record<number, number> = { 3: 20000, 5: 8000 };
+  const secs = progressReport(rep, (id) => budget[id] ?? 0);
+  it("묶음·합계·진도율", () => {
+    const g = secs[0];
+    expect(g.total).toMatchObject({ budget: 28000, week: 1150, prev: 12500, ytd: 13650 });
+    expect(pct(g.total.rate)).toBe("48.75");
+    expect(g.rows.find((x) => x.item === "감사헌금")).toMatchObject({ group: "일반회계", budget: 8000, week: 150, prev: 3500, ytd: 3650 });
+    expect(g.rows.find((x) => x.item === "성탄절")).toMatchObject({ ytd: 0, rate: null }); // 원본 행은 0이어도 남긴다
+    expect(pct(g.rows.find((x) => x.item === "성탄절")!.rate)).toBe("-");
+    expect(secs[1].rows.map((x) => x.item)).toEqual(["이웃사랑헌금", "꽃꽂이", "건축(E/V)헌금"]); // 금액 없는 소원예물은 빠짐
+    expect(secs.map((s) => s.fund)).toEqual(["일반", "특별"]); // 별도는 금액 있을 때만
+    const sheet = progressSheet(rep, secs, "2026-10-04", "교회");
+    expect(sheet.rows).toContainEqual(["일반회계", 28000, 1150, 12500, 13650, "48.75"]);
+    expect(sheet.rows).toContainEqual(["일반 회계", "일반회계", "감사헌금", 8000, 150, 3500, 3650, "45.63"]);
+  });
+  it("몇 번째 주일·주별 누계", () => {
+    expect(sundayIndex("2026-01-04")).toEqual({ index: 1, total: 52 });
+    expect(sundayIndex("2026-10-04")).toEqual({ index: 40, total: 52 });
+    expect(cumulativeWeeks(prior, "2026-10-04", 1150)).toEqual([{ sunday: "2026-09-27", amount: 12500, cum: 12500 }, { sunday: "2026-10-04", amount: 1150, cum: 13650 }]);
   });
 });

@@ -90,8 +90,8 @@ export default function IncomeHistory() {
         {report.loading ? <div className="text-muted">불러오는 중…</div> : matrix.total === 0 ? <div className="text-muted">이 연도 수입이 없어요.</div> : (
           <>
             <div className="no-print"><FundMonthChart byFund={matrix.byFund} /></div>
-            <div className="tbl-scroll overflow-x-auto">
-              <table className="w-full border-collapse text-xs">
+            <div className="overflow-x-auto">
+              <table className="tbl-cards w-full border-collapse text-xs">
                 <thead><tr><th className={th}>기금</th><th className={th}>헌금구분</th>{MONTHS.map((m, i) => <th key={m} className={`${th} ${f.month === i + 1 ? "bg-primary-subtle" : ""}`}>{m}</th>)}<th className={th}>합계</th></tr></thead>
                 <tbody>
                   {matrix.types.map((t) => (

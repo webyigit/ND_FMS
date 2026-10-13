@@ -1,5 +1,7 @@
 "use client";
 import { Fragment, useMemo, useState } from "react";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faAnglesDown, faAnglesUp, faMagnifyingGlass } from "@fortawesome/free-solid-svg-icons";
 import PageHeader from "@/components/PageHeader";
 import DbOnly from "@/components/ui/DbOnly";
 import Notice from "@/components/ui/Notice";
@@ -8,7 +10,7 @@ import { ExcelButton, PrintButton, btn, card, input } from "@/components/ui/Butt
 import { must, useDbQuery } from "@/lib/db/useDb";
 import { fileName, thisYear, won } from "@/lib/format";
 import { downloadXlsx } from "@/lib/excel";
-import { byDepartment, periodRange, type DeptTx, type ItemBudget } from "@/lib/expense/budget";
+import { byDepartment, periodRange, searchDepts, type DeptTx, type ItemBudget } from "@/lib/expense/budget";
 import { fetchAll } from "@/lib/expense/db";
 
 type ItemRow = { id: number; name: string; sort_order: number | null; department: { name: string; sort_order: number | null } | null };
@@ -31,6 +33,7 @@ function Screen() {
   const [custom, setCustom] = useState<[string, string]>([`${thisYear()}-01-01`, `${thisYear()}-12-31`]);
   const [dept, setDept] = useState("");
   const [open, setOpen] = useState<Set<number>>(new Set());
+  const [search, setSearch] = useState("");
 
   const q = useDbQuery(async (sb) => {
     const [items, budgets, txs, deptRows] = await Promise.all([
@@ -51,13 +54,19 @@ function Screen() {
 
   const [from, to] = period === "C" ? custom : periodRange(year, period);
   const result = useMemo(() => (q.data ? byDepartment(q.data.list, q.data.tx, from, to) : null), [q.data, from, to]);
-  const depts = (result?.depts ?? []).filter((d) => !dept || d.dept === dept);
+  const tabDepts = (result?.depts ?? []).filter((d) => !dept || d.dept === dept);
+  const { depts, hits } = searchDepts(tabDepts, search);
+  // 검색 중이면 맞는 지출이 있는 항목은 펼쳐 보인다
+  const isOpen = (id: number) => (hits ? !open.has(id) : open.has(id));
   // 탭: 전체 + 부서 테이블 순서, 부서 테이블에 없는 이름(예: 부서 없음)은 뒤에
   const tabs = [...(q.data?.deptNames ?? [])];
   result?.depts.forEach((d) => { if (!tabs.includes(d.dept)) tabs.push(d.dept); });
-  const total = dept ? (depts[0] ?? { budget: 0, spent: 0, remain: 0, rate: "-" }) : result?.total;
+  const total = dept ? (tabDepts[0] ?? { budget: 0, spent: 0, remain: 0, rate: "-" }) : result?.total;
   const toggle = (id: number) => setOpen((s) => { const n = new Set(s); if (n.has(id)) n.delete(id); else n.add(id); return n; });
-  const allOpen = depts.every((d) => d.items.every((i) => !i.txs.length || open.has(i.itemId)));
+  const withTx = depts.flatMap((d) => d.items.filter((i) => i.txs.length).map((i) => i.itemId));
+  const allOpen = withTx.every(isOpen), allClosed = !withTx.some(isOpen);
+  // 검색 중엔 open 이 '닫은 항목' 목록이라 뒤집어 넣는다
+  const setAll = (show: boolean) => setOpen(show === !hits ? new Set(withTx) : new Set());
   const periodLabel = `${from} ~ ${to}`;
 
   const excel = () => {
@@ -90,7 +99,14 @@ function Screen() {
           <span>~</span>
           <input type="date" className={input} value={custom[1]} onChange={(e) => setCustom([custom[0], e.target.value])} />
         </>}
-        <button className={`${btn} ml-auto`} onClick={() => setOpen(allOpen ? new Set() : new Set(depts.flatMap((d) => d.items.map((i) => i.itemId))))}>{allOpen ? "상세 모두 접기" : "상세 모두 펼치기"}</button>
+        <div className="flex items-center gap-2 rounded border border-line bg-surface px-3 py-1.5 sm:w-72">
+          <FontAwesomeIcon icon={faMagnifyingGlass} className="text-muted" />
+          <input type="search" aria-label="검색" value={search} onChange={(e) => { setSearch(e.target.value); setOpen(new Set()); }} placeholder="항목·내용·청구자·비고 검색" className="w-full bg-transparent outline-none" />
+        </div>
+        <div className="ml-auto flex gap-1">
+          <button className={btn} disabled={!withTx.length || allOpen} onClick={() => setAll(true)}><FontAwesomeIcon icon={faAnglesDown} className="mr-1" />전체 펼침</button>
+          <button className={btn} disabled={!withTx.length || allClosed} onClick={() => setAll(false)}><FontAwesomeIcon icon={faAnglesUp} className="mr-1" />전체 닫힘</button>
+        </div>
       </div>
       {q.data && (
         <div role="tablist" aria-label="부서" className="no-print mb-4 flex flex-wrap gap-1 border-b border-line text-sm">
@@ -108,7 +124,10 @@ function Screen() {
       {result && (
         <div className={`${card} p-6 text-sm print:p-0`}>
           <h2 className="text-center text-lg font-bold">{year}년 부서별 지출내역{dept && ` - ${dept}`}</h2>
-          <div className="mb-2 text-right text-label">기간 {periodLabel}</div>
+          <div className="mb-2 flex flex-wrap justify-between gap-2 text-label">
+            <span>{hits && <>검색 “{search.trim()}” · 지출 {hits.count}건 {won(hits.amount)}원 <span className="text-xs text-muted">(합계·소계는 검색과 무관한 전체 금액)</span></>}</span>
+            <span>기간 {periodLabel}</span>
+          </div>
           <table className="tbl-cards w-full border-collapse">
             <thead><tr><th className={th}>부서</th><th className={th}>항목</th><th className={th}>예산</th><th className={th}>지출</th><th className={th}>잔액</th><th className={th}>집행률</th></tr></thead>
             <tbody>
@@ -124,13 +143,13 @@ function Screen() {
                   </tr>
                   {d.items.map((i) => (
                     <Fragment key={i.itemId}>
-                      <tr className={i.txs.length ? "cursor-pointer hover:bg-surface-2" : ""} onClick={() => i.txs.length && toggle(i.itemId)}>
+                      <tr className={`${i.txs.length ? "cursor-pointer hover:bg-surface-2" : ""} ${i.remain === 0 ? "bg-surface-2/60 text-muted" : ""}`} onClick={() => i.txs.length && toggle(i.itemId)}>
                         <td className={td} />
-                        <td className={td}>{i.txs.length > 0 && <span className="no-print mr-1 text-muted">{open.has(i.itemId) ? "▾" : "▸"}</span>}{i.item} <span className="text-xs text-muted">({i.txs.length}건)</span></td>
+                        <td className={td}>{i.txs.length > 0 && <span className="no-print mr-1 text-muted">{isOpen(i.itemId) ? "▾" : "▸"}</span>}{i.item} <span className="text-xs text-muted">({i.txs.length}건)</span></td>
                         <td className={`${td} text-right`}>{won(i.budget)}</td><td className={`${td} text-right`}>{won(i.spent)}</td>
-                        <td className={`${td} text-right ${i.remain < 0 ? "text-danger" : ""}`}>{won(i.remain)}</td><td className={`${td} text-right`}>{i.rate}</td>
+                        <td className={`${td} text-right ${i.remain < 0 ? "text-danger" : ""}`}>{i.remain === 0 && <span className="mr-1.5 rounded border border-line bg-surface px-1.5 py-0.5 text-[11px] font-medium text-label">소진</span>}{won(i.remain)}</td><td className={`${td} text-right`}>{i.rate}</td>
                       </tr>
-                      {open.has(i.itemId) && i.txs.map((t, k) => (
+                      {isOpen(i.itemId) && i.txs.map((t, k) => (
                         <tr key={k} className="text-xs text-label">
                           <td className={td} /><td className={`${td} pl-6`}>{t.sunday}</td>
                           <td className={td} colSpan={2}>{t.content}{t.requester && <span className="text-muted"> · {t.requester}</span>}{t.memo && <span className="text-muted"> · {t.memo}</span>}</td>
@@ -141,10 +160,10 @@ function Screen() {
                   ))}
                 </Fragment>
               ))}
-              {!depts.length && <tr><td colSpan={6} className={`${td} py-6 text-center text-muted`}>예산이나 지출이 없어요.</td></tr>}
+              {!depts.length && <tr><td colSpan={6} className={`${td} py-6 text-center text-muted`}>{hits ? "검색 결과가 없어요." : "예산이나 지출이 없어요."}</td></tr>}
             </tbody>
           </table>
-          <p className="mt-2 text-xs text-muted no-print">예산은 그 해 항목별 예산, 지출은 지출 항목 기준(수수료 제외)이에요. 예비비에서 끌어 쓴 지출(예산 전용)을 원래 항목·예비비 중 어디에 셀지는 [확인 필요].</p>
+          <p className="mt-2 text-xs text-muted no-print">회색 줄(소진)은 잔액이 0원인 항목이에요. 예산은 그 해 항목별 예산, 지출은 지출 항목 기준(수수료 제외)이에요. 예비비에서 끌어 쓴 지출(예산 전용)을 원래 항목·예비비 중 어디에 셀지는 [확인 필요].</p>
         </div>
       )}
     </>

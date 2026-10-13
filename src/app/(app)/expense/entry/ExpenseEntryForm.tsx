@@ -4,7 +4,8 @@ import ExcelJS from "exceljs";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faPaperclip } from "@fortawesome/free-solid-svg-icons";
 import PageHeader from "@/components/PageHeader";
-import { currentSunday, weekOfMonth } from "@/lib/demo";
+import { weekOfMonth } from "@/lib/demo";
+import { sundayOf, upcomingSunday } from "@/lib/income/dates";
 import { useRefData, type RefData } from "@/lib/db/refData";
 import { dbError, expenseProblems, expenseSig, loadExpense, saveExpense, type ExpenseRow as Row } from "@/lib/db/weekly";
 import { supabaseBrowser } from "@/lib/supabase/client";
@@ -12,6 +13,7 @@ import { enqueue, getWeekCache, setWeekCache, syncNow } from "@/lib/offline/sync
 import { isNetworkError } from "@/lib/offline/logic";
 import { readFirstSheet } from "@/lib/bank/readXlsx";
 import { parseNonghyupRows, type BankTx } from "@/lib/bank/nonghyup";
+import { newFixedOnly } from "@/lib/expense/fixed";
 
 const KEY = "ndfms.expense.draft"; // 지출증빙 올리기 화면도 이 키에 행을 덧붙인다
 const KEY_META = "ndfms.expense.draft.meta"; // {sunday, savedSig}
@@ -32,13 +34,14 @@ function Form({ ref_ }: { ref_: RefData }) {
   const { departments: DEPARTMENTS, fixedExpenses: FIXED_EXPENSES, members: MEMBERS, demo } = ref_;
   const sb = supabaseBrowser();
   const [meta0] = useState(loadMeta);
-  const [sunday, setSunday] = useState(() => (!demo && meta0?.sunday) || currentSunday());
   const [rows, setRows] = useState<Row[]>(load);
   const [savedSig, setSavedSig] = useState<string | null>(() => meta0?.savedSig ?? null);
   const [bankTx, setBankTx] = useState<(BankTx & { key: string })[]>([]);
   const [pick, setPick] = useState<Set<string>>(new Set());
   // 처음 열 때: 저장 안 한 행(증빙 올리기에서 넘어온 것 포함)이 있으면 이어서, 없으면 DB에서
   const [resumed] = useState(() => !demo && rows.length > 0 && meta0?.savedSig !== expenseSig(rows));
+  // 처음 열면 돌아오는 주일. 저장 안 한 입력을 이어서 보여줄 때만 그 입력의 주일을 쓴다
+  const [sunday, setSunday] = useState(() => (resumed && meta0?.sunday) || upcomingSunday());
   const [msg, setMsg] = useState(resumed ? "저장하지 않은 지출을 이어서 보여드려요." : "");
   const [busy, setBusy] = useState(!demo && !resumed);
   const [err, setErr] = useState("");
@@ -71,8 +74,10 @@ function Form({ ref_ }: { ref_: RefData }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const changeSunday = (day: string) => {
-    if (!day) return;
+  const changeSunday = (picked: string) => {
+    if (!picked) return;
+    const day = sundayOf(picked, "next"); // 주일이 아닌 날을 고르면 그 주의 주일로
+    if (day === sunday) return;
     if (dirty && !confirm("저장하지 않은 지출이 있어요. 버리고 다른 주일로 갈까요?")) return;
     setSunday(day); setMsg("");
     if (!demo) fetchWeek(day);
@@ -111,9 +116,13 @@ function Form({ ref_ }: { ref_: RefData }) {
 
   const loadFixed = () => {
     const w = weekOfMonth(sunday);
-    const add = FIXED_EXPENSES.filter((f) => f.weekOfMonth === w).map((f) => ({ ...blank(), ...f, source: "고정" as const }));
-    setRows((xs) => [...xs, ...add]);
-    setMsg(`${w}째 주 고정지출 ${add.length}건을 불러왔어요.`);
+    const all = FIXED_EXPENSES.filter((f) => f.weekOfMonth === w);
+    if (!all.length) { setErr(""); return setMsg(`${w}째 주 고정지출이 없어요.`); }
+    const { add, dup } = newFixedOnly(all, rows);
+    if (!add.length) { setMsg(""); return setErr(`${w}째 주 고정지출 ${dup}건은 이미 추가돼 있어요. 중복이라 다시 추가할 수 없어요.`); }
+    setRows((xs) => [...xs, ...add.map((f) => ({ ...blank(), ...f, source: "고정" as const }))]);
+    setErr("");
+    setMsg(`${w}째 주 고정지출 ${add.length}건을 불러왔어요.${dup ? ` 이미 있는 ${dup}건은 중복이라 빼었어요.` : ""}`);
   };
 
   const onBank = async (f: File) => {
@@ -153,6 +162,7 @@ function Form({ ref_ }: { ref_: RefData }) {
       <div className="mb-4 flex flex-wrap items-end gap-2 rounded-lg bg-surface shadow-card p-4 text-sm">
         <label className="text-xs text-label">주일
           <input type="date" value={sunday} onChange={(e) => changeSunday(e.target.value)} className="mt-1 block rounded border px-2 py-1.5 text-sm text-heading" />
+            {sunday !== upcomingSunday() && <button type="button" onClick={() => changeSunday(upcomingSunday())} className="mt-1 block text-xs text-primary underline">돌아오는 주일로</button>}
         </label>
         <button onClick={loadFixed} className="rounded border px-3 py-1.5">고정지출 불러오기</button>
         <label className="cursor-pointer rounded border px-3 py-1.5">은행 엑셀 업로드
@@ -205,6 +215,7 @@ function Form({ ref_ }: { ref_: RefData }) {
       </div>
 
       <div className="mt-4 flex flex-wrap gap-4 text-sm">
+        <button onClick={() => setRows((xs) => [...xs, blank()])} className="rounded border bg-surface px-3 py-1.5">행 추가</button>
         <div className="rounded-lg bg-surface shadow-card px-4 py-3">금주 지출 합계 <b>{won(total)}원</b> · {rows.length}건</div>
         {!demo && <button onClick={save} disabled={busy || !dirty} className="rounded bg-primary px-4 py-1.5 text-white disabled:bg-slate-300">{busy ? "처리 중…" : dirty ? "입력 완료(저장)" : "저장됨"}</button>}
         {byDept.map(([d, n]) => <div key={d} className="rounded-lg bg-surface shadow-card px-4 py-3">{d} {won(n)}</div>)}

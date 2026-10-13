@@ -82,7 +82,7 @@ export default function OfficersReport() {
           <>
             <h2 className="text-center text-lg font-bold">{year}년도 지출 현황</h2>
             <div className="mb-2 text-right text-label">작성일 {asOf}</div>
-            <table className="w-full border-collapse">
+            <table className="tbl-cards w-full border-collapse">
               <thead><tr><th className={th}>구 분(부서)</th><th className={th}>(항목)</th><th className={th}>예 산 액(A)</th><th className={th}>지 출 액(B)</th><th className={th}>진행율(B/A)</th><th className={th}>잔 액</th></tr></thead>
               <tbody>
                 {rows.map((r, i) => r.kind === "item" ? (
@@ -110,7 +110,7 @@ export default function OfficersReport() {
             <>
               <h2 className="mb-4 text-center text-lg font-bold">[재정부] {year}년도 지출 상세 ({from} ~ {asOf})</h2>
               {detail.filter((r) => r.kind === "subtotal").map((d) => (
-                <table key={d.dept} className="mb-5 w-full border-collapse">
+                <div key={d.dept} className="tbl-scroll mb-5 overflow-x-auto"><table className="w-full border-collapse">
                   <thead>
                     <tr><th className={`${th} text-left`} colSpan={5}>{d.dept} <span className="font-normal text-label">(부장 [확인 필요])</span></th></tr>
                     <tr><th className={th}></th><th className={th}>예산</th><th className={th}>지출</th><th className={th}>잔액</th><th className={th}>진행률</th></tr>
@@ -131,7 +131,7 @@ export default function OfficersReport() {
                       );
                     })}
                   </tbody>
-                </table>
+                </table></div>
               ))}
             </>
           );
@@ -164,12 +164,12 @@ export default function OfficersReport() {
             <>
               <h2 className="text-center text-lg font-bold">{year}년도 해외선교 현황보고</h2>
               <div className="mb-3 text-right text-label">작성일 : {asOf}</div>
-              <table className="mb-5 w-full border-collapse">
+              <table className="tbl-cards mb-5 w-full border-collapse">
                 <thead><tr>{[`${String(year - 1).slice(2)}년도 이월금(A)`, "금년도 총 수입(B)", "합계(A+B)(C)", "금년도 총 지출(D)", "현재 잔액(C−D)"].map((h) => <th key={h} className={th}>{h}</th>)}</tr></thead>
                 <tbody><tr className="font-semibold">{[s.carry, s.income, s.sum, s.expense, s.balance].map((v, i) => <td key={i} className={`${td} text-right`}>{won(v)}</td>)}</tr></tbody>
               </table>
               <div className="mb-1 font-semibold">◆ 상세내역</div>
-              <table className="w-full border-collapse">
+              <table className="tbl-cards w-full border-collapse">
                 <thead><tr>{["일자", "내 용", "수입", "지출", "잔액"].map((h) => <th key={h} className={th}>{h}</th>)}</tr></thead>
                 <tbody>
                   {mrows.map((r, i) => r.kind === "month" ? (

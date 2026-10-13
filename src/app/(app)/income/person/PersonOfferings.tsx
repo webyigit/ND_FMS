@@ -35,6 +35,11 @@ export default function PersonOfferings() {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [detail, setDetail] = useState<PersonTotal | null>(null);
   const [famView, setFamView] = useState(false);
+  const [resetN, setResetN] = useState(0);
+  // 초기화: 연도·탭은 그대로 두고, 고른 사람·검색어·헌금구분·가족 합산·체크·상세를 비운다(탭 안의 입력도 새로 그림)
+  const resetAll = () => {
+    setBase(null); setFamView(false); setTypeId(0); setQ(""); setFamily(false); setSelected(new Set()); setDetail(null); setResetN((n) => n + 1);
+  };
 
   const data = useDbQuery((sb) => fetchAll<PersonAggRow>((a, b) => sb.from("v_income_person").select("*").eq("year", year)
     .order("member_id", { nullsFirst: false }).order("payer_label").order("offering_type_id").order("month").range(a, b)), [year]);
@@ -89,6 +94,7 @@ export default function PersonOfferings() {
         <label className="flex items-center gap-1 pb-1.5"><input type="checkbox" checked={family} onChange={(e) => { setFamily(e.target.checked); setSelected(new Set()); setDetail(null); }} /> 가족 단위 합산</label>
         </>}
         <span className="ml-auto pb-1.5 text-xs text-muted">주일헌금(총액 입력)은 개인별에 들어가지 않아요.</span>
+        <button type="button" onClick={resetAll} className={btn}>초기화</button>
       </div>
       {(data.error || members.error) && <Notice kind="error">불러오지 못했어요: {data.error ?? members.error}</Notice>}
       <div role="tablist" className="no-print mb-4 flex gap-1 border-b text-sm">
@@ -98,11 +104,11 @@ export default function PersonOfferings() {
         ))}
       </div>
 
-      {tab === "person" && <PersonTab year={year} base={basePerson} persons={persons} members={members.data ?? []} families={families} rows={data.data ?? []}
+      {tab === "person" && <PersonTab key={resetN} year={year} base={basePerson} persons={persons} members={members.data ?? []} families={families} rows={data.data ?? []}
         withFamily={famView} setWithFamily={setFamView} onPick={(p) => { setBase(p.key); setFamView(false); }} onPickFamily={(f) => { setBase(f.baseKey); setFamView(true); }} onFamily={() => setTab("family")} />}
-      {tab === "family" && <FamilyTab key={`${year}-${base}`} year={year} base={basePerson} persons={persons} members={members.data ?? []} types={allTypes}
+      {tab === "family" && <FamilyTab key={`${year}-${base}-${resetN}`} year={year} base={basePerson} persons={persons} members={members.data ?? []} types={allTypes}
         onPick={(p) => setBase(p.key)} onChanged={reloadAll} />}
-      {tab === "names" && <NameMergeTab onChanged={reloadAll} />}
+      {tab === "names" && <NameMergeTab key={resetN} onChanged={reloadAll} />}
 
       {tab === "all" && <>
 
@@ -122,8 +128,8 @@ export default function PersonOfferings() {
             <h2 className="font-semibold">{detail.name} · {year}년 월별 내역{detail.members.length > 1 && <span className="text-xs font-normal text-muted"> ({detail.members.join(", ")})</span>}</h2>
             <button onClick={() => setDetail(null)} className={`${btn} no-print`}>닫기</button>
           </div>
-          <div className="tbl-scroll overflow-x-auto">
-            <table className="w-full border-collapse text-xs">
+          <div className="overflow-x-auto">
+            <table className="tbl-cards w-full border-collapse text-xs">
               <thead><tr><th className={th}>헌금구분</th>{MONTHS.map((m) => <th key={m} className={th}>{m}</th>)}<th className={th}>합계</th></tr></thead>
               <tbody>
                 {matrix.types.map((t) => <tr key={t.id}><td className={td}>{t.name}</td>{t.months.map((v, i) => <td key={i} className={tdNum}>{amt(v)}</td>)}<td className={`${tdNum} font-semibold`}>{amt(t.total)}</td></tr>)}
@@ -135,10 +141,10 @@ export default function PersonOfferings() {
       )}
 
       {data.loading ? <div className="text-sm text-muted">불러오는 중…</div> : (
-        <div className={`${card} tbl-scroll overflow-x-auto p-4 text-sm print:p-0`}>
+        <div className={`${card} overflow-x-auto p-4 text-sm print:p-0`}>
           <h2 className="mb-2 hidden text-center text-lg font-bold print:block">{year}년 개인별 헌금현황{family ? " (가족 합산)" : ""}</h2>
           <div className="no-print mb-2 text-xs text-muted">{list.length}{family ? "가족·개인" : "명"} · 합계 {won(grand)}원 · 이름을 누르면 월별 내역</div>
-          <table className="w-full border-collapse">
+          <table className="tbl-cards w-full border-collapse">
             <thead>
               <tr>
                 <th className={`${th} no-print w-8`}>

@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { fromFundRows, groupOfferings, lineOf, separateLines, weekSummary } from "../expense/report";
-import { byDepartment, periodRange } from "../expense/budget";
+import { byDepartment, periodRange, searchDepts } from "../expense/budget";
 import { amountMatch, filterHistory, monthlyTotals, type HistRow } from "../expense/history";
 import { clergyByPerson } from "../expense/clergy";
-import { fixedProblems, emptyFixed, sortFixed, toFixedRow } from "../expense/fixed";
+import { fixedProblems, emptyFixed, sortFixed, toFixedRow, newFixedOnly } from "../expense/fixed";
 import { addDays, isSunday, sundayOf } from "../expense/week";
 import { fromReconRow, reconcile, verdict } from "../reconcile";
 
@@ -69,6 +69,18 @@ describe("부서별 지출", () => {
     expect(depts[1].items[0]).toMatchObject({ remain: -20000, rate: "120.00%" });
     expect(total).toMatchObject({ budget: 300000, spent: 170000 });
   });
+  it("검색: 항목명은 항목 전체, 내용·청구자는 맞는 지출만", () => {
+    const { depts } = byDepartment(items, txs, "2026-01-01", "2026-12-31");
+    expect(searchDepts(depts, "").hits).toBeNull();
+    const a = searchDepts(depts, "공공");
+    expect(a.depts.map((d) => d.items.map((i) => i.item))).toEqual([["공공요금"]]);
+    expect(a.hits).toEqual({ count: 2, amount: 80000 });
+    const b = searchDepts(depts, " 수도 ");
+    expect(b.depts[0].items[0].txs.map((t) => t.content)).toEqual(["수도"]);
+    expect(b.depts[0].items[0].spent).toBe(80000);
+    expect(searchDepts(depts, "가나다").hits).toEqual({ count: 1, amount: 120000 });
+    expect(searchDepts(depts, "없는말").depts).toEqual([]);
+  });
   it("기간 단축", () => {
     expect(periodRange(2026, "Y")).toEqual(["2026-01-01", "2026-12-31"]);
     expect(periodRange(2026, "H1")).toEqual(["2026-01-01", "2026-06-30"]);
@@ -123,6 +135,14 @@ describe("교역자급여·고정지출·주일", () => {
     const s = sortFixed([{ weekOfMonth: 2, active: true, content: "나" }, { weekOfMonth: 1, active: false, content: "가" }, { weekOfMonth: 1, active: true, content: "다" }]);
     expect(s.map((x) => x.content)).toEqual(["다", "가", "나"]);
     expect(toFixedRow({ ...emptyFixed(), content: " 전기 ", amount: 1, expenseItemId: 3 })).toMatchObject({ content: "전기", memo: null, week_of_month: 1 });
+  });
+  it("고정지출 불러오기는 이미 있는 항목을 빼고 새 것만", () => {
+    const fixed = [{ content: "전기", dept: "관리", item: "공과금", amount: 1 }, { content: "수도", dept: "관리", item: "공과금", amount: 2 }];
+    expect(newFixedOnly(fixed, [])).toEqual({ add: fixed, dup: 0 });
+    const once = fixed.map((f) => ({ ...f, source: "고정" }));
+    expect(newFixedOnly(fixed, once)).toEqual({ add: [], dup: 2 });
+    expect(newFixedOnly(fixed, [{ ...once[0], content: " 전기 " }])).toEqual({ add: [fixed[1]], dup: 1 });
+    expect(newFixedOnly(fixed, [{ ...fixed[0], source: "직접" }]).dup).toBe(0);
   });
   it("주일 계산", () => {
     expect(isSunday("2026-10-04")).toBe(true);

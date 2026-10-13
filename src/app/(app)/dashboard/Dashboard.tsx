@@ -1,7 +1,7 @@
 "use client";
 import { useMemo, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faBell, faLightbulb, faFileLines, faChartLine } from "@fortawesome/free-solid-svg-icons";
+import { faBell, faLightbulb, faFileLines, faChartLine, faLayerGroup } from "@fortawesome/free-solid-svg-icons";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import PageHeader from "@/components/PageHeader";
 import Notice from "@/components/ui/Notice";
@@ -10,7 +10,7 @@ import EChart, { C, compareHOption, compareOption, flowOption, man, wonTip } fro
 import { useDbQuery } from "@/lib/db/useDb";
 import { localDate, won } from "@/lib/format";
 import { change, sum, yearOf, type ExpWeek, type IncWeek } from "@/lib/reports/common";
-import { insights, monthlyOf, payeeAlerts, quarterlyOf, reportSunday, weekReport, weekReportText, weeklySeries, ytdCompare, ytdReport, ytdReportText, type PayeeActivity } from "@/lib/reports/dashboard";
+import { insights, itemsByDept, monthlyOf, payeeAlerts, quarterlyOf, reportSunday, weekReport, weekReportText, weeklySeries, ytdCompare, ytdReport, ytdReportText, type PayeeActivity } from "@/lib/reports/dashboard";
 import { loadBudgets, loadCarry, loadExpWeeks, loadFunds, loadIncWeeks, loadPayees, operatingCarry } from "@/lib/reports/load";
 import { demoBudgetTotals, demoExpWeeks, demoIncWeeks } from "@/lib/reports/demoData";
 
@@ -85,6 +85,11 @@ function View({ d, today }: { d: Data; today: string }) {
       { rows: ty, option: compareHOption(ty.map((x) => x.name), ty.map((x) => x.cur), ty.map((x) => x.prev), C.in) },
     ];
   }, [d, today]);
+
+  const groups = useMemo(() => itemsByDept(d.exp, today), [d.exp, today]);
+  const [pick, setPick] = useState<string | null>(null);
+  const group = groups.find((g) => g.dept === pick) ?? groups[0];
+  const itemChart = useMemo(() => group && compareHOption(group.items.map((x) => x.name), group.items.map((x) => x.cur), group.items.map((x) => x.prev), C.out), [group]);
 
   const tile = (label: string, v: number, prev: number | null, tone: string, prevLabel = "전주") => (
     <div className="rounded-lg bg-surface-2 p-3">
@@ -191,6 +196,33 @@ function View({ d, today }: { d: Data; today: string }) {
           {types.rows.length ? <EChart option={types.option} className="h-80" label="헌금구분별 헌금 올해·작년" /> : <p className="text-sm text-muted">수입이 없어요.</p>}
         </section>
       </div>
+
+      {/* 구분(부서)별로 나눠 한 번에 한 구분의 항목만 보여 준다 (항목이 많아서) */}
+      <section className={`${card} mt-4 p-4`}>
+        <h3 className={h3}><FontAwesomeIcon icon={faLayerGroup} className="text-primary" />항목별 지출 <span className="font-normal text-muted">(구분별 · 올해 누계 · 작년 같은 기간)</span></h3>
+        {group && itemChart ? <>
+          <div className="mb-3 flex flex-wrap gap-1.5 text-xs" role="tablist" aria-label="지출 구분">
+            {groups.map((g) => {
+              const on = g.dept === group.dept;
+              return <button key={g.dept} role="tab" aria-selected={on} onClick={() => setPick(g.dept)}
+                className={`rounded-full border px-2.5 py-1 ${on ? "border-primary bg-primary text-white" : "bg-surface text-label hover:bg-surface-2"}`}>
+                {g.dept} <span className={on ? "text-white/80" : "text-muted"}>{man(g.cur)}</span>
+              </button>;
+            })}
+          </div>
+          <div className="grid gap-4 lg:grid-cols-3">
+            <div className="lg:col-span-2"><EChart option={itemChart} height={Math.max(160, group.items.length * 34 + 48)} label={`${group.dept} 항목별 지출 올해·작년`} /></div>
+            {/* 열 4개뿐이라 폰에서도 카드로 바꾸지 않고 표 그대로 (넘치면 가로 스크롤) */}
+            <div className="tbl-scroll self-start overflow-x-auto"><table className="w-full text-xs sm:text-sm">
+              <thead className="bg-surface-2 text-xs text-label"><tr><th className="px-2 py-1.5 text-left">항목</th><th className="text-right">올해</th><th className="text-right">작년</th><th className="px-2 text-right">증감</th></tr></thead>
+              <tbody>{group.items.map((r) => (
+                <tr key={r.name} className="border-t"><td className="px-2 py-1">{r.name}</td><td className="text-right">{won(r.cur)}</td><td className="text-right text-muted">{won(r.prev)}</td><td className="px-2 text-right text-xs text-label">{change(r.cur, r.prev)}</td></tr>
+              ))}</tbody>
+              <tfoot><tr className="border-t bg-surface-2 font-semibold"><td className="px-2 py-1">{group.dept} 합계</td><td className="text-right">{won(group.cur)}</td><td className="text-right text-muted">{won(group.prev)}</td><td className="px-2 text-right text-xs">{change(group.cur, group.prev)}</td></tr></tfoot>
+            </table></div>
+          </div>
+        </> : <p className="text-sm text-muted">지출이 없어요.</p>}
+      </section>
     </>
   );
 }
