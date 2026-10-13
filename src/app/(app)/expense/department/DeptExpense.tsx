@@ -1,7 +1,7 @@
 "use client";
 import { Fragment, useMemo, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faMagnifyingGlass } from "@fortawesome/free-solid-svg-icons";
+import { faAnglesDown, faAnglesUp, faMagnifyingGlass } from "@fortawesome/free-solid-svg-icons";
 import PageHeader from "@/components/PageHeader";
 import DbOnly from "@/components/ui/DbOnly";
 import Notice from "@/components/ui/Notice";
@@ -63,7 +63,10 @@ function Screen() {
   result?.depts.forEach((d) => { if (!tabs.includes(d.dept)) tabs.push(d.dept); });
   const total = dept ? (tabDepts[0] ?? { budget: 0, spent: 0, remain: 0, rate: "-" }) : result?.total;
   const toggle = (id: number) => setOpen((s) => { const n = new Set(s); if (n.has(id)) n.delete(id); else n.add(id); return n; });
-  const allOpen = depts.every((d) => d.items.every((i) => !i.txs.length || isOpen(i.itemId)));
+  const withTx = depts.flatMap((d) => d.items.filter((i) => i.txs.length).map((i) => i.itemId));
+  const allOpen = withTx.every(isOpen), allClosed = !withTx.some(isOpen);
+  // 검색 중엔 open 이 '닫은 항목' 목록이라 뒤집어 넣는다
+  const setAll = (show: boolean) => setOpen(show === !hits ? new Set(withTx) : new Set());
   const periodLabel = `${from} ~ ${to}`;
 
   const excel = () => {
@@ -100,7 +103,10 @@ function Screen() {
           <FontAwesomeIcon icon={faMagnifyingGlass} className="text-muted" />
           <input type="search" aria-label="검색" value={search} onChange={(e) => { setSearch(e.target.value); setOpen(new Set()); }} placeholder="항목·내용·청구자·비고 검색" className="w-full bg-transparent outline-none" />
         </div>
-        <button className={`${btn} ml-auto`} onClick={() => { const all = new Set(depts.flatMap((d) => d.items.map((i) => i.itemId))); setOpen((allOpen ? !hits : !!hits) ? new Set() : all); }}>{allOpen ? "상세 모두 접기" : "상세 모두 펼치기"}</button>
+        <div className="ml-auto flex gap-1">
+          <button className={btn} disabled={!withTx.length || allOpen} onClick={() => setAll(true)}><FontAwesomeIcon icon={faAnglesDown} className="mr-1" />전체 펼침</button>
+          <button className={btn} disabled={!withTx.length || allClosed} onClick={() => setAll(false)}><FontAwesomeIcon icon={faAnglesUp} className="mr-1" />전체 닫힘</button>
+        </div>
       </div>
       {q.data && (
         <div role="tablist" aria-label="부서" className="no-print mb-4 flex flex-wrap gap-1 border-b border-line text-sm">
