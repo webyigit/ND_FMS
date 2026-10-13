@@ -124,11 +124,11 @@ function Screen() {
                   </tr>
                   {d.items.map((i) => (
                     <Fragment key={i.itemId}>
-                      <tr className={i.txs.length ? "cursor-pointer hover:bg-surface-2" : ""} onClick={() => i.txs.length && toggle(i.itemId)}>
+                      <tr className={`${i.txs.length ? "cursor-pointer hover:bg-surface-2" : ""} ${i.remain === 0 ? "bg-surface-2/60 text-muted" : ""}`} onClick={() => i.txs.length && toggle(i.itemId)}>
                         <td className={td} />
                         <td className={td}>{i.txs.length > 0 && <span className="no-print mr-1 text-muted">{open.has(i.itemId) ? "▾" : "▸"}</span>}{i.item} <span className="text-xs text-muted">({i.txs.length}건)</span></td>
                         <td className={`${td} text-right`}>{won(i.budget)}</td><td className={`${td} text-right`}>{won(i.spent)}</td>
-                        <td className={`${td} text-right ${i.remain < 0 ? "text-danger" : ""}`}>{won(i.remain)}</td><td className={`${td} text-right`}>{i.rate}</td>
+                        <td className={`${td} text-right ${i.remain < 0 ? "text-danger" : ""}`}>{i.remain === 0 && <span className="mr-1.5 rounded border border-line bg-surface px-1.5 py-0.5 text-[11px] font-medium text-label">소진</span>}{won(i.remain)}</td><td className={`${td} text-right`}>{i.rate}</td>
                       </tr>
                       {open.has(i.itemId) && i.txs.map((t, k) => (
                         <tr key={k} className="text-xs text-label">
@@ -144,7 +144,7 @@ function Screen() {
               {!depts.length && <tr><td colSpan={6} className={`${td} py-6 text-center text-muted`}>예산이나 지출이 없어요.</td></tr>}
             </tbody>
           </table>
-          <p className="mt-2 text-xs text-muted no-print">예산은 그 해 항목별 예산, 지출은 지출 항목 기준(수수료 제외)이에요. 예비비에서 끌어 쓴 지출(예산 전용)을 원래 항목·예비비 중 어디에 셀지는 [확인 필요].</p>
+          <p className="mt-2 text-xs text-muted no-print">회색 줄(소진)은 잔액이 0원인 항목이에요. 예산은 그 해 항목별 예산, 지출은 지출 항목 기준(수수료 제외)이에요. 예비비에서 끌어 쓴 지출(예산 전용)을 원래 항목·예비비 중 어디에 셀지는 [확인 필요].</p>
         </div>
       )}
     </>
