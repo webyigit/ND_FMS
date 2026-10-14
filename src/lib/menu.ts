@@ -71,6 +71,7 @@ export const MENU: MenuGroup[] = [
       { href: "/expense/report", label: "금주 수입/지출 리포트" },
       { href: "/reports/officers-meeting", label: "재직회보고서" },
       { href: "/reports/audit", label: "재정감사보고서" },
+      { href: "/ledger", label: "총계원장" },
     ],
   },
   {

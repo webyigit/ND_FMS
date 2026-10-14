@@ -1,6 +1,7 @@
 "use client";
 import { useMemo, useState } from "react";
 import PageHeader from "@/components/PageHeader";
+import { markStep } from "@/lib/weekly/stepsDb";
 import DbOnly from "@/components/ui/DbOnly";
 import Notice from "@/components/ui/Notice";
 import TitleEditor from "@/components/ui/TitleEditor";
@@ -52,7 +53,7 @@ function Screen() {
   const pick = (v: string) => { if (v) setSunday(isSunday(v) ? v : sundayOf(v)); };
   return (
     <>
-      <PageHeader actions={<><ExcelButton onClick={() => d && excel(d)} disabled={!d} /><PrintButton /></>} />
+      <PageHeader actions={<><ExcelButton onClick={() => d && excel(d)} disabled={!d} /><PrintButton onPrint={() => void markStep(sunday, "report")} /></>} />
       <div className={`${card} no-print mb-4 flex flex-wrap items-end gap-3 p-4 text-sm`}>
         <label className="text-xs text-label">주일
           <input type="date" value={sunday} onChange={(e) => pick(e.target.value)} className={`${input} mt-1 block`} />

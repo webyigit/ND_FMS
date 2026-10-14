@@ -1,6 +1,7 @@
 "use client";
 import { Fragment, useMemo, useState } from "react";
 import PageHeader from "@/components/PageHeader";
+import { markStep } from "@/lib/weekly/stepsDb";
 import Notice from "@/components/ui/Notice";
 import { ExcelButton, PrintButton, card, input } from "@/components/ui/Buttons";
 import TitleEditor from "@/components/ui/TitleEditor";
@@ -63,7 +64,7 @@ export default function WeeklyIncome() {
     <>
       <PageHeader printHidden actions={<>
         <ExcelButton disabled={!rep?.count} onClick={() => rep && downloadXlsx(fileName(`주일헌금_${sunday.replace(/-/g, "").slice(4)}`, "xlsx"), [progressSheet(rep, secs, sunday, `대한예수교장로회 ${churchName}`), ...weeklySheets(rep, sunday)])} />
-        <PrintButton />
+        <PrintButton onPrint={() => void markStep(sunday, "income_report")} />
       </>} />
       <div className={`${card} no-print mb-4 flex flex-wrap items-end gap-3 p-3 text-sm`}>
         <label className="text-xs text-label">주일

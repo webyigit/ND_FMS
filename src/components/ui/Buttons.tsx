@@ -3,8 +3,9 @@
 export function ExcelButton({ onClick, disabled }: { onClick: () => void; disabled?: boolean }) {
   return <button onClick={onClick} disabled={disabled} className="no-print whitespace-nowrap rounded border bg-surface px-3 py-1.5 text-sm disabled:opacity-50">엑셀 저장</button>;
 }
-export function PrintButton() {
-  return <button onClick={() => window.print()} className="no-print whitespace-nowrap rounded bg-primary px-3 py-1.5 text-sm text-white">출력·PDF</button>;
+/** onPrint: 출력 전에 할 일(매주 업무 순서의 '출력하면 완료 처리' 등) */
+export function PrintButton({ onPrint }: { onPrint?: () => void } = {}) {
+  return <button onClick={() => { onPrint?.(); window.print(); }} className="no-print whitespace-nowrap rounded bg-primary px-3 py-1.5 text-sm text-white">출력·PDF</button>;
 }
 export const btn = "whitespace-nowrap rounded border bg-surface px-3 py-1.5 text-sm disabled:opacity-50";
 export const btnPrimary = "whitespace-nowrap rounded bg-primary px-3 py-1.5 text-sm text-white disabled:bg-slate-300";

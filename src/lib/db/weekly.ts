@@ -3,7 +3,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 export type IncomeEntry = { id: string; typeId: number; channel: "cash" | "online"; memberId: number | null; name: string; amount: number; memo: string };
 export type ExpenseSource = "직접" | "고정" | "은행" | "증빙" | "엑셀" | "신청";
-export type ExpenseRow = { id: string; content: string; amount: number; dept: string; item: string; requester: string; memo: string; source: ExpenseSource; fileId?: string };
+export type ExpenseRow = { id: string; content: string; amount: number; dept: string; item: string; requester: string; memo: string; source: ExpenseSource; fileId?: string; /** 은행거래내역에서 보낸 출금 거래 id */ bankTxId?: number };
 
 /** DB에서 불러온 행의 id ("db-12" → 12). 새 행은 null → 저장 시 새로 넣는다 */
 const dbId = (id: string) => (id.startsWith("db-") ? Number(id.slice(3)) : null);
@@ -12,7 +12,7 @@ export const toIncomePayload = (xs: IncomeEntry[]) =>
   xs.map((e) => ({ id: dbId(e.id), offering_type_id: e.typeId, member_id: e.memberId, payer_label: e.name, channel: e.channel, amount: e.amount, memo: e.memo || null }));
 
 export const toExpensePayload = (xs: ExpenseRow[]) =>
-  xs.map((r) => ({ id: dbId(r.id), dept: r.dept, item: r.item, content: r.content.trim(), amount: r.amount, requester: r.requester.trim(), memo: r.memo || null, source: r.source, drive_file_id: r.fileId ?? null }));
+  xs.map((r) => ({ id: dbId(r.id), dept: r.dept, item: r.item, content: r.content.trim(), amount: r.amount, requester: r.requester.trim(), memo: r.memo || null, source: r.source, drive_file_id: r.fileId ?? null, bank_tx_id: r.bankTxId ?? null }));
 
 /** 저장 여부 비교용 서명(화면용 id는 빼고 내용만) */
 const noId = <T extends { id: unknown }>({ id: _, ...rest }: T) => rest; // eslint-disable-line @typescript-eslint/no-unused-vars
@@ -32,7 +32,7 @@ export const fromIncomeRows = (rows: IncomeDbRow[]): IncomeEntry[] =>
   rows.map((r) => ({ id: `db-${r.id}`, typeId: r.offering_type_id, channel: r.channel, memberId: r.member_id, name: r.payer_label ?? "", amount: Number(r.amount), memo: r.memo ?? "" }));
 
 type ExpenseDbRow = {
-  id: number; content: string; amount: number; requester_label: string | null; memo: string | null; source: string | null;
+  id: number; content: string; amount: number; requester_label: string | null; memo: string | null; source: string | null; bank_tx_id?: number | null;
   expense_item: { name: string; department: { name: string } | null } | null;
   receipt_file: { drive_file_id: string | null } | null;
 };
@@ -44,9 +44,10 @@ export const fromExpenseRows = (rows: ExpenseDbRow[]): ExpenseRow[] =>
     requester: r.requester_label ?? "", memo: r.memo ?? "",
     source: SOURCES.includes(r.source as ExpenseSource) ? (r.source as ExpenseSource) : "직접",
     ...(r.receipt_file?.drive_file_id ? { fileId: r.receipt_file.drive_file_id } : {}),
+    ...(r.bank_tx_id ? { bankTxId: Number(r.bank_tx_id) } : {}),
   }));
 
-// 은행거래에서 들어온 행(bank_tx_id 있음)은 은행거래내역 화면에서 다룬다
+// 은행거래에서 들어온 수입 행(bank_tx_id 있음)은 은행거래내역 화면에서 다룬다. 지출은 은행 출금에서 보낸 행도 여기서 함께 고친다
 export async function loadIncome(sb: SupabaseClient, sunday: string) {
   const { data, error } = await sb.from("income")
     .select("id, offering_type_id, member_id, payer_label, channel, amount, memo, week!inner(sunday)")
@@ -57,8 +58,8 @@ export async function loadIncome(sb: SupabaseClient, sunday: string) {
 
 export async function loadExpense(sb: SupabaseClient, sunday: string) {
   const { data, error } = await sb.from("expense")
-    .select("id, content, amount, requester_label, memo, source, week!inner(sunday), expense_item!expense_expense_item_id_fkey(name, department(name)), receipt_file(drive_file_id)")
-    .eq("week.sunday", sunday).is("bank_tx_id", null).order("sort_order");
+    .select("id, content, amount, requester_label, memo, source, bank_tx_id, week!inner(sunday), expense_item!expense_expense_item_id_fkey(name, department(name)), receipt_file(drive_file_id)")
+    .eq("week.sunday", sunday).order("sort_order");
   if (error) throw error;
   return fromExpenseRows(data as unknown as ExpenseDbRow[]);
 }
