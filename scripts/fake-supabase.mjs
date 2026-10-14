@@ -222,3 +222,49 @@ const server = http.createServer(async (req, res) => {
   json(404, { message: "없음" });
 });
 server.listen(54321, "127.0.0.1", () => console.log("fake supabase on 54321"));
+
+// ===== 매주 업무 순서(사이드바)·은행 출금 → 지출입력·총계원장(/ledger) 확인용 가상 데이터 =====
+// 지난 주(10/11)는 수입입력·금주 수입내역만 완료(나머지는 '시행 안 됨'), 이번 주(10/18)는 수입입력만 완료
+db.week_step = [
+  { sunday: "2026-10-11", step: "income", done_at: "2026-10-07T01:00:00Z" }, { sunday: "2026-10-11", step: "income_report", done_at: "2026-10-07T01:10:00Z" },
+  { sunday: "2026-10-18", step: "income", done_at: "2026-10-14T01:00:00Z" },
+];
+rpc.set_week_step = ({ p_sunday, p_step, p_done }) => {
+  db.week_step = db.week_step.filter((r) => !(r.sunday === p_sunday && r.step === p_step));
+  if (p_done) db.week_step.push({ sunday: p_sunday, step: p_step, done_at: new Date().toISOString() });
+  return null;
+};
+db.fixed_expense = [{ week_of_month: 3, content: "전기요금(가상)", amount: 150000, active: true, expense_item: { name: "수선비", department: { name: "관리부", sort_order: 3 } } }];
+db.v_bank_account = [{ id: 1, bank: "농협", holder: "가상교회", kind: "일반", is_primary: true, active: true, account_mask: "***-**-1234" }];
+db.member_alias = [];
+const btx = (id, tx_at, withdraw, deposit, description, extra = {}) => ({
+  id, import_id: 1, bank_account_id: 1, tx_at, tx_date: tx_at.slice(0, 10), withdraw, deposit, balance: 1000000, tx_type: "인터넷당행", description, branch: "", transfer_memo: null, tx_memo: null,
+  suggested_offering_type_id: null, suggested_member_id: null, linked: false, default_sunday: "2026-10-11",
+  income_id: null, income_sunday: null, income_closed: null, income_offering_type_id: null, income_offering_type: null, income_member_id: null, income_payer_label: null, income_memo: null,
+  expense_id: null, expense_sunday: null, expense_content: null, ...extra,
+});
+db.v_bank_tx = [
+  btx(1, "2026-10-13T09:10:00+09:00", 150000, 0, "한국전력", { transfer_memo: "전기요금" }),
+  btx(2, "2026-10-13T11:20:00+09:00", 45000, 0, "가상마트"),
+  btx(3, "2026-10-12T14:00:00+09:00", 80000, 0, "악보사", { expense_id: 6002, expense_sunday: "2026-10-11", expense_content: "성가 악보" }),
+  btx(4, "2026-10-12T08:00:00+09:00", 0, 300000, "가나다십일조", { suggested_offering_type_id: 3, suggested_member_id: 1 }),
+];
+rpc.import_bank_tx = () => ({ inserted: 0, skipped: 0 });
+db.fund = [{ id: 1, code: "general", name: "일반", kind: "general" }, { id: 2, code: "special", name: "특별", kind: "special" }, { id: 3, code: "separate", name: "별도", kind: "separate" }];
+db.carryover = [{ year: 2026, fund_id: 1, amount: -1080913 }, { year: 2026, fund_id: 2, amount: 38041780 }, { year: 2026, fund_id: 3, amount: 10445000 }];
+db.offering_carryover = [{ year: 2026, offering_type_id: 13, amount: 14904080 }, { year: 2026, offering_type_id: 14, amount: 2940000 }];
+db.offering_type.forEach((t) => { t.parent_id = [6, 5, 9].includes(t.id) ? 4 : null; });
+db.offering_type.push({ id: 4, name: "감사헌금", total_only: false, amount_unit: 1000, has_memo: false, sort_order: 3, active: true, fund: { kind: "general" }, parent_id: null },
+  { id: 7, name: "부활절", total_only: false, amount_unit: 1000, has_memo: false, sort_order: 20, active: true, fund: { kind: "general" }, parent_id: null },
+  { id: 8, name: "신년감사", total_only: false, amount_unit: 1000, has_memo: false, sort_order: 21, active: true, fund: { kind: "general" }, parent_id: null });
+db.budget.push({ year: 2026, offering_type_id: 7, amount: 6500000 }, { year: 2026, offering_type_id: 8, amount: 5500000 });
+db.v_income_week.push({ sunday: "2026-04-05", offering_type_id: 7, offering_type: "부활절", type_order: 20, fund_kind: "general", amount: 5430000 }, { sunday: "2026-01-04", offering_type_id: 8, offering_type: "신년감사", type_order: 21, fund_kind: "general", amount: 5685000 });
+db.v_income_week.forEach((r) => { r.year = 2026; });
+db.expense_item.forEach((it) => { it.fund = { kind: it.department?.name === "해외선교" ? "separate" : "general" }; });
+db.expense_item.push({ id: 70, name: "이웃사랑 구제", sort_order: 1, department: { id: 6, name: "이웃사랑선교부", sort_order: 6 }, fund: { kind: "special" } });
+db.v_expense_week = [
+  ...db.v_expense.map((e) => ({ year: 2026, sunday: e.sunday, expense_item_id: e.expense_item_id, amount: e.amount, fee: 500 })),
+  { year: 2026, sunday: "2026-10-11", expense_item_id: 64, amount: 6235000, fee: 0 }, { year: 2026, sunday: "2026-09-06", expense_item_id: 70, amount: 1800000, fee: 0 },
+];
+db.fund_transfer = [{ from_fund: 1, to_fund: 2, amount: 617000, year: 2026, sunday: "2026-03-01", week: { sunday: "2026-03-01", year: 2026 } }];
+db.loan = [{ id: 1, lender: "수협은행", principal: 100000000, memo: null }, { id: 2, lender: "해외선교헌금", principal: 40000000, memo: null }];

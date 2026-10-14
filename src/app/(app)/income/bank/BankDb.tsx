@@ -1,5 +1,6 @@
 "use client";
 import { useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import PageHeader from "@/components/PageHeader";
 import Notice from "@/components/ui/Notice";
 import { btn, btnPrimary, card, input } from "@/components/ui/Buttons";
@@ -14,6 +15,9 @@ import { linkProblems, suggest, toImportRows, toLinkPayload, type LinkDraft } fr
 import { addDays, isSunday, kstDate, kstDateTime, sundayOf } from "@/lib/income/dates";
 import { fetchAll } from "@/lib/income/db";
 import { supabaseBrowser } from "@/lib/supabase/client";
+import { appendToDraft, rowFromBankTx } from "@/lib/expense/draft";
+import { workSunday } from "@/lib/weekly/steps";
+import { markStep } from "@/lib/weekly/stepsDb";
 
 type Account = { id: number; bank: string | null; holder: string | null; kind: string | null; is_primary: boolean | null; account_mask: string | null };
 type Tx = {
@@ -21,15 +25,17 @@ type Tx = {
   tx_type: string | null; description: string | null; transfer_memo: string | null; tx_memo: string | null;
   suggested_offering_type_id: number | null; suggested_member_id: number | null; linked: boolean;
   income_id: number | null; income_sunday: string | null; income_closed: boolean | null; income_offering_type: string | null; income_payer_label: string | null;
+  expense_id: number | null; expense_sunday: string | null; expense_content: string | null;
 };
 type View = "open" | "deposit" | "linked" | "withdraw" | "all";
-const VIEWS: [View, string][] = [["open", "입금 · 미반영"], ["deposit", "입금 전체"], ["linked", "반영됨"], ["withdraw", "출금"], ["all", "전체"]];
+const VIEWS: [View, string][] = [["open", "입금 · 미반영"], ["deposit", "입금 전체"], ["linked", "반영됨"], ["withdraw", "출금 → 지출입력"], ["all", "전체"]];
 const today = () => kstDate(new Date().toISOString());
 const accLabel = (a: Account) => [a.bank, a.kind, a.account_mask, a.holder].filter(Boolean).join(" ");
 const th = "px-2 py-2 text-left font-medium";
 
 export default function BankDb() {
   const sb = supabaseBrowser()!;
+  const router = useRouter();
   const { ref, error: refErr } = useRefData();
   const [uploadAcc, setUploadAcc] = useState<string>("");
   const [filterAcc, setFilterAcc] = useState<string>("all");
@@ -40,6 +46,7 @@ export default function BankDb() {
   const [edits, setEdits] = useState<Record<number, Partial<LinkDraft>>>({});
   const [memberQ, setMemberQ] = useState<Record<number, string>>({}); // 교인 칸에 친 글자
   const [selected, setSelected] = useState<Set<number>>(new Set());
+  const [selW, setSelW] = useState<Set<number>>(new Set()); // 지출입력으로 보낼 출금
   const [busy, setBusy] = useState(false);
   const [note, setNote] = useState<{ kind: "ok" | "error" | "warn"; text: string } | null>(null);
 
@@ -105,6 +112,17 @@ export default function BankDb() {
   }, [all]);
   const openRows = rows.filter((t) => t.deposit > 0 && !t.linked);
   const picked = openRows.filter((t) => selected.has(t.id));
+  // 출금: 아직 지출로 들어가지 않은 것만 고를 수 있다
+  const openW = rows.filter((t) => t.withdraw > 0 && !t.expense_id);
+  const pickedW = openW.filter((t) => selW.has(t.id));
+
+  // 고른 출금을 지출입력 임시저장에 넣고 지출입력으로 간다(매주 업무 순서 3단계 완료). 거래는 그대로 남는다
+  const sendToExpense = async () => {
+    if (!pickedW.length) return;
+    const day = appendToDraft(pickedW.map((t) => rowFromBankTx(t, () => crypto.randomUUID())), workSunday());
+    await markStep(day, "bank");
+    router.push("/expense/entry?fixed=1");
+  };
 
   const onFile = async (f: File) => {
     setNote(null); setBusy(true);
@@ -149,6 +167,7 @@ export default function BankDb() {
   };
 
   const toggle = (id: number) => setSelected((s) => { const n = new Set(s); if (n.has(id)) n.delete(id); else n.add(id); return n; });
+  const toggleW = (id: number) => setSelW((s) => { const n = new Set(s); if (n.has(id)) n.delete(id); else n.add(id); return n; });
   const err = refErr ?? accounts.error ?? learn.error ?? txs.error;
 
   return (
@@ -199,11 +218,15 @@ export default function BankDb() {
         <span>입금 {stat.dep[0]}건 · {won(stat.dep[1])}원</span>
         <span className="text-warning">미반영 {stat.open[0]}건 · {won(stat.open[1])}원</span>
         <span className="text-label">출금 {stat.out[0]}건 · {won(stat.out[1])}원</span>
-        <button onClick={link} disabled={busy || !picked.length} className={`${btnPrimary} ml-auto`}>
-          {busy ? "처리 중…" : `선택 ${picked.length}건 수입으로 반영`}
-        </button>
+        {view === "withdraw" ? (
+          <button onClick={sendToExpense} disabled={busy || !pickedW.length} className={`${btnPrimary} ml-auto`}>선택 {pickedW.length}건 지출입력으로 보내기</button>
+        ) : (
+          <button onClick={link} disabled={busy || !picked.length} className={`${btnPrimary} ml-auto`}>
+            {busy ? "처리 중…" : `선택 ${picked.length}건 수입으로 반영`}
+          </button>
+        )}
       </div>
-      {view === "withdraw" && <Notice kind="warn">출금은 목록만 보여요. 지출로 넣는 것은 지출관리 &gt; 지출입력에서 해요.</Notice>}
+      {view === "withdraw" && <Notice kind="warn">출금을 골라 &lsquo;지출입력으로 보내기&rsquo;를 누르면 지출입력 화면에 행으로 들어가요(부서·항목은 거기서 고르고 저장). 올린 거래내역은 지우지 않고 남겨요.</Notice>}
 
       {txs.loading ? <div className="text-sm text-muted">불러오는 중…</div> : rows.length === 0 ? (
         <div className={`${card} p-6 text-center text-sm text-muted`}>이 기간에 해당하는 거래가 없어요.</div>
@@ -214,8 +237,13 @@ export default function BankDb() {
             <thead className="bg-surface-2 text-xs text-label">
               <tr>
                 <th className="w-8 px-2 py-2">
-                  <input type="checkbox" aria-label="미반영 입금 모두 선택" checked={openRows.length > 0 && openRows.every((t) => selected.has(t.id))}
-                    onChange={(e) => setSelected(e.target.checked ? new Set(openRows.map((t) => t.id)) : new Set())} />
+                  {view === "withdraw" ? (
+                    <input type="checkbox" aria-label="지출 미반영 출금 모두 선택" checked={openW.length > 0 && openW.every((t) => selW.has(t.id))}
+                      onChange={(e) => setSelW(e.target.checked ? new Set(openW.map((t) => t.id)) : new Set())} />
+                  ) : (
+                    <input type="checkbox" aria-label="미반영 입금 모두 선택" checked={openRows.length > 0 && openRows.every((t) => selected.has(t.id))}
+                      onChange={(e) => setSelected(e.target.checked ? new Set(openRows.map((t) => t.id)) : new Set())} />
+                  )}
                 </th>
                 <th className={th}>거래일시</th><th className={`${th} text-right`}>입금</th><th className={`${th} text-right`}>출금</th>
                 <th className={th}>거래기록사항</th><th className={th}>헌금구분</th><th className={th}>교인(대표)</th><th className={th}>표기</th>
@@ -228,7 +256,10 @@ export default function BankDb() {
                 const d = open ? draft(t.id) : null;
                 return (
                   <tr key={t.id} className={`border-t align-top ${t.linked ? "bg-success-subtle/40" : ""}`}>
-                    <td className="px-2 py-1.5 text-center">{open && <input type="checkbox" checked={selected.has(t.id)} onChange={() => toggle(t.id)} />}</td>
+                    <td className="px-2 py-1.5 text-center">
+                      {open && <input type="checkbox" checked={selected.has(t.id)} onChange={() => toggle(t.id)} />}
+                      {t.withdraw > 0 && !t.expense_id && <input type="checkbox" aria-label="지출입력으로 보낼 출금" checked={selW.has(t.id)} onChange={() => toggleW(t.id)} />}
+                    </td>
                     <td className="whitespace-nowrap px-2 py-1.5">{kstDateTime(t.tx_at)}<div className="text-xs text-muted">{t.tx_type}</div></td>
                     <td className="px-2 py-1.5 text-right">{t.deposit ? won(t.deposit) : ""}</td>
                     <td className="px-2 py-1.5 text-right text-label">{t.withdraw ? won(t.withdraw) : ""}</td>
@@ -271,6 +302,11 @@ export default function BankDb() {
                             className="text-xs text-danger disabled:text-muted">되돌리기</button>
                         </td>
                       </>
+                    ) : t.expense_id ? (
+                      <td colSpan={6} className="px-2 py-1.5 text-xs">
+                        <span className="rounded bg-success-subtle px-2 py-0.5 text-success">지출 반영됨</span> {t.expense_content} · {t.expense_sunday} 주일
+                        <span className="ml-2 text-muted">{t.balance != null && `잔액 ${won(t.balance)}`}</span>
+                      </td>
                     ) : (
                       <td colSpan={6} className="px-2 py-1.5 text-xs text-muted">{t.balance != null && `잔액 ${won(t.balance)}`}</td>
                     )}

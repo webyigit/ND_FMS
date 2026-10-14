@@ -151,3 +151,27 @@ describe("교역자급여·고정지출·주일", () => {
     expect(addDays("2026-01-04", -7)).toBe("2025-12-28");
   });
 });
+
+describe("은행 출금 → 지출입력 임시저장", async () => {
+  const { mergeIntoDraft, rowFromBankTx } = await import("../expense/draft");
+  const { expenseSig } = await import("../db/weekly");
+  const row = (id: string, content: string) => ({ id, content, amount: 1000, dept: "관리부", item: "공공요금", requester: "", memo: "", source: "직접" as const });
+  it("저장 안 한 입력이 있으면 뒤에 덧붙이고 그 주일 유지", () => {
+    const cur = [row("a", "x")];
+    const r = mergeIntoDraft(cur, { sunday: "2026-10-11", savedSig: null }, [row("b", "y")], "2026-10-18");
+    expect(r.rows.map((x) => x.id)).toEqual(["a", "b"]);
+    expect(r.sunday).toBe("2026-10-11");
+  });
+  it("이미 저장된 것이면 새로 시작해 기준 주일로", () => {
+    const cur = [row("a", "x")];
+    const r = mergeIntoDraft(cur, { sunday: "2026-10-11", savedSig: expenseSig(cur) }, [row("b", "y")], "2026-10-18");
+    expect(r.rows.map((x) => x.id)).toEqual(["b"]);
+    expect(r).toMatchObject({ sunday: "2026-10-18", meta: { sunday: "2026-10-18", savedSig: null } });
+    expect(mergeIntoDraft([], null, [row("b", "y")], "2026-10-18").sunday).toBe("2026-10-18");
+  });
+  it("출금 거래 → 지출 행: 이체메모 우선, 적요·날짜는 비고, 거래 id 보관", () => {
+    const r = rowFromBankTx({ id: 9, withdraw: 33000, description: "한전", transfer_memo: "전기요금", tx_memo: null, tx_date: "2026-10-13" }, () => "n1");
+    expect(r).toMatchObject({ id: "n1", content: "전기요금", amount: 33000, memo: "한전 · 2026-10-13", source: "은행", bankTxId: 9, dept: "", item: "" });
+    expect(rowFromBankTx({ id: 1, withdraw: 1, description: "한전", transfer_memo: null, tx_memo: null, tx_date: "2026-10-13" }, () => "n").memo).toBe("2026-10-13");
+  });
+});

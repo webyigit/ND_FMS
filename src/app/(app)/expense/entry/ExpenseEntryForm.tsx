@@ -2,7 +2,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import ExcelJS from "exceljs";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faPaperclip } from "@fortawesome/free-solid-svg-icons";
+import { faBuildingColumns, faPaperclip } from "@fortawesome/free-solid-svg-icons";
 import PageHeader from "@/components/PageHeader";
 import { weekOfMonth } from "@/lib/demo";
 import { sundayOf, upcomingSunday } from "@/lib/income/dates";
@@ -14,6 +14,8 @@ import { isNetworkError } from "@/lib/offline/logic";
 import { readFirstSheet } from "@/lib/bank/readXlsx";
 import { parseNonghyupRows, type BankTx } from "@/lib/bank/nonghyup";
 import { newFixedOnly } from "@/lib/expense/fixed";
+import { markStep } from "@/lib/weekly/stepsDb";
+import { useSearchParams } from "next/navigation";
 
 const KEY = "ndfms.expense.draft"; // 지출증빙 올리기 화면도 이 키에 행을 덧붙인다
 const KEY_META = "ndfms.expense.draft.meta"; // {sunday, savedSig}
@@ -33,6 +35,8 @@ export default function ExpenseEntryForm() {
 function Form({ ref_ }: { ref_: RefData }) {
   const { departments: DEPARTMENTS, fixedExpenses: FIXED_EXPENSES, members: MEMBERS, demo } = ref_;
   const sb = supabaseBrowser();
+  // 매주 업무 순서에서 들어오면(?fixed=1) 그 주 고정지출을 먼저 불러온다
+  const autoFixed = useSearchParams().get("fixed") === "1";
   const [meta0] = useState(loadMeta);
   const [rows, setRows] = useState<Row[]>(load);
   const [savedSig, setSavedSig] = useState<string | null>(() => meta0?.savedSig ?? null);
@@ -99,6 +103,7 @@ function Form({ ref_ }: { ref_: RefData }) {
       const n = await saveExpense(sb, sunday, rows);
       setSavedSig(expenseSig(rows));
       setMsg(`${sunday} 주일 지출 ${n}건을 저장했어요.`);
+      void markStep(sunday, "expense"); // 매주 업무 순서 4단계 완료
       pull(sunday); // 새 행의 DB id를 받아 다음 저장 때 같은 행을 고치게
     } catch (e) {
       if (isNetworkError(e)) await queue();
@@ -114,16 +119,25 @@ function Form({ ref_ }: { ref_: RefData }) {
     return [...m];
   }, [rows]);
 
-  const loadFixed = () => {
+  const loadFixed = (quiet = false) => {
     const w = weekOfMonth(sunday);
     const all = FIXED_EXPENSES.filter((f) => f.weekOfMonth === w);
     if (!all.length) { setErr(""); return setMsg(`${w}째 주 고정지출이 없어요.`); }
     const { add, dup } = newFixedOnly(all, rows);
-    if (!add.length) { setMsg(""); return setErr(`${w}째 주 고정지출 ${dup}건은 이미 추가돼 있어요. 중복이라 다시 추가할 수 없어요.`); }
+    if (!add.length) { if (quiet) return; setMsg(""); return setErr(`${w}째 주 고정지출 ${dup}건은 이미 추가돼 있어요. 중복이라 다시 추가할 수 없어요.`); }
     setRows((xs) => [...xs, ...add.map((f) => ({ ...blank(), ...f, source: "고정" as const }))]);
     setErr("");
     setMsg(`${w}째 주 고정지출 ${add.length}건을 불러왔어요.${dup ? ` 이미 있는 ${dup}건은 중복이라 빼었어요.` : ""}`);
   };
+
+  // ?fixed=1: 주일 데이터를 다 읽은 뒤 한 번만 고정지출을 넣는다(이미 있는 건 건너뜀)
+  const [fixedDone, setFixedDone] = useState(false);
+  useEffect(() => {
+    if (!autoFixed || fixedDone || busy) return;
+    const t = setTimeout(() => { setFixedDone(true); loadFixed(true); }, 0); // 읽기가 끝난 다음 턴에
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoFixed, fixedDone, busy]);
 
   const onBank = async (f: File) => {
     const tx = parseNonghyupRows(await readFirstSheet(await f.arrayBuffer())).filter((t) => t.withdraw > 0);
@@ -164,7 +178,7 @@ function Form({ ref_ }: { ref_: RefData }) {
           <input type="date" value={sunday} onChange={(e) => changeSunday(e.target.value)} className="mt-1 block rounded border px-2 py-1.5 text-sm text-heading" />
             {sunday !== upcomingSunday() && <button type="button" onClick={() => changeSunday(upcomingSunday())} className="mt-1 block text-xs text-primary underline">돌아오는 주일로</button>}
         </label>
-        <button onClick={loadFixed} className="rounded border px-3 py-1.5">고정지출 불러오기</button>
+        <button onClick={() => loadFixed()} className="rounded border px-3 py-1.5">고정지출 불러오기</button>
         <label className="cursor-pointer rounded border px-3 py-1.5">은행 엑셀 업로드
           <input type="file" accept=".xlsx" className="hidden" onChange={(e) => e.target.files?.[0] && onBank(e.target.files[0])} />
         </label>
@@ -206,7 +220,7 @@ function Form({ ref_ }: { ref_: RefData }) {
                 <td className="px-1"><select className={input} value={r.item} onChange={(e) => set(r.id, { item: e.target.value })}><option value="">선택</option>{(DEPARTMENTS[r.dept] ?? []).map((d) => <option key={d}>{d}</option>)}</select></td>
                 <td className="px-1"><input className={input} list="members" value={r.requester} onChange={(e) => set(r.id, { requester: e.target.value })} /></td>
                 <td className="px-1"><input className={input} value={r.memo} onChange={(e) => set(r.id, { memo: e.target.value })} /></td>
-                <td className="text-center text-xs text-muted">{r.fileId ? <a href={`/api/receipts/${r.fileId}`} className="text-primary" title="드라이브에 저장된 증빙 내려받기"><FontAwesomeIcon icon={faPaperclip} /> {r.source}</a> : r.source}</td>
+                <td className="text-center text-xs text-muted">{r.fileId ? <a href={`/api/receipts/${r.fileId}`} className="text-primary" title="드라이브에 저장된 증빙 내려받기"><FontAwesomeIcon icon={faPaperclip} /> {r.source}</a> : r.bankTxId ? <span title={`은행거래 #${r.bankTxId}에서 보낸 출금`}><FontAwesomeIcon icon={faBuildingColumns} /> {r.source}</span> : r.source}</td>
                 <td className="text-center"><button onClick={() => setRows((xs) => xs.filter((x) => x.id !== r.id))} className="text-xs text-red-500">삭제</button></td>
               </tr>
             ))}

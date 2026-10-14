@@ -1,0 +1,98 @@
+"use client";
+// 매주 업무 순서: 사이드바·폰 메뉴 맨 위. 이번 주(돌아오는 주일) 단계를 순서대로, 완료/미완료/시행 안 됨을 메뉴명 옆에 보여준다.
+import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from "react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faCalendarCheck, faChevronLeft, faChevronRight, faCircleCheck, faCircleExclamation, faCircle, faRotateRight } from "@fortawesome/free-solid-svg-icons";
+import { kstDate, sundayOf } from "@/lib/income/dates";
+import { STATUS_LABEL, nextSunday, prevSunday, shortSunday, stepCounts, weekSteps, type StepDone, type StepKey } from "@/lib/weekly/steps";
+import { STEP_EVENT, loadSteps, markStep } from "@/lib/weekly/stepsDb";
+
+const ICON = { done: faCircleCheck, missed: faCircleExclamation, todo: faCircle } as const;
+const COLOR = { done: "text-success", missed: "text-danger", todo: "text-muted" } as const;
+
+export default function WeeklySteps({ open, onToggle, onNavigate }: { open: boolean; onToggle: () => void; onNavigate?: () => void }) {
+  const path = usePathname();
+  // 오늘(한국 날짜)은 브라우저에서만 읽는다(서버 미리 그리기 때는 빈 값 → 아래에서 머리글만)
+  const today = useSyncExternalStore(() => () => {}, () => kstDate(new Date().toISOString()), () => "");
+  const current = today ? sundayOf(today, "next") : ""; // 이번 주 = 돌아오는 주일
+  const [picked, setPicked] = useState<string | null>(null);
+  const sunday = picked ?? current;
+  const setSunday = (s: string) => setPicked(s === current ? null : s);
+  const [records, setRecords] = useState<StepDone[]>([]);
+  const [err, setErr] = useState<string | null>(null);
+  const [busy, setBusy] = useState<StepKey | null>(null);
+
+  const reload = useCallback(() => {
+    if (!sunday) return;
+    loadSteps(prevSunday(sunday), nextSunday(sunday)).then((xs) => { setRecords(xs); setErr(null); }, (e) => setErr(e instanceof Error ? e.message : "불러오지 못했어요"));
+  }, [sunday]);
+  useEffect(() => { reload(); }, [reload]);
+  useEffect(() => {
+    window.addEventListener(STEP_EVENT, reload);
+    return () => window.removeEventListener(STEP_EVENT, reload);
+  }, [reload]);
+
+  const steps = useMemo(() => (sunday ? weekSteps(sunday, records, today) : []), [sunday, records, today]);
+  const lastWeek = useMemo(() => (sunday ? stepCounts(weekSteps(prevSunday(sunday), records, today)) : { done: 0, missed: 0, total: 0 }), [sunday, records, today]);
+  const counts = stepCounts(steps);
+  const isCurrent = sunday === current;
+
+  // 완료 표시를 손으로 되돌리거나(잘못 눌렀을 때) 직접 완료 처리
+  const toggle = async (key: StepKey, done: boolean) => {
+    if (!confirm(done ? "이 단계를 완료로 표시할까요?" : "완료 표시를 취소할까요?")) return;
+    setBusy(key);
+    const e = await markStep(sunday, key, done);
+    setBusy(null);
+    if (e) setErr(e);
+  };
+
+  return (
+    <div className="mb-3 rounded-menu bg-primary-subtle/40 px-2 pb-2 pt-1">
+      <button type="button" onClick={onToggle} aria-expanded={open} className="flex w-full items-center gap-2 px-2 pb-1 pt-2 text-left text-[11px] uppercase tracking-[1px] text-label">
+        <FontAwesomeIcon icon={faCalendarCheck} className="w-3.5" /> 매주 업무 순서
+        <span className="ml-auto flex items-center gap-1 normal-case tracking-normal">
+          <span className={counts.done === counts.total ? "text-success" : counts.missed ? "text-danger" : "text-label"}>{counts.done}/{counts.total}</span>
+          <FontAwesomeIcon icon={faChevronRight} className={`w-2.5 transition-transform ${open ? "rotate-90" : ""}`} />
+        </span>
+      </button>
+      {open && today && (
+        <>
+          <div className="flex items-center justify-between px-2 py-1 text-xs text-heading">
+            <button type="button" onClick={() => setSunday(prevSunday(sunday))} aria-label="지난 주" className="px-1 text-label hover:text-primary"><FontAwesomeIcon icon={faChevronLeft} /></button>
+            <span className="font-semibold">{shortSunday(sunday)}{isCurrent && <span className="ml-1 font-normal text-muted">(이번 주)</span>}</span>
+            <span className="flex items-center gap-1">
+              {!isCurrent && <button type="button" onClick={() => setSunday(current)} title="이번 주로" className="px-1 text-label hover:text-primary"><FontAwesomeIcon icon={faRotateRight} /></button>}
+              <button type="button" onClick={() => setSunday(nextSunday(sunday))} aria-label="다음 주" className="px-1 text-label hover:text-primary"><FontAwesomeIcon icon={faChevronRight} /></button>
+            </span>
+          </div>
+          <ol className="space-y-0.5">
+            {steps.map((s, i) => {
+              const active = path === s.href.split("?")[0];
+              return (
+                <li key={s.key} className={`flex items-center gap-1 rounded-menu px-2 py-1 text-sm ${active ? "bg-surface text-primary" : "text-heading"}`}>
+                  <Link href={s.href} onClick={onNavigate} className="flex min-w-0 flex-1 items-center gap-2 font-medium hover:text-primary" title={`완료 조건: ${s.done}`}>
+                    <span className="w-4 shrink-0 text-center text-xs text-muted">{i + 1}</span>
+                    <span className="truncate">{s.label}</span>
+                  </Link>
+                  <button type="button" onClick={() => toggle(s.key, s.status !== "done")} disabled={busy === s.key}
+                    title={s.doneAt ? `완료 ${s.doneAt.slice(0, 16).replace("T", " ")} · 누르면 취소` : "누르면 완료로 표시"}
+                    className={`flex shrink-0 items-center gap-1 whitespace-nowrap text-[11px] ${COLOR[s.status]}`}>
+                    <FontAwesomeIcon icon={ICON[s.status]} className="w-3" />{STATUS_LABEL[s.status]}
+                  </button>
+                </li>
+              );
+            })}
+          </ol>
+          {isCurrent && lastWeek.missed > 0 && (
+            <button type="button" onClick={() => setSunday(prevSunday(sunday))} className="mt-1 w-full rounded-menu bg-danger-subtle px-2 py-1 text-left text-xs text-danger">
+              지난 주({shortSunday(prevSunday(sunday))}) 시행 안 된 단계 {lastWeek.missed}건
+            </button>
+          )}
+          {err && <div className="px-2 pt-1 text-xs text-danger">{err}</div>}
+        </>
+      )}
+    </div>
+  );
+}

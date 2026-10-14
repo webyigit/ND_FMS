@@ -11,6 +11,7 @@ import { useListNav } from "@/lib/listNav";
 import { enqueue, getWeekCache, setWeekCache, syncNow } from "@/lib/offline/sync";
 import { isNetworkError } from "@/lib/offline/logic";
 import ListOrderModal from "./ListOrderModal";
+import { markStep } from "@/lib/weekly/stepsDb";
 
 const KEY_TYPE = "ndfms.income.type"; // 헌금구분은 바꾸기 전까지 유지
 const KEY_DRAFT = "ndfms.income.draft"; // 완료 전까지 계속 입력(임시저장)
@@ -107,6 +108,7 @@ function Form({ ref_, reloadRef }: { ref_: RefData; reloadRef: () => Promise<voi
       const n = await saveIncome(sb, sunday, entries);
       setSavedSig(incomeSig(entries));
       setNote({ ok: true, text: `${sunday} 주일 수입 ${n}건을 저장했어요.` });
+      void markStep(sunday, "income"); // 매주 업무 순서 1단계 완료
       pull(sunday); // 새 행의 DB id를 받아 다음 저장 때 같은 행을 고치게
     } catch (e) {
       if (isNetworkError(e)) await queue();
