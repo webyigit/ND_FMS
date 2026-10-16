@@ -21,6 +21,57 @@
   button, a { border-radius: var(--r); }
 }
 
+/* ── 클레이모피즘(대시보드 카드·아이콘, 2026-10-16) ──
+   통통한 3D: 둥근 모서리 24px 이상 + 파스텔 바탕 + 안쪽 하이라이트(좌상 밝게, 우하 살짝 어둡게) + 부드러운 바깥 그림자
+   .clay: 큰 카드 / .clay-tile: 카드 안 숫자 칸 / .clay-icon: 제목 앞 아이콘 방울. 색은 data-tone(mint·peach·lavender·sky·lemon·rose) */
+:root {
+  --clay-base: #fbfcff;
+  --clay-mint: #dcf5ea;
+  --clay-peach: #ffe4d6;
+  --clay-lavender: #e9e5ff;
+  --clay-sky: #dbf0fb;
+  --clay-lemon: #fff3cc;
+  --clay-rose: #ffe0e7;
+  --clay-hi: rgba(255, 255, 255, .95);
+  --clay-lo: rgba(110, 120, 170, .14);
+  --clay-drop: rgba(120, 130, 180, .20);
+}
+:root[data-theme="dark"] {
+  --clay-base: #262a29;
+  --clay-mint: #1f3a31;
+  --clay-peach: #3d2c25;
+  --clay-lavender: #2d2a45;
+  --clay-sky: #1f3442;
+  --clay-lemon: #3a3523;
+  --clay-rose: #3d2830;
+  --clay-hi: rgba(255, 255, 255, .08);
+  --clay-lo: rgba(0, 0, 0, .35);
+  --clay-drop: rgba(0, 0, 0, .45);
+}
+.clay, .clay-tile, .clay-icon { background: var(--clay-bg, var(--clay-base)); }
+[data-tone="mint"] { --clay-bg: var(--clay-mint); }
+[data-tone="peach"] { --clay-bg: var(--clay-peach); }
+[data-tone="lavender"] { --clay-bg: var(--clay-lavender); }
+[data-tone="sky"] { --clay-bg: var(--clay-sky); }
+[data-tone="lemon"] { --clay-bg: var(--clay-lemon); }
+[data-tone="rose"] { --clay-bg: var(--clay-rose); }
+.clay {
+  border-radius: 28px;
+  box-shadow: 12px 14px 32px var(--clay-drop), inset 4px 4px 10px var(--clay-hi), inset -6px -6px 14px var(--clay-lo);
+}
+.clay-tile {
+  border-radius: 24px;
+  box-shadow: 6px 8px 18px var(--clay-drop), inset 3px 3px 8px var(--clay-hi), inset -4px -4px 10px var(--clay-lo);
+}
+.clay-icon {
+  display: inline-flex; align-items: center; justify-content: center; flex: 0 0 auto;
+  width: 2.25rem; height: 2.25rem; border-radius: 9999px; font-size: .95rem;
+  box-shadow: 3px 5px 10px var(--clay-drop), inset 2px 2px 5px var(--clay-hi), inset -3px -3px 6px var(--clay-lo);
+}
+@media print {
+  .clay, .clay-tile, .clay-icon { box-shadow: none !important; }
+}
+
 @media print {
   aside, header, .no-print { display: none !important; }
   main { padding: 0 !important; }

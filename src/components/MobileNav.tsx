@@ -5,8 +5,7 @@ import { usePathname } from "next/navigation";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faBars, faChevronRight, faXmark } from "@fortawesome/free-solid-svg-icons";
 import { MENU, findMenu } from "@/lib/menu";
-import { STEPS_KEY, useMenuOpen } from "@/lib/menuState";
-import WeeklySteps from "./WeeklySteps";
+import { useMenuOpen } from "@/lib/menuState";
 
 // 폰·태블릿(사이드바가 숨는 폭)에서 쓰는 전체 메뉴
 export default function MobileNav() {
@@ -28,7 +27,6 @@ export default function MobileNav() {
                 </span>
                 <button onClick={() => setOpen(false)} aria-label="메뉴 닫기" className="text-label"><FontAwesomeIcon icon={faXmark} /></button>
               </span></div>
-            <WeeklySteps open={isOpen(STEPS_KEY)} onToggle={() => toggle(STEPS_KEY)} onNavigate={() => setOpen(false)} />
             {MENU.map((g) => {
               const gOpen = isOpen(g.label) || g.label === cur?.group.label;
               return (

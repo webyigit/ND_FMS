@@ -5,8 +5,7 @@ import { usePathname } from "next/navigation";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faChevronRight, faWonSign } from "@fortawesome/free-solid-svg-icons";
 import { MENU, findMenu } from "@/lib/menu";
-import { STEPS_KEY, useMenuOpen } from "@/lib/menuState";
-import WeeklySteps from "./WeeklySteps";
+import { useMenuOpen } from "@/lib/menuState";
 
 export default function Sidebar() {
   const path = usePathname();
@@ -24,7 +23,6 @@ export default function Sidebar() {
             <button type="button" onClick={() => setAll(false)} className="border-l px-2 py-0.5 hover:text-primary">전체 닫기</button>
           </span>
         </div>
-        <WeeklySteps open={isOpen(STEPS_KEY)} onToggle={() => toggle(STEPS_KEY)} />
         {MENU.map((g) => {
           const open = isOpen(g.label);
           return (

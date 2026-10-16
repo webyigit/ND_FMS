@@ -7,7 +7,8 @@ const KEY = "ndfms.menu.open";
 const EVENT = "ndfms:menu";
 export const STEPS_KEY = "매주 업무 순서";
 type OpenMap = Record<string, boolean>;
-const ALL = [STEPS_KEY, ...MENU.map((g) => g.label)];
+/** 전체 펼침/닫기 대상 = 사이드바 묶음만(매주 업무 순서는 상단 가로 영역이라 따로) */
+const ALL = MENU.map((g) => g.label);
 
 const read = () => { try { return localStorage.getItem(KEY) ?? "{}"; } catch { return "{}"; } };
 const subscribe = (cb: () => void) => { window.addEventListener(EVENT, cb); window.addEventListener("storage", cb); return () => { window.removeEventListener(EVENT, cb); window.removeEventListener("storage", cb); }; };
@@ -19,7 +20,7 @@ export function useMenuOpen() {
   const isOpen = useCallback((label: string) => open[label] !== false, [open]);
   const toggle = useCallback((label: string) => write({ ...open, [label]: !isOpen(label) }), [open, isOpen]);
   const allOpen = ALL.every(isOpen);
-  const setAll = useCallback((v: boolean) => write(Object.fromEntries(ALL.map((l) => [l, v]))), []);
+  const setAll = useCallback((v: boolean) => write({ ...open, ...Object.fromEntries(ALL.map((l) => [l, v])) }), [open]);
   /** 현재 화면이 속한 묶음은 닫혀 있어도 보이게 */
   const openFor = useCallback((label: string) => write({ ...open, [label]: true }), [open]);
   return { isOpen, toggle, allOpen, setAll, openFor };
