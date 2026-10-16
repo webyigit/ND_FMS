@@ -250,6 +250,18 @@ db.v_bank_tx = [
   btx(4, "2026-10-12T08:00:00+09:00", 0, 300000, "가나다십일조", { suggested_offering_type_id: 3, suggested_member_id: 1 }),
 ];
 rpc.import_bank_tx = () => ({ inserted: 0, skipped: 0 });
+// 검증시트(/expense/verify): 거래별 잔액, 장부잔액·기금잔액·저장
+db.v_bank_tx.forEach((t, i) => { t.balance = [12450000, 12600000, 12645000, 12725000][i]; });
+db.v_bank_tx.push(btx(5, "2026-10-16T10:00:00+09:00", 0, 50000, "라마바감사", { balance: 12500000, default_sunday: "2026-10-11" }));
+db.v_reconciliation = [{ sunday: "2026-10-11", year: 2026, closed: false, week_id: 2, bank_balance: 12725000, pending_deposit: 0, mission_unremitted: 2000000, base_surplus: 0, note: null, ledger_balance: 10725000 }];
+rpc.ledger_balance = () => 10450000;
+rpc.fund_balances = () => [
+  { kind: "general", name: "일반", carry: -1080913, prev_net: 5000000, week_in: 6850000, week_out: 4120000, week_transfer: 0, balance: 6649087 },
+  { kind: "special", name: "특별", carry: 3800913, prev_net: 0, week_in: 220000, week_out: 220000, week_transfer: 0, balance: 3800913 },
+  { kind: "separate", name: "별도", carry: 1850000, prev_net: 0, week_in: 200000, week_out: 0, week_transfer: 0, balance: 2050000 },
+];
+rpc.save_reconciliation = (a) => { db.v_reconciliation = db.v_reconciliation.filter((r) => r.sunday !== a.p_sunday); db.v_reconciliation.push({ sunday: a.p_sunday, year: 2026, closed: false, week_id: 9, bank_balance: a.p_bank_balance, pending_deposit: a.p_pending_deposit, mission_unremitted: a.p_mission_unremitted, base_surplus: a.p_base_surplus, note: a.p_note || null, ledger_balance: 10450000 }); return null; };
+rpc.my_role = () => "admin";
 db.fund = [{ id: 1, code: "general", name: "일반", kind: "general" }, { id: 2, code: "special", name: "특별", kind: "special" }, { id: 3, code: "separate", name: "별도", kind: "separate" }];
 db.carryover = [{ year: 2026, fund_id: 1, amount: -1080913 }, { year: 2026, fund_id: 2, amount: 38041780 }, { year: 2026, fund_id: 3, amount: 10445000 }];
 db.offering_carryover = [{ year: 2026, offering_type_id: 13, amount: 14904080 }, { year: 2026, offering_type_id: 14, amount: 2940000 }];

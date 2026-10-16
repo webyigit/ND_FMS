@@ -7,26 +7,30 @@ import { ExcelButton, PrintButton, btn, btnPrimary, card, input } from "@/compon
 import { must, useDbQuery } from "@/lib/db/useDb";
 import { dbError } from "@/lib/db/weekly";
 import { supabaseBrowser } from "@/lib/supabase/client";
-import { currentSunday } from "@/lib/demo";
 import { fileName, toAmount, won } from "@/lib/format";
 import { downloadXlsx } from "@/lib/excel";
-import { fromReconRow, reconcile, verdict, type ReconRow } from "@/lib/reconcile";
+import { fromReconRow, lastBankBalance, reconcile, verdict, type BalanceTx, type ReconRow } from "@/lib/reconcile";
 import { isAdmin, loadFundBalances } from "@/lib/expense/db";
 import { isSunday, sundayOf } from "@/lib/expense/week";
+import { kstDateTime, upcomingSunday } from "@/lib/income/dates";
+import { markStep } from "@/lib/weekly/stepsDb";
 
 type Recon = ReconRow & { sunday: string; closed: boolean; note: string | null };
-type Data = { sunday: string; closed: boolean; saved: Recon | null; ledger: number; separate: number; lastH: number | null; history: Recon[]; admin: boolean };
+/** bank: 은행거래내역에서 뽑은 A(그 주일까지 마지막 거래 잔액), weekIn/weekOut: 이번 주 수입·지출(일반+특별) */
+type Data = { sunday: string; closed: boolean; saved: Recon | null; ledger: number; separate: number; lastH: number | null; history: Recon[]; admin: boolean;
+  bank: { balance: number; txAt: string } | null; weekIn: number; weekOut: number };
 
 export default function VerifySheet() {
   return <DbOnly what="검증시트"><Screen /></DbOnly>;
 }
 
 function Screen() {
-  const [sunday, setSunday] = useState(currentSunday);
+  const [sunday, setSunday] = useState(() => upcomingSunday()); // 매주 업무 순서와 같은 주(돌아오는 주일)
   const [withCarry, setWithCarry] = useState(true);
+  const [msg, setMsg] = useState(""); // 저장 후 다시 불러와도(시트가 새로 그려져도) 남도록 여기서 들고 있는다
   const q = useDbQuery(async (sb): Promise<Data> => {
     const year = Number(sunday.slice(0, 4));
-    const [week, saved, ledger, funds, last, history, admin] = await Promise.all([
+    const [week, saved, ledger, funds, last, history, admin, txs, accounts] = await Promise.all([
       sb.from("week").select("closed").eq("sunday", sunday).maybeSingle().then(must),
       sb.from("v_reconciliation").select("*").eq("sunday", sunday).maybeSingle().then(must),
       sb.rpc("ledger_balance", { p_sunday: sunday, p_with_carry: withCarry }).then(must),
@@ -34,7 +38,13 @@ function Screen() {
       sb.from("v_reconciliation").select("base_surplus").lt("sunday", sunday).order("sunday", { ascending: false }).limit(1).then(must),
       sb.from("v_reconciliation").select("*").eq("year", year).order("sunday", { ascending: false }).then(must),
       isAdmin(sb),
+      sb.from("v_bank_tx").select("id, tx_at, tx_date, balance, bank_account_id").lte("tx_date", sunday).order("tx_at", { ascending: false }).limit(50).then(must),
+      sb.from("v_bank_account").select("id, is_primary").then(must),
     ]);
+    // 주 계좌(is_primary)의 거래만. 계좌 없이 올린 거래도 포함
+    const primary = (accounts as { id: number; is_primary: boolean }[]).find((a) => a.is_primary)?.id;
+    const mine = (txs as (BalanceTx & { bank_account_id: number | null })[]).filter((t) => primary == null || t.bank_account_id == null || t.bank_account_id === primary);
+    const gs = funds.filter((f) => f.kind !== "separate");
     const lastH = (last as { base_surplus: number | null }[])[0]?.base_surplus;
     return {
       sunday,
@@ -45,10 +55,13 @@ function Screen() {
       lastH: lastH == null ? null : Number(lastH),
       history: history as Recon[],
       admin,
+      bank: lastBankBalance(mine, sunday),
+      weekIn: gs.reduce((s, f) => s + f.weekIn, 0),
+      weekOut: gs.reduce((s, f) => s + f.weekOut, 0),
     };
   }, [sunday, withCarry]);
 
-  const pick = (d: string) => { if (d) setSunday(isSunday(d) ? d : sundayOf(d)); };
+  const pick = (d: string) => { if (d) { setSunday(isSunday(d) ? d : sundayOf(d)); setMsg(""); } };
   const excel = () => q.data && downloadXlsx(fileName(`검증시트_${sunday.slice(0, 4)}`, "xlsx"), [{
     name: "검증",
     rows: [["주일", "A 통장잔액", "B 입금예정", "C 실잔액", "D 해외선교 미입금", "E 계좌잔액", "F 장부잔액", "G 유용가능", "H 기준잉여금", "G−H", "판정", "메모"],
@@ -70,7 +83,7 @@ function Screen() {
       </div>
       {q.error && <Notice kind="error">불러오지 못했어요: {q.error}</Notice>}
       {q.data?.sunday !== sunday && !q.error && <div className="text-sm text-muted">불러오는 중…</div>}
-      {q.data?.sunday === sunday && <Sheet key={`${sunday}-${JSON.stringify(q.data.saved)}-${q.data.closed}-${q.data.lastH}`} sunday={sunday} d={q.data} reload={q.reload} />}
+      {q.data?.sunday === sunday && <Sheet key={`${sunday}-${JSON.stringify(q.data.saved)}-${q.data.closed}-${q.data.lastH}-${q.data.bank?.txAt}`} sunday={sunday} d={q.data} reload={q.reload} msg={msg} setMsg={setMsg} />}
 
       {q.data && q.data.history.length > 0 && (
         <div className={`${card} no-print mt-6 overflow-x-auto`}>
@@ -83,7 +96,7 @@ function Screen() {
               {q.data.history.map((r) => {
                 const i = fromReconRow(r), c = reconcile(i), v = verdict(c.diff);
                 return (
-                  <tr key={r.sunday} className={`cursor-pointer border-t hover:bg-surface-2 ${r.sunday === sunday ? "bg-primary-subtle" : ""}`} onClick={() => setSunday(r.sunday)}>
+                  <tr key={r.sunday} className={`cursor-pointer border-t hover:bg-surface-2 ${r.sunday === sunday ? "bg-primary-subtle" : ""}`} onClick={() => pick(r.sunday)}>
                     <td className="px-3 py-1.5">{r.sunday}</td><td className="text-right">{won(i.bankBalance)}</td><td className="text-right">{won(c.realBalance)}</td>
                     <td className="text-right">{won(c.accountBalance)}</td><td className="text-right">{won(i.ledgerBalance)}</td><td className="text-right">{won(c.diff)}</td>
                     <td className="text-center"><Badge label={v.label} /></td><td className="text-center text-xs">{r.closed ? "마감" : "-"}</td>
@@ -104,16 +117,29 @@ function Badge({ label }: { label: string }) {
   return <span className={`rounded px-2 py-0.5 text-xs ${c}`}>{label}</span>;
 }
 
-function Sheet({ sunday, d, reload }: { sunday: string; d: Data; reload: () => void }) {
+/** A 칸 안내: 은행거래내역 마지막 거래 잔액(있으면 넣기 버튼) */
+function BankHint({ bank, value, closed, put }: { bank: Data["bank"]; value: number; closed: boolean; put: (n: number) => void }) {
+  if (!bank) return <>농협 통장 잔액. 은행거래내역을 올리면 마지막 거래 잔액을 자동으로 넣어요</>;
+  const at = kstDateTime(bank.txAt).slice(5).replace("-", "/");
+  if (bank.balance === value) return <>은행거래내역 마지막 거래({at}) 잔액</>;
+  return (
+    <>
+      은행거래내역 마지막 거래({at}) {won(bank.balance)}
+      {!closed && <button className="no-print ml-1 text-primary underline" onClick={() => put(bank.balance)}>넣기</button>}
+    </>
+  );
+}
+
+function Sheet({ sunday, d, reload, msg, setMsg }: { sunday: string; d: Data; reload: () => void; msg: string; setMsg: (s: string) => void }) {
   const sb = supabaseBrowser()!;
   const s = d.saved;
   const init = (v: number | string | null | undefined) => (v == null ? "" : won(Number(v)));
-  const [a, setA] = useState(init(s?.bank_balance));
+  // A: 저장값 → 없으면 은행거래내역 마지막 거래 잔액(고칠 수 있음)
+  const [a, setA] = useState(init(s?.bank_balance ?? d.bank?.balance));
   const [b, setB] = useState(init(s?.pending_deposit));
   const [dd, setD] = useState(init(s?.mission_unremitted));
   const [h, setH] = useState(init(s?.base_surplus ?? d.lastH));
   const [note, setNote] = useState(s?.note ?? "");
-  const [msg, setMsg] = useState("");
   const [err, setErr] = useState("");
   const [busy, setBusy] = useState(false);
 
@@ -129,7 +155,10 @@ function Sheet({ sunday, d, reload }: { sunday: string; d: Data; reload: () => v
     });
     setBusy(false);
     if (error) return setErr(`저장하지 못했어요: ${dbError(error)}`);
-    setMsg("저장했어요."); reload();
+    // 매주 업무 순서 '검증' 단계: 일치로 저장하면 완료
+    if (v.label === "일치") { void markStep(sunday, "verify"); setMsg("저장했어요. 잔액이 맞아 '검증' 단계를 완료로 표시했어요."); }
+    else setMsg(`저장했어요. ${won(v.amount)}원 ${v.label}이라 '검증' 단계는 완료로 표시하지 않았어요.`);
+    reload();
   };
   const close = async (closed: boolean) => {
     if (!confirm(closed ? `${sunday} 주를 마감할까요? 마감하면 그 주 수입·지출·검증시트를 고칠 수 없어요.` : `${sunday} 주 마감을 풀까요?`)) return;
@@ -166,7 +195,10 @@ function Sheet({ sunday, d, reload }: { sunday: string; d: Data; reload: () => v
         <div className="mb-3 text-center text-sm text-label">{sunday} 주일 기준</div>
         <table className="tbl-cards mx-auto w-full max-w-3xl text-sm">
           <tbody>
-            {field("A 통장 잔액", a, setA, "농협 통장 잔액")}
+            {calc("이번 주 수입", d.weekIn, "일반+특별 (별도 기금 제외)")}
+            {calc("이번 주 지출", d.weekOut, "일반+특별, 송금 수수료 포함")}
+            {calc("이번 주 수지", d.weekIn - d.weekOut, "수입 − 지출")}
+            {field("A 통장 잔액", a, setA, <BankHint bank={d.bank} value={toAmount(a)} closed={d.closed} put={(n) => setA(won(n))} />)}
             {field("B 입금 예정", b, setB)}
             {calc("C 실잔액", c.realBalance, "A + B")}
             {field("D 해외선교 미입금", dd, setD, !d.closed && (
