@@ -33,3 +33,12 @@ export const fromReconRow = (r: ReconRow): ReconcileInput => ({
   ledgerBalance: Number(r.ledger_balance ?? 0),
   baseSurplus: Number(r.base_surplus ?? 0),
 });
+
+/** 은행거래내역에서 A 통장 잔액 뽑기: 그 주일(포함)까지의 마지막 거래 잔액. 거래가 없으면 null */
+export type BalanceTx = { id: number; tx_at: string; tx_date: string; balance: number | string | null };
+export function lastBankBalance(txs: BalanceTx[], sunday: string): { balance: number; txAt: string } | null {
+  const hit = txs
+    .filter((t) => t.tx_date <= sunday && t.balance != null)
+    .sort((a, b) => Date.parse(b.tx_at) - Date.parse(a.tx_at) || b.id - a.id)[0];
+  return hit ? { balance: Number(hit.balance), txAt: hit.tx_at } : null;
+}

@@ -5,7 +5,7 @@ import { amountMatch, filterHistory, monthlyTotals, type HistRow } from "../expe
 import { clergyByPerson } from "../expense/clergy";
 import { fixedProblems, emptyFixed, sortFixed, toFixedRow, newFixedOnly } from "../expense/fixed";
 import { addDays, isSunday, sundayOf } from "../expense/week";
-import { fromReconRow, reconcile, verdict } from "../reconcile";
+import { fromReconRow, lastBankBalance, reconcile, verdict } from "../reconcile";
 
 // 테스트 데이터는 모두 가상(실명·실금액 아님)
 describe("금주 리포트", () => {
@@ -173,5 +173,19 @@ describe("은행 출금 → 지출입력 임시저장", async () => {
     const r = rowFromBankTx({ id: 9, withdraw: 33000, description: "한전", transfer_memo: "전기요금", tx_memo: null, tx_date: "2026-10-13" }, () => "n1");
     expect(r).toMatchObject({ id: "n1", content: "전기요금", amount: 33000, memo: "한전 · 2026-10-13", source: "은행", bankTxId: 9, dept: "", item: "" });
     expect(rowFromBankTx({ id: 1, withdraw: 1, description: "한전", transfer_memo: null, tx_memo: null, tx_date: "2026-10-13" }, () => "n").memo).toBe("2026-10-13");
+  });
+});
+
+describe("검증시트 A: 은행거래내역 마지막 거래 잔액", () => {
+  const txs = [
+    { id: 1, tx_at: "2026-10-12T00:10:00+00:00", tx_date: "2026-10-12", balance: 900 },
+    { id: 2, tx_at: "2026-10-18T01:00:00+00:00", tx_date: "2026-10-18", balance: 1200 },
+    { id: 3, tx_at: "2026-10-18T01:00:00+00:00", tx_date: "2026-10-18", balance: 1100 }, // 같은 시각이면 나중 행
+    { id: 4, tx_at: "2026-10-19T01:00:00+00:00", tx_date: "2026-10-19", balance: 5000 }, // 주일 다음 날은 제외
+  ];
+  it("그 주일(포함)까지 마지막 거래", () => {
+    expect(lastBankBalance(txs, "2026-10-18")).toEqual({ balance: 1100, txAt: "2026-10-18T01:00:00+00:00" });
+    expect(lastBankBalance(txs, "2026-10-11")).toBeNull();
+    expect(lastBankBalance(txs, "2026-10-15")?.balance).toBe(900);
   });
 });

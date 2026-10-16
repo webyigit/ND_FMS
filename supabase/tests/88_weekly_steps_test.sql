@@ -10,6 +10,9 @@ do $$ declare t bigint; n int; first_at timestamptz; begin
   perform public.set_week_step('2024-12-01', 'income');  -- 다시 완료해도 처음 시각 유지
   assert (select done_at from week_step where sunday = '2024-12-01' and step = 'income') = first_at, '완료 시각 유지';
   assert (select count(*) from week_step where sunday = '2024-12-01') = 2, '2단계 완료';
+  perform public.set_week_step('2024-12-01', 'verify');  -- 0025 검증 단계
+  assert (select count(*) from week_step where sunday = '2024-12-01') = 3, '검증 단계 완료';
+  perform public.set_week_step('2024-12-01', 'verify', false);
   perform public.set_week_step('2024-12-01', 'income_report', false);
   assert (select count(*) from week_step where sunday = '2024-12-01') = 1, '완료 취소';
   begin

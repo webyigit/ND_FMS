@@ -78,8 +78,8 @@ export default function WeeklySteps() {
         </div>
         {open && today && (
           <>
-            {/* 넓은 화면은 6단계를 한 줄로, 폰은 가로로 밀어서 본다 */}
-            <ol className="-mx-1 mt-1 flex snap-x gap-2 overflow-x-auto px-1 pb-1 lg:grid lg:grid-cols-6 lg:overflow-visible">
+            {/* 넓은 화면은 7단계를 한 줄로, 폰은 가로로 밀어서 본다 */}
+            <ol className="-mx-1 mt-1 flex snap-x gap-2 overflow-x-auto px-1 pb-1 lg:grid lg:grid-cols-7 lg:overflow-visible">
               {steps.map((s, i) => {
                 const active = path === s.href.split("?")[0];
                 return (
