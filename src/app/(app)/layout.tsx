@@ -5,6 +5,7 @@ import MobileNav from "@/components/MobileNav";
 import UserMenu from "@/components/UserMenu";
 import AccessLogger from "@/components/AccessLogger";
 import SyncStatus from "@/components/SyncStatus";
+import WeeklySteps from "@/components/WeeklySteps";
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -18,6 +19,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         </header>
         <PendingRequests />
         <PendingTodos />
+        <WeeklySteps />
         <main className="flex-1 p-4 lg:p-6">{children}</main>
       </div>
     </div>

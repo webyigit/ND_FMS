@@ -1,11 +1,10 @@
 "use client";
 import { useMemo, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faBell, faLightbulb, faFileLines, faChartLine, faLayerGroup } from "@fortawesome/free-solid-svg-icons";
+import { faBell, faLightbulb, faFileLines, faChartLine, faLayerGroup, faChartColumn, faArrowTrendUp, faArrowTrendDown, faCalendarDays, faBuilding, faHandHoldingHeart, type IconDefinition } from "@fortawesome/free-solid-svg-icons";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import PageHeader from "@/components/PageHeader";
 import Notice from "@/components/ui/Notice";
-import { card } from "@/components/ui/Buttons";
 import EChart, { C, compareHOption, compareOption, flowOption, man, wonTip } from "@/components/charts/EChart";
 import { useDbQuery } from "@/lib/db/useDb";
 import { localDate, won } from "@/lib/format";
@@ -31,7 +30,13 @@ async function load(sb: SupabaseClient, year: number): Promise<Data> {
 }
 
 const MONTHS = Array.from({ length: 12 }, (_, i) => `${i + 1}월`);
-const h3 = "mb-3 flex flex-wrap items-center gap-x-2 gap-y-0 text-sm font-semibold text-heading";
+const h3 = "mb-3 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm font-semibold text-heading";
+// 클레이모피즘 카드·아이콘(globals.css .clay). tone 은 파스텔 바탕색
+type Tone = "mint" | "peach" | "lavender" | "sky" | "lemon" | "rose";
+const clay = (extra = "", tone?: Tone) => ({ className: `clay p-5 ${extra}`, ...(tone ? { "data-tone": tone } : {}) });
+const Ico = ({ icon, tone, color }: { icon: IconDefinition; tone: Tone; color: string }) => (
+  <span className={`clay-icon ${color}`} data-tone={tone}><FontAwesomeIcon icon={icon} /></span>
+);
 
 export default function Dashboard() {
   const today = localDate();
@@ -91,8 +96,8 @@ function View({ d, today }: { d: Data; today: string }) {
   const group = groups.find((g) => g.dept === pick) ?? groups[0];
   const itemChart = useMemo(() => group && compareHOption(group.items.map((x) => x.name), group.items.map((x) => x.cur), group.items.map((x) => x.prev), C.out), [group]);
 
-  const tile = (label: string, v: number, prev: number | null, tone: string, prevLabel = "전주") => (
-    <div className="rounded-lg bg-surface-2 p-3">
+  const tile = (label: string, v: number, prev: number | null, tone: string, prevLabel = "전주", bg: Tone = "sky") => (
+    <div className="clay-tile p-4" data-tone={bg}>
       <div className="text-xs text-label">{label}</div>
       <div className={`text-lg font-bold ${tone}`}>{won(v)}</div>
       {prev != null && <div className="text-xs text-muted">{prevLabel} {won(prev)} · {change(v, prev)}</div>}
@@ -106,39 +111,39 @@ function View({ d, today }: { d: Data; today: string }) {
         <span className="rounded bg-surface px-2 py-1 text-xs text-label shadow-card">기준 주일 {sunday} · 오늘 {today}</span>
       </>} />
 
-      <div className="grid gap-4 lg:grid-cols-3">
-        <div className="space-y-4 lg:col-span-2">
-        <section className={`${card} p-4`}>
-          <h3 className={h3}><FontAwesomeIcon icon={faFileLines} className="text-primary" />금주 리포트 <span className="font-normal text-muted">({sunday} 주일, 일반·특별)</span></h3>
-          <div className="mb-3 grid grid-cols-1 gap-2 sm:grid-cols-3">
-            {tile("수입", wr.income, wr.prevIncome, "text-chart-in")}
-            {tile("지출", wr.expense, wr.prevExpense, "text-chart-out")}
-            {tile("잔액(이월 포함)", wr.balance, null, wr.balance < 0 ? "text-danger" : "text-heading")}
+      <div className="grid gap-5 lg:grid-cols-3">
+        <div className="space-y-5 lg:col-span-2">
+        <section {...clay()}>
+          <h3 className={h3}><Ico icon={faFileLines} tone="sky" color="text-info" />금주 리포트 <span className="font-normal text-muted">({sunday} 주일, 일반·특별)</span></h3>
+          <div className="mb-3 grid grid-cols-1 gap-3 sm:grid-cols-3">
+            {tile("수입", wr.income, wr.prevIncome, "text-chart-in", "전주", "mint")}
+            {tile("지출", wr.expense, wr.prevExpense, "text-chart-out", "전주", "rose")}
+            {tile("잔액(이월 포함)", wr.balance, null, wr.balance < 0 ? "text-danger" : "text-heading", "전주", "lavender")}
           </div>
           <ul className="list-disc space-y-1 pl-5 text-sm">{weekReportText(wr).map((l) => <li key={l}>{l}</li>)}</ul>
           <p className="mt-2 text-xs text-muted">잔액 = 올해 이월금(일반·특별) + 올해 수입 누계 − 지출 누계 [확인 필요: 검증시트 장부잔액과 기준 맞추기]</p>
         </section>
 
-        <section className={`${card} p-4`}>
-          <h3 className={h3}><FontAwesomeIcon icon={faChartLine} className="text-primary" />누적 리포트 <span className="font-normal text-muted">({yr.from} ~ {sunday}, {yr.weeks}주, 일반·특별)</span></h3>
-          <div className="mb-3 grid grid-cols-1 gap-2 sm:grid-cols-3">
-            {tile("수입 누계", yr.income, yr.prevIncome, "text-chart-in", "작년 같은 기간")}
-            {tile("지출 누계", yr.expense, yr.prevExpense, "text-chart-out", "작년 같은 기간")}
-            {tile("잔액(이월 포함)", yr.balance, null, yr.balance < 0 ? "text-danger" : "text-heading")}
+        <section {...clay()}>
+          <h3 className={h3}><Ico icon={faChartLine} tone="mint" color="text-primary" />누적 리포트 <span className="font-normal text-muted">({yr.from} ~ {sunday}, {yr.weeks}주, 일반·특별)</span></h3>
+          <div className="mb-3 grid grid-cols-1 gap-3 sm:grid-cols-3">
+            {tile("수입 누계", yr.income, yr.prevIncome, "text-chart-in", "작년 같은 기간", "mint")}
+            {tile("지출 누계", yr.expense, yr.prevExpense, "text-chart-out", "작년 같은 기간", "rose")}
+            {tile("잔액(이월 포함)", yr.balance, null, yr.balance < 0 ? "text-danger" : "text-heading", "", "lavender")}
           </div>
           <ul className="list-disc space-y-1 pl-5 text-sm">{ytdReportText(yr).map((l) => <li key={l}>{l}</li>)}</ul>
         </section>
         </div>
 
         {/* 오른쪽 열: 왼쪽 열 높이에 맞춰 특이사항 알람·수지 인사이트가 반씩 차지 (lg 이상) */}
-        <div className="grid gap-4 lg:grid-rows-2 lg:[contain:size]">
-        <section className={`${card} p-4 lg:overflow-y-auto`}>
-          <h3 className={h3}><FontAwesomeIcon icon={faBell} className="text-warning" />특이사항 알람</h3>
+        <div className="grid gap-5 lg:grid-rows-2 lg:[contain:size]">
+        <section {...clay("lg:overflow-y-auto", "lemon")}>
+          <h3 className={h3}><Ico icon={faBell} tone="peach" color="text-warning" />특이사항 알람</h3>
           {d.demo ? <p className="text-sm text-muted">DB를 연결하면 송금 계좌 이체 이력으로 알려 드려요.</p> : (
             <div className="space-y-3 text-sm">
               <div>
                 <div className="mb-1 font-medium text-heading">처음 이체하는 계좌 <span className="text-muted">({alerts.firstTime.length})</span></div>
-                {alerts.firstTime.length ? <ul className="space-y-0.5">{alerts.firstTime.map((p) => <li key={p.payeeId} className="rounded bg-warning-subtle px-2 py-1 text-warning">{p.name} {p.bank ?? ""} {p.account ?? ""} · {won(p.total)}원</li>)}</ul>
+                {alerts.firstTime.length ? <ul className="space-y-0.5">{alerts.firstTime.map((p) => <li key={p.payeeId} className="rounded-xl bg-surface/70 px-3 py-1.5 text-warning">{p.name} {p.bank ?? ""} {p.account ?? ""} · {won(p.total)}원</li>)}</ul>
                   : <p className="text-muted">없어요</p>}
               </div>
               <div>
@@ -155,26 +160,26 @@ function View({ d, today }: { d: Data; today: string }) {
           )}
         </section>
 
-        <section className={`${card} p-4 lg:overflow-y-auto`}>
-          <h3 className={h3}><FontAwesomeIcon icon={faLightbulb} className="text-primary" />수지 인사이트</h3>
+        <section {...clay("lg:overflow-y-auto", "lavender")}>
+          <h3 className={h3}><Ico icon={faLightbulb} tone="lemon" color="text-warning" />수지 인사이트</h3>
           {tips.length ? <ul className="list-disc space-y-1 pl-5 text-sm">{tips.map((t) => <li key={t}>{t}</li>)}</ul> : <p className="text-sm text-muted">아직 데이터가 부족해요.</p>}
           <p className="mt-1 text-xs text-muted">정해진 규칙으로 만든 문장이에요(일반·특별 기준, 작년 같은 기간과 비교).</p>
         </section>
         </div>
       </div>
 
-      <section className={`${card} mt-4 p-4`}>
-        <h3 className={h3}>주간 수지 추이 <span className="font-normal text-muted">(최근 12주)</span></h3>
+      <section {...clay("mt-4")}>
+        <h3 className={h3}><Ico icon={faChartColumn} tone="sky" color="text-info" />주간 수지 추이 <span className="font-normal text-muted">(최근 12주)</span></h3>
         <EChart option={weekly} label="최근 12주 수입·지출" />
       </section>
 
       <div className="mt-4 grid gap-4 lg:grid-cols-2">
-        <section className={`${card} p-4`}><h3 className={h3}>수입 · 작년 동월 대비</h3><EChart option={incMonth} label="월별 수입 올해·작년" /></section>
-        <section className={`${card} p-4`}><h3 className={h3}>지출 · 작년 동월 대비</h3><EChart option={expMonth} label="월별 지출 올해·작년" /></section>
+        <section {...clay()}><h3 className={h3}><Ico icon={faArrowTrendUp} tone="mint" color="text-chart-in" />수입 · 작년 동월 대비</h3><EChart option={incMonth} label="월별 수입 올해·작년" /></section>
+        <section {...clay()}><h3 className={h3}><Ico icon={faArrowTrendDown} tone="rose" color="text-chart-out" />지출 · 작년 동월 대비</h3><EChart option={expMonth} label="월별 지출 올해·작년" /></section>
       </div>
 
-      <section className={`${card} mt-4 p-4`}>
-        <h3 className={h3}>분기별 수입 / 지출 <span className="font-normal text-muted">({year} · {year - 1})</span></h3>
+      <section {...clay("mt-4")}>
+        <h3 className={h3}><Ico icon={faCalendarDays} tone="lavender" color="text-purple" />분기별 수입 / 지출 <span className="font-normal text-muted">({year} · {year - 1})</span></h3>
         <div className="grid gap-4 lg:grid-cols-3">
           <div className="lg:col-span-2"><EChart option={quarter.option} label="분기별 수입·지출" /></div>
           <table className="tbl-cards w-full self-start text-sm">
@@ -187,25 +192,25 @@ function View({ d, today }: { d: Data; today: string }) {
       </section>
 
       <div className="mt-4 grid gap-4 lg:grid-cols-2">
-        <section className={`${card} p-4`}>
-          <h3 className={h3}>부서별 지출 <span className="font-normal text-muted">(올해 누계 · 작년 같은 기간)</span></h3>
+        <section {...clay()}>
+          <h3 className={h3}><Ico icon={faBuilding} tone="peach" color="text-warning" />부서별 지출 <span className="font-normal text-muted">(올해 누계 · 작년 같은 기간)</span></h3>
           {dept.rows.length ? <EChart option={dept.option} className="h-80" label="부서별 지출 올해·작년" /> : <p className="text-sm text-muted">지출이 없어요.</p>}
         </section>
-        <section className={`${card} p-4`}>
-          <h3 className={h3}>헌금구분별 헌금 <span className="font-normal text-muted">(올해 누계 · 작년 같은 기간)</span></h3>
+        <section {...clay()}>
+          <h3 className={h3}><Ico icon={faHandHoldingHeart} tone="rose" color="text-pink" />헌금구분별 헌금 <span className="font-normal text-muted">(올해 누계 · 작년 같은 기간)</span></h3>
           {types.rows.length ? <EChart option={types.option} className="h-80" label="헌금구분별 헌금 올해·작년" /> : <p className="text-sm text-muted">수입이 없어요.</p>}
         </section>
       </div>
 
       {/* 구분(부서)별로 나눠 한 번에 한 구분의 항목만 보여 준다 (항목이 많아서) */}
-      <section className={`${card} mt-4 p-4`}>
-        <h3 className={h3}><FontAwesomeIcon icon={faLayerGroup} className="text-primary" />항목별 지출 <span className="font-normal text-muted">(구분별 · 올해 누계 · 작년 같은 기간)</span></h3>
+      <section {...clay("mt-4")}>
+        <h3 className={h3}><Ico icon={faLayerGroup} tone="lavender" color="text-purple" />항목별 지출 <span className="font-normal text-muted">(구분별 · 올해 누계 · 작년 같은 기간)</span></h3>
         {group && itemChart ? <>
           <div className="mb-3 flex flex-wrap gap-1.5 text-xs" role="tablist" aria-label="지출 구분">
             {groups.map((g) => {
               const on = g.dept === group.dept;
               return <button key={g.dept} role="tab" aria-selected={on} onClick={() => setPick(g.dept)}
-                className={`rounded-full border px-2.5 py-1 ${on ? "border-primary bg-primary text-white" : "bg-surface text-label hover:bg-surface-2"}`}>
+                className={`clay-tile rounded-full px-3 py-1.5 ${on ? "bg-primary! text-white" : "text-label hover:text-primary"}`}>
                 {g.dept} <span className={on ? "text-white/80" : "text-muted"}>{man(g.cur)}</span>
               </button>;
             })}
