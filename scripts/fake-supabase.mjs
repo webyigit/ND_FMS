@@ -238,7 +238,10 @@ rpc.set_week_step = ({ p_sunday, p_step, p_done }) => {
   if (p_done) db.week_step.push({ sunday: p_sunday, step: p_step, done_at: new Date().toISOString() });
   return null;
 };
-db.fixed_expense = [{ week_of_month: 3, content: "전기요금(가상)", amount: 150000, active: true, expense_item: { name: "수선비", department: { name: "관리부", sort_order: 3 } } }];
+// 고정지출: 3째 주에 사용 1건·미사용 1건(미사용은 불러오기에서 빠져야 함), 1째 주 사용 1건
+const fx = (id, week_of_month, content, amount, active) => ({ id, week_of_month, content, amount, active, expense_item_id: 13, payee_id: null, memo: null, expense_item: { name: "수선비", department: { name: "관리부", sort_order: 3 } } });
+db.payee ??= [{ id: 1, name: "한전(가상)", holder: null, bank: "가상은행" }];
+db.fixed_expense = [fx(1, 3, "전기요금(가상)", 150000, true), fx(2, 3, "정수기 렌탈(가상)", 30000, false), fx(3, 1, "인터넷(가상)", 40000, true)];
 db.v_bank_account = [{ id: 1, bank: "농협", holder: "가상교회", kind: "일반", is_primary: true, active: true, account_mask: "***-**-1234" }];
 db.member_alias = [];
 const btx = (id, tx_at, withdraw, deposit, description, extra = {}) => ({

@@ -31,3 +31,12 @@ export function newFixedOnly<T extends FixedLike>(fixed: T[], rows: (FixedLike &
   const add = fixed.filter((f) => !have.has(fixedKey(f)));
   return { add, dup: fixed.length - add.length };
 }
+
+/** 주차별로 사용 중 / 미사용을 나눈다(빈 주차는 빼고). 불러오기·합계는 사용 중만 쓴다 */
+export function groupFixedByWeek<T extends { weekOfMonth: number; active: boolean; content: string; amount: number }>(xs: T[]) {
+  return [1, 2, 3, 4, 5].map((w) => {
+    const inWeek = sortFixed(xs.filter((x) => x.weekOfMonth === w));
+    const active = inWeek.filter((x) => x.active), inactive = inWeek.filter((x) => !x.active);
+    return { week: w, active, inactive, total: active.reduce((s, x) => s + x.amount, 0) };
+  }).filter((g) => g.active.length || g.inactive.length);
+}

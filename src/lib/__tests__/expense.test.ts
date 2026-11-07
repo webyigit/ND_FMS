@@ -3,7 +3,7 @@ import { fromFundRows, groupOfferings, lineOf, separateLines, weekSummary } from
 import { byDepartment, periodRange, searchDepts } from "../expense/budget";
 import { amountMatch, filterHistory, monthlyTotals, type HistRow } from "../expense/history";
 import { clergyByPerson } from "../expense/clergy";
-import { fixedProblems, emptyFixed, sortFixed, toFixedRow, newFixedOnly } from "../expense/fixed";
+import { fixedProblems, emptyFixed, sortFixed, toFixedRow, newFixedOnly, groupFixedByWeek } from "../expense/fixed";
 import { addDays, isSunday, sundayOf } from "../expense/week";
 import { fromReconRow, lastBankBalance, reconcile, verdict } from "../reconcile";
 
@@ -134,6 +134,8 @@ describe("교역자급여·고정지출·주일", () => {
     expect(fixedProblems({ ...emptyFixed(), weekOfMonth: 6, content: "x", amount: 1, expenseItemId: 1 })).toEqual(["N째 주(1~5)"]);
     const s = sortFixed([{ weekOfMonth: 2, active: true, content: "나" }, { weekOfMonth: 1, active: false, content: "가" }, { weekOfMonth: 1, active: true, content: "다" }]);
     expect(s.map((x) => x.content)).toEqual(["다", "가", "나"]);
+    const g = groupFixedByWeek([{ weekOfMonth: 2, active: true, content: "나", amount: 5 }, { weekOfMonth: 2, active: false, content: "가", amount: 7 }, { weekOfMonth: 4, active: false, content: "다", amount: 9 }]);
+    expect(g.map((x) => [x.week, x.active.length, x.inactive.length, x.total])).toEqual([[2, 1, 1, 5], [4, 0, 1, 0]]);
     expect(toFixedRow({ ...emptyFixed(), content: " 전기 ", amount: 1, expenseItemId: 3 })).toMatchObject({ content: "전기", memo: null, week_of_month: 1 });
   });
   it("고정지출 불러오기는 이미 있는 항목을 빼고 새 것만", () => {

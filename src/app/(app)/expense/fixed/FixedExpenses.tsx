@@ -1,5 +1,5 @@
 "use client";
-import { useMemo, useState } from "react";
+import { Fragment, useMemo, useState } from "react";
 import PageHeader from "@/components/PageHeader";
 import DbOnly from "@/components/ui/DbOnly";
 import Notice from "@/components/ui/Notice";
@@ -8,7 +8,7 @@ import { must, useDbQuery } from "@/lib/db/useDb";
 import { dbError } from "@/lib/db/weekly";
 import { supabaseBrowser } from "@/lib/supabase/client";
 import { won } from "@/lib/format";
-import { emptyFixed, fixedProblems, sortFixed, toFixedRow, type FixedForm } from "@/lib/expense/fixed";
+import { emptyFixed, fixedProblems, groupFixedByWeek, toFixedRow, type FixedForm } from "@/lib/expense/fixed";
 
 type Item = { id: number; name: string; sort_order: number | null; department: { name: string; sort_order: number | null } | null };
 type Payee = { id: number; name: string | null; holder: string | null; bank: string | null };
@@ -44,7 +44,7 @@ function Screen() {
 
   const itemLabel = useMemo(() => new Map((q.data?.items ?? []).map((i) => [i.id, `${i.department?.name ?? ""} · ${i.name}`])), [q.data]);
   const payeeLabel = useMemo(() => new Map((q.data?.payees ?? []).map((p) => [p.id, [p.name ?? p.holder, p.bank].filter(Boolean).join(" · ")])), [q.data]);
-  const rows = useMemo(() => sortFixed((q.data?.rows ?? []).filter((r) => !week || r.weekOfMonth === week)), [q.data, week]);
+  const groups = useMemo(() => groupFixedByWeek((q.data?.rows ?? []).filter((r) => !week || r.weekOfMonth === week)), [q.data, week]);
   const totals = useMemo(() => [1, 2, 3, 4, 5].map((w) => (q.data?.rows ?? []).filter((r) => r.active && r.weekOfMonth === w).reduce((s, r) => s + r.amount, 0)), [q.data]);
 
   const save = async () => {
@@ -59,6 +59,15 @@ function Screen() {
     if (!r.data?.length) return setErr("저장 권한이 없어요.");
     setMsg(edit.id ? "고쳤어요." : "추가했어요."); setEdit(null); q.reload();
   };
+  // 사용 ↔ 미사용 바로 바꾸기(미사용은 '고정지출 불러오기'에서 빠짐)
+  const toggle = async (r: Row) => {
+    setErr(""); setMsg(""); setBusy(true);
+    const { data, error } = await sb.from("fixed_expense").update({ active: !r.active }).eq("id", r.id).select("id");
+    setBusy(false);
+    if (error) return setErr(`바꾸지 못했어요: ${dbError(error)}`);
+    if (!data?.length) return setErr("바꿀 권한이 없어요.");
+    setMsg(`'${r.content}'을(를) ${r.active ? "미사용으로 바꿨어요. 고정지출 불러오기에서 빠져요." : "다시 사용해요."}`); q.reload();
+  };
   const remove = async (r: Row) => {
     if (!confirm(`'${r.content}' 고정지출을 지울까요?`)) return;
     setErr(""); setMsg("");
@@ -66,6 +75,27 @@ function Screen() {
     if (error) return setErr(`지우지 못했어요: ${dbError(error)}`);
     setMsg("지웠어요."); q.reload();
   };
+
+  const line = (r: Row) => (
+    <tr key={r.id} className={`border-t ${r.active ? "" : "text-muted"}`}>
+      <td className="py-2 text-center">{r.weekOfMonth}째</td>
+      <td className={r.active ? "text-heading" : "line-through"}>{r.content}</td>
+      <td className="text-right">{won(r.amount)}</td>
+      <td className="pl-4">{r.expenseItemId ? itemLabel.get(r.expenseItemId) : "-"}</td>
+      <td>{r.payeeId ? payeeLabel.get(r.payeeId) : "-"}</td>
+      <td className="text-label">{r.memo}</td>
+      <td className="text-center">
+        <button onClick={() => toggle(r)} disabled={busy} title={r.active ? "눌러서 미사용으로" : "눌러서 사용으로"} aria-pressed={r.active}
+          className={`rounded-full border px-2.5 py-0.5 text-xs ${r.active ? "border-success bg-success-subtle text-success" : "bg-surface-2 text-muted"}`}>
+          {r.active ? "사용" : "미사용"}
+        </button>
+      </td>
+      <td className="px-2 text-right text-xs">
+        <button onClick={() => { setEdit({ id: r.id, f: { ...r } }); setMsg(""); }} className="rounded border px-2 py-1">고치기</button>{" "}
+        <button onClick={() => remove(r)} className="rounded border px-2 py-1 text-danger">삭제</button>
+      </td>
+    </tr>
+  );
 
   const form = edit && (
     <div className={`${card} mb-4 p-4 text-sm`}>
@@ -99,7 +129,7 @@ function Screen() {
           <input className={`${input} mt-1 block w-full`} value={edit.f.memo} onChange={(e) => setEdit({ ...edit, f: { ...edit.f, memo: e.target.value } })} />
         </label>
         <label className="flex items-center gap-2 self-end pb-2 text-sm">
-          <input type="checkbox" checked={edit.f.active} onChange={(e) => setEdit({ ...edit, f: { ...edit.f, active: e.target.checked } })} /> 사용
+          <input type="checkbox" checked={edit.f.active} onChange={(e) => setEdit({ ...edit, f: { ...edit.f, active: e.target.checked } })} /> 사용 (끄면 미사용: 불러오기에서 빠짐)
         </label>
       </div>
       <div className="mt-3 flex gap-2">
@@ -129,30 +159,24 @@ function Screen() {
       <div className={`${card} overflow-x-auto`}>
         <table className="tbl-cards w-full text-sm">
           <thead className="bg-surface-2 text-xs text-label">
-            <tr><th className="w-16 py-2">주</th><th className="text-left">내용</th><th className="w-28 text-right">금액</th><th className="text-left">부서·항목</th><th className="text-left">송금처</th><th className="text-left">메모</th><th className="w-16">사용</th><th className="w-28" /></tr>
+            <tr><th className="w-16 py-2">주</th><th className="text-left">내용</th><th className="w-28 text-right">금액</th><th className="pl-4 text-left">부서·항목</th><th className="text-left">송금처</th><th className="text-left">메모</th><th className="w-20">상태</th><th className="w-28" /></tr>
           </thead>
           <tbody>
             {q.loading && <tr><td colSpan={8} className="py-6 text-center text-muted">불러오는 중…</td></tr>}
-            {!q.loading && !rows.length && <tr><td colSpan={8} className="py-6 text-center text-muted">등록된 고정지출이 없어요.</td></tr>}
-            {rows.map((r) => (
-              <tr key={r.id} className={`border-t ${r.active ? "" : "text-muted"}`}>
-                <td className="py-2 text-center">{r.weekOfMonth}째</td>
-                <td className="text-heading">{r.content}</td>
-                <td className="text-right">{won(r.amount)}</td>
-                <td>{r.expenseItemId ? itemLabel.get(r.expenseItemId) : "-"}</td>
-                <td>{r.payeeId ? payeeLabel.get(r.payeeId) : "-"}</td>
-                <td className="text-label">{r.memo}</td>
-                <td className="text-center">{r.active ? <span className="rounded bg-success-subtle px-2 py-0.5 text-xs text-success">사용</span> : <span className="text-xs">중지</span>}</td>
-                <td className="px-2 text-right text-xs">
-                  <button onClick={() => { setEdit({ id: r.id, f: { ...r } }); setMsg(""); }} className="rounded border px-2 py-1">고치기</button>{" "}
-                  <button onClick={() => remove(r)} className="rounded border px-2 py-1 text-danger">삭제</button>
-                </td>
-              </tr>
+            {!q.loading && !groups.length && <tr><td colSpan={8} className="py-6 text-center text-muted">등록된 고정지출이 없어요.</td></tr>}
+            {groups.map((g) => (
+              <Fragment key={g.week}>
+                <tr className="border-t bg-surface-2/60"><td colSpan={8} className="px-3 py-1.5 text-xs font-semibold text-heading">{g.week}째 주 · 사용 중 {g.active.length}건 {won(g.total)}</td></tr>
+                {!g.active.length && <tr><td colSpan={8} className="py-3 text-center text-xs text-muted">사용 중인 항목이 없어요.</td></tr>}
+                {g.active.map((r) => line(r))}
+                {g.inactive.length > 0 && <tr className="border-t border-dashed"><td colSpan={8} className="px-3 py-1.5 text-xs text-muted"><i className="fa-solid fa-ban mr-1" aria-hidden />{g.week}째 주 미사용 {g.inactive.length}건 · 고정지출 불러오기에서 빠져요</td></tr>}
+                {g.inactive.map((r) => line(r))}
+              </Fragment>
             ))}
           </tbody>
         </table>
       </div>
-      <p className="mt-3 text-xs text-muted">지출입력의 &apos;고정지출 불러오기&apos;는 그 주일이 몇째 주인지(날짜÷7 올림)에 맞는 사용 중 항목만 불러와요.</p>
+      <p className="mt-3 text-xs text-muted">지출입력의 &apos;고정지출 불러오기&apos;는 그 주일이 몇째 주인지(날짜÷7 올림)에 맞는 사용 중 항목만 불러와요. 상태 칸의 사용/미사용을 누르면 바로 바뀌고, 미사용 항목은 불러오기에서 빠져요.</p>
     </>
   );
 }
