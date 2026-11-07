@@ -2,6 +2,9 @@
 // 사용: node scripts/fake-supabase.mjs  →  NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:54321 NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=sb_publishable_fake npm run build && npx next start
 // (next dev는 클라우드 컨테이너에서 하이드레이션이 안 돼 build+start로 확인했다.) 로그인: 아무 이메일·비밀번호.
 import http from "node:http";
+import fs from "node:fs";
+// 직인·간인 확인용: FAKE_SEAL / FAKE_STAMP 에 PNG 경로를 주면 교회 정보에 data URL로 넣는다(이미지는 커밋하지 않음)
+const img = (p) => (p ? `data:image/png;base64,${fs.readFileSync(p).toString("base64")}` : null);
 const USER_ID = "11111111-1111-1111-1111-111111111111";
 const b64 = (o) => Buffer.from(JSON.stringify(o)).toString("base64url");
 const JWT = `${b64({ alg: "HS256", typ: "JWT" })}.${b64({ sub: USER_ID, aud: "authenticated", role: "authenticated", email: "admin@example.test", exp: 4102444800, iat: 1700000000, session_id: "s1", is_anonymous: false, app_metadata: {}, user_metadata: {} })}.sig`;
@@ -17,7 +20,7 @@ const members = [
 const donorHit = (m) => ({ member_id: m.id, name: m.name + (m.name_suffix ?? ""), title: m.title, household_id: m.household_id, household_label: `가정${m.household_id}`, is_household_head: m.is_household_head, address: m.address, phone: m.phone, rrn_masked: m.rrn_enc ? "900101-1******" : null, family: members.filter((f) => f.household_id === m.household_id && f.id !== m.id).map((f) => f.name + (f.name_suffix ?? "")) });
 const db = {
   app_user: [{ id: USER_ID, name: "관리자", status: "approved", role: "admin" }],
-  church_info: [{ id: 1, name: "가상교회", pastor: "홍길동", address: "서울시 가상구 가상로 100", reg_no: "123-82-00000", phone: "02-000-0000", seal_image: null, stamp_image: null }],
+  church_info: [{ id: 1, name: "가상교회", pastor: "홍길동", address: "서울시 가상구 가상로 100", reg_no: "123-82-00000", phone: "02-000-0000", seal_image: img(process.env.FAKE_SEAL), stamp_image: img(process.env.FAKE_STAMP) }],
   member: members,
   v_donation_request: [
     { id: 5, request_no: "D261008-0005", year: 2025, name: "가나다", rrn_masked: "900101-1******", has_rrn: true, phone: "010-1111-2222", address: "서울시 가상구 가상로 1", request_note: "우편으로 부탁드려요", family_names: ["라마바"], is_returning: false, member_id: null, member_name: null, status: "requested", donation_receipt_id: null, serial_no: null, created_at: "2026-10-08T03:00:00Z", review_note: null },
@@ -30,6 +33,7 @@ const db = {
   expense_item: [{ id: 11, name: "교재비", sort_order: 1, department: { id: 1, name: "교육부", sort_order: 1 } }],
   donation_receipt_source: [],
   receipt_attachment: [],
+  receipt_form: [{ id: 1, name: "별지 제45호의2서식", version: "2021.3.16", active: true, is_default: true, memo: null }],
   v_income: [
     { id: 101, year: 2025, offering_type: "십일조", type_order: 1, month: 1, member_id: 1, member_name: "가나다", payer_label: "가나다", amount: 300000 },
     { id: 102, year: 2025, offering_type: "십일조", type_order: 1, month: 2, member_id: 1, member_name: "가나다", payer_label: "가나다", amount: 300000 },

@@ -73,7 +73,7 @@ function Form({ initial }: { initial: Church }) {
           <p className="text-xs text-muted md:col-span-2">영수증의 &lsquo;기부금 단체&rsquo; 칸에 들어가요. 근거법령 문구는 서식에 고정돼 있어요 [확인 필요].</p>
         </div>
         <div className={`${card} space-y-4 p-4`}>
-          {([["seal_image", "직인", "영수증 기부금 수령인 옆에 찍혀요"], ["stamp_image", "간인", "영수증 오른쪽 여백에 찍혀요 [확인 필요: 위치]"]] as const).map(([k, label, hint]) => (
+          {([["seal_image", "직인", "네모 도장 · 영수증 하단 기부금 수령인 (서명 또는 인) 자리에 찍혀요"], ["stamp_image", "간인", "반원 도장 · 영수증 오른쪽 위에 찍혀요"]] as const).map(([k, label, hint]) => (
             <div key={k}>
               <div className="mb-1 text-xs text-label">{label} <span className="text-muted">· {hint}</span></div>
               <div className="flex items-center gap-3">
