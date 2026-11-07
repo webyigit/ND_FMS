@@ -14,15 +14,16 @@ import { downloadXlsx } from "@/lib/excel";
 import { fileName, won } from "@/lib/format";
 import { isSunday } from "@/lib/income/dates";
 import { fetchAll } from "@/lib/income/db";
-import { NO_NAME, cumulativeWeeks, entryLabel, listedTypes, pct, progressReport, progressSheet, sundayIndex, toGrid, weeklyReport, weeklySheets, type IncomeViewRow, type PriorRow, type ProgressRow } from "@/lib/income/report";
+import { LIST_COLS, NO_NAME, cumulativeWeeks, entryLabel, listedTypes, pct, progressReport, progressSheet, sundayIndex, toGrid, weeklyReport, weeklySheets, type IncomeViewRow, type PriorRow, type ProgressRow } from "@/lib/income/report";
 import { loadChurch } from "@/lib/receipt/api";
 import ProgressChart from "./ProgressChart";
 import { amt, longDate, td, tdNum, th } from "../_ui/sheet";
 
 type Week = { sunday: string; closed: boolean };
 const TITLE_KEY = "income_approval_titles";
+const PAIRS = Array.from({ length: LIST_COLS }, (_, i) => i);
 
-// 금주 수입내역: 원본 'MM-DD_주일헌금현황' 견본처럼 결재란 + 요약표 + 헌금종류별 (성명, 금액)×4 명단. A4 출력해 결재
+// 금주 수입내역: 원본 'MM-DD_주일헌금현황' 견본처럼 결재란 + 요약표 + 헌금종류별 (성명, 금액)×2 명단. A4 출력해 결재
 export default function WeeklyIncome() {
   const { ref, error: refErr } = useRefData();
   const weeks = useDbQuery(async (sb) => must(await sb.from("week").select("sunday, closed").order("sunday", { ascending: false }).limit(260)) as Week[], []);
@@ -172,8 +173,8 @@ export default function WeeklyIncome() {
               )}
               {!t.totalOnly && (
                 <table className="hidden w-full table-fixed border-collapse sm:table print:table">
-                  <colgroup>{[0, 1, 2, 3].map((i) => <Fragment key={i}><col className="w-[15%]" /><col className="w-[10%]" /></Fragment>)}</colgroup>
-                  <thead><tr>{[0, 1, 2, 3].map((i) => <Fragment key={i}><th className={th}>성명</th><th className={th}>금액</th></Fragment>)}</tr></thead>
+                  <colgroup>{PAIRS.map((i) => <Fragment key={i}><col className="w-[30%]" /><col className="w-[20%]" /></Fragment>)}</colgroup>
+                  <thead><tr>{PAIRS.map((i) => <Fragment key={i}><th className={th}>성명</th><th className={th}>금액</th></Fragment>)}</tr></thead>
                   <tbody>
                     {toGrid(t.entries).map((row, i) => (
                       <tr key={i}>
@@ -188,7 +189,7 @@ export default function WeeklyIncome() {
                       </tr>
                     ))}
                     {!!t.noName && (
-                      <tr><td className={`${td} text-muted`} colSpan={7}>{NO_NAME}</td><td className={tdNum}>{won(t.noName)}</td></tr>
+                      <tr><td className={`${td} text-muted`} colSpan={LIST_COLS * 2 - 1}>{NO_NAME}</td><td className={tdNum}>{won(t.noName)}</td></tr>
                     )}
                   </tbody>
                 </table>
