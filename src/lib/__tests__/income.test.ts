@@ -116,12 +116,14 @@ describe("금주 수입내역", () => {
     expect(weeklySheets(r, "2026-10-11")[0].rows.at(-1)).toEqual(["총계(별도 포함)", "", 551000, 120000, 671000, 7, 1539000, 2210000]);
     expect(rep.grand).toMatchObject({ prev: 0, ytd: 671000 }); // 누계 자료 없으면 금주만
   });
-  it("그리드 4칸·엑셀", () => {
-    expect(toGrid([1, 2, 3, 4, 5])).toEqual([[1, 2, 3, 4], [5, null, null, null]]);
+  it("그리드 2단·엑셀", () => {
+    expect(toGrid([1, 2, 3])).toEqual([[1, 2], [3, null]]);
+    expect(toGrid([1, 2, 3, 4, 5], 4)).toEqual([[1, 2, 3, 4], [5, null, null, null]]);
     const [summary, grid] = weeklySheets(rep, "2026-10-11");
     expect(summary.rows.at(-1)).toEqual(["총계(별도 포함)", "", 551000, 120000, 671000, 7, 0, 671000]);
     expect(summary.rows).toContainEqual(["일반·특별 합계", "", 551000, 50000, 601000, null, 0, 601000]);
     expect(grid.rows.flat()).toContain("가나다,라마바(가상)");
+    expect(grid.rows).toContainEqual(["성명", "금액", "성명", "금액"]);
     expect(grid.rows.flat()).not.toContain("(총액)"); // 주일헌금은 명단 없이 총액만
   });
   it("이름 없는 합계 행은 명단 대신 '개인내역 없음' 한 줄", () => {

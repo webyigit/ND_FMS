@@ -63,8 +63,11 @@ export function weeklyReport(rows: IncomeViewRow[], types: TypeRef[], rankOf: (m
   return { types: out, byFund, generalSpecial, grand: sumUp([generalSpecial, byFund.별도]), count: rows.length, noName: out.reduce((s, t) => s + t.noName, 0) };
 }
 
+/** 헌금 명단 한 줄의 (성명, 금액) 묶음 수. 4단은 A4에서 이름·금액이 찌그러져 2단(2026-11-07 사용자 요청) */
+export const LIST_COLS = 2;
+
 /** (성명, 금액) × cols 그리드로 나눈다. 마지막 줄은 null로 채움 */
-export function toGrid<T>(xs: T[], cols = 4): (T | null)[][] {
+export function toGrid<T>(xs: T[], cols = LIST_COLS): (T | null)[][] {
   const out: (T | null)[][] = [];
   for (let i = 0; i < xs.length; i += cols) {
     const row: (T | null)[] = xs.slice(i, i + cols);
@@ -179,14 +182,14 @@ export function weeklySheets(rep: WeeklyReport, sunday: string): Sheet[] {
     grid.push([], [`${t.name} (${t.count}건, ${t.total.toLocaleString("ko-KR")}원)`]);
     if (t.totalOnly) return;
     if (t.entries.length) {
-      grid.push(["성명", "금액", "성명", "금액", "성명", "금액", "성명", "금액"]);
+      grid.push(Array.from({ length: LIST_COLS }, () => ["성명", "금액"]).flat());
       toGrid(t.entries).forEach((row) => grid.push(row.flatMap((e) => (e ? [entryLabel(e), e.amount] : ["", null]))));
     }
     if (t.noName) grid.push([NO_NAME, t.noName]);
   });
   return [
     { name: "기금별", rows: summary, widths: [16, 14, 14, 14, 14, 8], header: 3 },
-    { name: "명단", rows: grid, widths: [14, 12, 14, 12, 14, 12, 14, 12], header: 1 },
+    { name: "명단", rows: grid, widths: [20, 14, 20, 14], header: 1 },
   ];
 }
 
