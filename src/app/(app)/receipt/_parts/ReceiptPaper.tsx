@@ -35,10 +35,11 @@ export default function ReceiptPaper({ r, church, sample }: { r: PaperData; chur
   const blanks = Math.max(0, ROWS - lines.length);
   const receiver = [church?.name, church?.pastor].filter(Boolean).join(" ");
   return (
-    <div className="receipt-paper relative mx-auto bg-white px-[15mm] py-[12mm] text-[9.5pt] leading-snug text-black shadow-card break-after-page last:break-after-auto min-h-[297mm] print:min-h-0 print:w-auto print:p-0 print:shadow-none"
-      style={{ width: "210mm", fontFamily: "'Batang','바탕','Nanum Myeongjo',serif" }}>
-      {sample && <div className="no-print absolute right-3 top-3 rounded bg-warning-subtle px-2 py-0.5 text-xs text-warning">견본(가상 값)</div>}
-      {church?.stamp_image && <img src={church.stamp_image} alt="간인" className="absolute right-[10mm] top-[2mm] h-[16mm] w-[16mm] object-contain opacity-90 print:-top-[8mm] print:right-0" />}
+    <div className="receipt-paper relative mx-auto bg-white px-[15mm] py-[12mm] text-[9.5pt] leading-snug text-black shadow-card break-after-page last:break-after-auto min-h-[297mm] print:min-h-0 print:w-auto print:p-0 print:shadow-none w-[210mm]"
+      style={{ fontFamily: "'Batang','바탕','Nanum Myeongjo',serif" }}>
+      {sample && <div className="no-print absolute left-3 top-3 rounded bg-warning-subtle px-2 py-0.5 text-xs text-warning">견본(가상 값)</div>}
+      {/* 반원 도장(간인): 서식 오른쪽 위, 제목 줄 오른쪽 끝 */}
+      {church?.stamp_image && <img src={church.stamp_image} alt="간인" className="pointer-events-none absolute right-[15mm] top-[10mm] h-[17mm] w-[17mm] object-contain object-right-top opacity-90 print:right-0 print:top-0" />}
 
       <div className="text-[8pt]">■ 소득세법 시행규칙 [별지 제45호의2서식] &lt;개정 2021. 3. 16.&gt;</div>
       <div className="relative mt-[2mm] flex items-center">
@@ -162,7 +163,8 @@ export default function ReceiptPaper({ r, church, sample }: { r: PaperData; chur
         <div className="relative mt-[6mm] flex items-baseline justify-end gap-[10mm] pb-[3mm]">
           <span className="text-[10.5pt]">기부금 수령인</span>
           <span className="min-w-[80mm] text-right font-semibold">{receiver} <span className="text-[9pt] font-normal">(서명 또는 인)</span></span>
-          {church?.seal_image && <img src={church.seal_image} alt="직인" className="absolute -top-[9mm] right-[1mm] h-[24mm] w-[24mm] object-contain" />}
+          {/* 네모 도장(직인): (서명 또는 인) 자리에 겹쳐 찍는다 */}
+          {church?.seal_image && <img src={church.seal_image} alt="직인" className="pointer-events-none absolute -top-[7mm] right-0 h-[20mm] w-[20mm] object-contain opacity-90" />}
         </div>
       </div>
       <div className="border-t-[3pt] border-double border-black" />
