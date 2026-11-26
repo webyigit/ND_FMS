@@ -72,6 +72,15 @@
   .clay, .clay-tile, .clay-icon { box-shadow: none !important; }
 }
 
+/* ── 레이아웃 개편(2026-11-26): 상단 GNB + 좌측 2depth + 본문 패널 + 하단 업무 흐름 바 ──
+   본문 패널(필터 카드·목록·설정 등 rounded-lg + shadow-card)은 흰 바탕 + 얇은 테두리 + 12px 모서리로 통일. 색은 토큰 그대로 */
+@media screen {
+  main .rounded-lg.shadow-card { border: 1px solid var(--c-border); border-radius: 12px; box-shadow: none; }
+  /* 패널 안 표 머리글: 옅은 바탕 + 작은 라벨 글씨 */
+  main .rounded-lg.shadow-card > table > thead th,
+  main .rounded-lg.shadow-card table:first-child > thead th { color: var(--c-label); font-weight: 500; }
+}
+
 @media print {
   aside, header, .no-print { display: none !important; }
   main { padding: 0 !important; }
@@ -94,6 +103,7 @@
   /* 구분 버튼 묶음(.seg): 글자를 줄바꿈하지 않고 묶음이 가로로 넘치면 묶음 안에서 스크롤 */
   .seg { max-width: 100%; overflow-x: auto; }
   .seg > button { flex: 0 0 auto; white-space: nowrap; }
+  .seg > button.flex-1 { flex: 1 0 auto; padding-inline: .75rem; }
   .tbl-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
   .tbl-scroll table { min-width: max-content; white-space: nowrap; }
   /* A4 장표: 폰에서는 장표 폭을 고집하지 않고 화면 폭에 맞춰 흐르게(여백만 줄임). 표는 .tbl-cards 로 카드화 */
