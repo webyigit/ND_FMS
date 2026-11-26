@@ -6,6 +6,8 @@ import { MENU } from "./menu";
 const KEY = "ndfms.menu.open";
 const EVENT = "ndfms:menu";
 export const STEPS_KEY = "매주 업무 순서";
+/** 하단 업무 흐름 바의 상세(단계별 완료 버튼) 펼침. 기본은 닫힘(한 줄 흐름만) */
+export const STEPS_DETAIL_KEY = "매주 업무 순서 상세";
 type OpenMap = Record<string, boolean>;
 /** 전체 펼침/닫기 대상 = 사이드바 묶음만(매주 업무 순서는 상단 가로 영역이라 따로) */
 const ALL = MENU.map((g) => g.label);
@@ -18,10 +20,13 @@ export function useMenuOpen() {
   const raw = useSyncExternalStore(subscribe, read, () => "{}");
   const open: OpenMap = (() => { try { return JSON.parse(raw); } catch { return {}; } })();
   const isOpen = useCallback((label: string) => open[label] !== false, [open]);
+  /** 기본 닫힘인 항목용: 사용자가 펼친 적 있을 때만 true */
+  const isOn = useCallback((label: string) => open[label] === true, [open]);
   const toggle = useCallback((label: string) => write({ ...open, [label]: !isOpen(label) }), [open, isOpen]);
   const allOpen = ALL.every(isOpen);
   const setAll = useCallback((v: boolean) => write({ ...open, ...Object.fromEntries(ALL.map((l) => [l, v])) }), [open]);
   /** 현재 화면이 속한 묶음은 닫혀 있어도 보이게 */
   const openFor = useCallback((label: string) => write({ ...open, [label]: true }), [open]);
-  return { isOpen, toggle, allOpen, setAll, openFor };
+  const toggleOn = useCallback((label: string) => write({ ...open, [label]: !(open[label] === true) }), [open]);
+  return { isOpen, isOn, toggle, toggleOn, allOpen, setAll, openFor };
 }
